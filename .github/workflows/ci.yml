@@ -18,6 +18,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Checkout fs-desktop vendor (dioxus-desktop path dep)
+        run: |
+          git clone --no-checkout --depth=1 --filter=blob:none \
+            https://github.com/FreeSynergy/fs-desktop.git \
+            $GITHUB_WORKSPACE/../fs-desktop
+          cd $GITHUB_WORKSPACE/../fs-desktop
+          git sparse-checkout init
+          git sparse-checkout set vendor/dioxus-desktop
+          git checkout
+
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -27,7 +37,6 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Format check
-        # --all would traverse path-deps into fs-desktop; format only workspace members.
         run: cargo fmt -p fs-store -p fs-store-app -p fs-store-cli -- --check
 
       - name: Clippy
