@@ -1,0 +1,36 @@
+[workspace]
+members  = ["crates/fs-store", "crates/fs-store-app"]
+resolver = "2"
+
+[workspace.package]
+version    = "0.1.0"
+edition    = "2021"
+license    = "MIT"
+authors    = ["FreeSynergy.Net"]
+repository = "https://github.com/FreeSynergy/fs-store"
+
+[workspace.dependencies]
+# Workspace crates
+fs-store = { path = "crates/fs-store" }
+
+# Serde
+serde      = { version = "1", features = ["derive"] }
+serde_json = { version = "1" }
+toml       = { version = "1", features = ["preserve_order"] }
+
+# Error handling
+anyhow    = { version = "1" }
+thiserror = { version = "2" }
+
+# Async
+tokio       = { version = "1", features = ["full"] }
+async-trait = { version = "0.1" }
+
+# HTTP
+reqwest = { version = "0.13", features = ["json", "rustls"], default-features = false }
+
+# Logging
+tracing = { version = "0.1" }
+
+# Time
+chrono = { version = "0.4", features = ["serde"] }
