@@ -17,11 +17,11 @@ use tracing::{debug, info, warn};
 use crate::catalog::{NamespaceIndex, RawCatalogEntry};
 use crate::i18n::{FtlContent, FtlKind, I18nSnippets};
 use crate::inventory::NamespaceMap;
+use crate::package::bundle::BundleComponent;
 use crate::package::{
     AppPackage, BundlePackage, ContainerPackage, ExternalPackage, IconSetPackage, LanguagePackage,
     Package, PackageData, PackageHelp, RepoPackage, TaskPackage, ThemePackage, WidgetPackage,
 };
-use crate::package::bundle::BundleComponent;
 use crate::release::PackageRelease;
 use crate::source::StoreSource;
 
@@ -61,18 +61,29 @@ impl StoreReader {
     /// Packages that fail to parse are skipped with a warning so one broken
     /// entry does not prevent the rest of the catalog from loading.
     pub async fn load_all(&self) -> Result<NamespaceMap> {
-        let mut map = NamespaceMap::default();
+        let apps = self.load_namespace("packages/apps").await?;
+        let containers = self.load_namespace("packages/containers").await?;
+        let themes = self.load_namespace("packages/themes").await?;
+        let widgets = self.load_namespace("packages/widgets").await?;
+        let tasks = self.load_namespace("packages/tasks").await?;
+        let languages = self.load_namespace("packages/i18n").await?;
+        let icons = self.load_namespace("packages/icons").await?;
+        let bundles = self.load_namespace("packages/bundles").await?;
+        let externals = self.load_namespace("packages/external").await?;
+        let repos = self.load_namespace("packages/repos").await?;
 
-        map.apps = self.load_namespace("packages/apps").await?;
-        map.containers = self.load_namespace("packages/containers").await?;
-        map.themes = self.load_namespace("packages/themes").await?;
-        map.widgets = self.load_namespace("packages/widgets").await?;
-        map.tasks = self.load_namespace("packages/tasks").await?;
-        map.languages = self.load_namespace("packages/i18n").await?;
-        map.icons = self.load_namespace("packages/icons").await?;
-        map.bundles = self.load_namespace("packages/bundles").await?;
-        map.externals = self.load_namespace("packages/external").await?;
-        map.repos = self.load_namespace("packages/repos").await?;
+        let map = NamespaceMap {
+            apps,
+            containers,
+            themes,
+            widgets,
+            tasks,
+            languages,
+            icons,
+            bundles,
+            externals,
+            repos,
+        };
 
         info!(
             "StoreReader: loaded {} packages across all namespaces",
@@ -292,11 +303,7 @@ fn catalog_entry_to_package(
     let pkg: Arc<dyn Package> = match entry.package.package_type.as_str() {
         "app" => Arc::new(AppPackage {
             data,
-            repo: entry
-                .package
-                .origin
-                .as_ref()
-                .and_then(|o| o.git.clone()),
+            repo: entry.package.origin.as_ref().and_then(|o| o.git.clone()),
         }),
 
         "container" => Arc::new(ContainerPackage {
@@ -331,14 +338,8 @@ fn catalog_entry_to_package(
             let (locale, rtl) = entry
                 .language
                 .map(|l| {
-                    let loc = l
-                        .locale
-                        .unwrap_or_else(|| entry.package.id.clone());
-                    let rtl = l
-                        .direction
-                        .as_deref()
-                        .map(|d| d == "rtl")
-                        .unwrap_or(false);
+                    let loc = l.locale.unwrap_or_else(|| entry.package.id.clone());
+                    let rtl = l.direction.as_deref().map(|d| d == "rtl").unwrap_or(false);
                     (loc, rtl)
                 })
                 .unwrap_or_else(|| (entry.package.id.clone(), false));
@@ -368,7 +369,11 @@ fn catalog_entry_to_package(
 
         "external" => Arc::new(ExternalPackage {
             data,
-            website: entry.package.origin.as_ref().and_then(|o| o.website.clone()),
+            website: entry
+                .package
+                .origin
+                .as_ref()
+                .and_then(|o| o.website.clone()),
             download: None,
             docs: entry.package.origin.as_ref().and_then(|o| o.docs.clone()),
         }),
@@ -384,15 +389,17 @@ fn catalog_entry_to_package(
             // If it appears in a regular namespace, treat as external.
             Arc::new(ExternalPackage {
                 data,
-                website: entry.package.origin.as_ref().and_then(|o| o.website.clone()),
+                website: entry
+                    .package
+                    .origin
+                    .as_ref()
+                    .and_then(|o| o.website.clone()),
                 download: None,
                 docs: None,
             })
         }
 
-        other => anyhow::bail!(
-            "unknown package type '{other}' in '{catalog_path}'"
-        ),
+        other => anyhow::bail!("unknown package type '{other}' in '{catalog_path}'"),
     };
 
     Ok(pkg)
