@@ -13,29 +13,9 @@ pub struct WidgetPackage {
 }
 
 impl Package for WidgetPackage {
-    fn id(&self) -> &str {
-        &self.data.id
-    }
-    fn name(&self) -> &str {
-        &self.data.name
-    }
+    impl_package_data!();
     fn category(&self) -> &'static dyn PackageCategory {
         static CAT: WidgetCategory = WidgetCategory;
         &CAT
-    }
-    fn summary(&self) -> &str {
-        &self.data.summary
-    }
-    fn icon_path(&self) -> Option<&str> {
-        self.data.icon_path.as_deref()
-    }
-    fn tags(&self) -> &[String] {
-        &self.data.tags
-    }
-    fn releases(&self) -> &[PackageRelease] {
-        &self.data.releases
-    }
-    fn help(&self) -> &PackageHelp {
-        &self.data.help
     }
 }

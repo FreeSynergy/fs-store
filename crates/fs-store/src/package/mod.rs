@@ -128,6 +128,9 @@ pub trait Package: Send + Sync {
     /// Short summary (≤255 chars) for store listings.
     fn summary(&self) -> &str;
 
+    /// Medium-length description for the detail view.
+    fn description(&self) -> &str;
+
     /// Store-relative path to this package's SVG icon.
     fn icon_path(&self) -> Option<&str>;
 

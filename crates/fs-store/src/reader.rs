@@ -200,6 +200,17 @@ impl StoreReader {
         })
     }
 
+    // ── Raw content ───────────────────────────────────────────────────────────
+
+    /// Fetch any Store-root-relative file as raw text.
+    ///
+    /// Use this for content files (compose templates, theme CSS, i18n snippets)
+    /// that are not catalog TOML files. The path is relative to the Store root,
+    /// e.g. `"packages/containers/forgejo/compose.yml"`.
+    pub async fn fetch_raw(&self, rel_path: &str) -> Result<String> {
+        self.fetch_text(rel_path).await
+    }
+
     // ── Icons ─────────────────────────────────────────────────────────────────
 
     /// Fetch a package icon as raw SVG bytes.
