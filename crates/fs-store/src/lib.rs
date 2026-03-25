@@ -18,6 +18,7 @@
 //   StoreSettings         — concrete settings for the Store
 //   i18n types            — I18nSnippets (TOML), FtlContent (.ftl), FtlKind
 
+pub mod catalog;
 pub mod category;
 pub mod i18n;
 pub mod icon;
@@ -38,7 +39,7 @@ pub use icon::IconSource;
 pub use init::BootableInstaller;
 pub use install_record::InstallRecord;
 pub use inventory::{Inventory, NamespaceMap, PackageState};
-pub use package::{Package, PackageData, PackageHelp};
+pub use package::{Package, PackageData, PackageHelp, RepoPackage};
 pub use reader::StoreReader;
 pub use release::{DistributionMap, PackageRelease, Platform, ReleaseChannel, VersionPin};
 pub use settings::{Settings, StoreSettings};

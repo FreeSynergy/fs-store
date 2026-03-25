@@ -36,6 +36,7 @@ pub struct NamespaceMap {
     pub icons: Vec<Arc<dyn Package>>,
     pub bundles: Vec<Arc<dyn Package>>,
     pub externals: Vec<Arc<dyn Package>>,
+    pub repos: Vec<Arc<dyn Package>>,
 }
 
 impl NamespaceMap {
@@ -51,6 +52,7 @@ impl NamespaceMap {
             .chain(&self.icons)
             .chain(&self.bundles)
             .chain(&self.externals)
+            .chain(&self.repos)
     }
 
     /// Find a package by id across all namespaces.

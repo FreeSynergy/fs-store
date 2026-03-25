@@ -96,7 +96,7 @@ category!(
     LanguageCategory,
     id = "languages",
     name = "Language Packs",
-    path = "packages/languages/"
+    path = "packages/i18n/"
 );
 category!(
     IconSetCategory,
@@ -108,13 +108,19 @@ category!(
     BundleCategory,
     id = "bundles",
     name = "Bundles",
-    path = "bundles/"
+    path = "packages/bundles/"
 );
 category!(
     ExternalCategory,
     id = "external",
     name = "External Services",
     path = "packages/external/"
+);
+category!(
+    RepoCategory,
+    id = "repos",
+    name = "Repositories",
+    path = "packages/repos/"
 );
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -132,6 +138,17 @@ mod tests {
 
     #[test]
     fn bundle_category_path() {
-        assert_eq!(BundleCategory.namespace_path(), "bundles/");
+        assert_eq!(BundleCategory.namespace_path(), "packages/bundles/");
+    }
+
+    #[test]
+    fn language_category_path() {
+        assert_eq!(LanguageCategory.namespace_path(), "packages/i18n/");
+    }
+
+    #[test]
+    fn repo_category_fields() {
+        assert_eq!(RepoCategory.id(), "repos");
+        assert_eq!(RepoCategory.namespace_path(), "packages/repos/");
     }
 }
