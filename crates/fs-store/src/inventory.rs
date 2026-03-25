@@ -82,6 +82,43 @@ impl NamespaceMap {
     pub fn total_count(&self) -> usize {
         self.all().count()
     }
+
+    /// Return the namespace name for a package id, e.g. `"containers"`.
+    ///
+    /// Returns `None` if the id is not found in any namespace.
+    pub fn namespace_of(&self, id: &str) -> Option<&'static str> {
+        if self.apps.iter().any(|p| p.id() == id) {
+            return Some("apps");
+        }
+        if self.containers.iter().any(|p| p.id() == id) {
+            return Some("containers");
+        }
+        if self.themes.iter().any(|p| p.id() == id) {
+            return Some("themes");
+        }
+        if self.widgets.iter().any(|p| p.id() == id) {
+            return Some("widgets");
+        }
+        if self.tasks.iter().any(|p| p.id() == id) {
+            return Some("tasks");
+        }
+        if self.languages.iter().any(|p| p.id() == id) {
+            return Some("languages");
+        }
+        if self.icons.iter().any(|p| p.id() == id) {
+            return Some("icons");
+        }
+        if self.bundles.iter().any(|p| p.id() == id) {
+            return Some("bundles");
+        }
+        if self.externals.iter().any(|p| p.id() == id) {
+            return Some("externals");
+        }
+        if self.repos.iter().any(|p| p.id() == id) {
+            return Some("repos");
+        }
+        None
+    }
 }
 
 // ── PackageState ──────────────────────────────────────────────────────────────

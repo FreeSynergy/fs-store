@@ -1,10 +1,21 @@
 // fs-store-app — FreeSynergy Store GUI application.
+// Dioxus components are PascalCase by convention — allow non_snake_case crate-wide.
+#![allow(non_snake_case)]
 //
-// This binary is the Dioxus-based graphical front-end for the Store.
-// It uses the fs-store library crate for all business logic and data access.
-//
-// Implementation: Phase C (after library is complete).
+// Entry point: launches the Dioxus desktop window.
+// All state is managed via StoreContext (Provider Pattern).
+// All rendering is delegated to views/ and the PackageView trait.
+
+mod app;
+mod context;
+mod view;
+mod views;
 
 fn main() {
-    println!("fs-store-app — coming in Phase C");
+    let config = dioxus_desktop::Config::default().with_window(
+        dioxus_desktop::WindowBuilder::default()
+            .with_title("FreeSynergy Store")
+            .with_inner_size(dioxus_desktop::LogicalSize::new(1100.0_f64, 700.0_f64)),
+    );
+    dioxus_desktop::launch::launch(app::App, vec![], vec![Box::new(config)]);
 }

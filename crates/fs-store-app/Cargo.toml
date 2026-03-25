@@ -12,7 +12,9 @@ name = "fs-store-app"
 path = "src/main.rs"
 
 [dependencies]
-fs-store  = { workspace = true }
-tokio     = { workspace = true }
-tracing   = { workspace = true }
-anyhow    = { workspace = true }
+fs-store       = { workspace = true }
+tokio          = { workspace = true }
+tracing        = { workspace = true }
+anyhow         = { workspace = true }
+dioxus         = { workspace = true }
+dioxus-desktop = { workspace = true }

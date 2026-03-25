@@ -8,8 +8,8 @@ use fs_store::{StoreReader, StoreSource};
 
 fn local_store_path() -> Option<std::path::PathBuf> {
     // Allow override via env var; fall back to the default dev path.
-    let raw = std::env::var("FS_STORE_LOCAL")
-        .unwrap_or_else(|_| "/home/kal/Server/Store".to_owned());
+    let raw =
+        std::env::var("FS_STORE_LOCAL").unwrap_or_else(|_| "/home/kal/Server/Store".to_owned());
     let path = std::path::PathBuf::from(raw);
     if path.exists() {
         Some(path)

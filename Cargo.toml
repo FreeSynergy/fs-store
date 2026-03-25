@@ -1,5 +1,5 @@
 [workspace]
-members  = ["crates/fs-store", "crates/fs-store-app"]
+members  = ["crates/fs-store", "crates/fs-store-app", "crates/fs-store-cli"]
 resolver = "2"
 
 [workspace.package]
@@ -30,7 +30,15 @@ async-trait = { version = "0.1" }
 reqwest = { version = "0.13", features = ["json", "rustls"], default-features = false }
 
 # Logging
-tracing = { version = "0.1" }
+tracing            = { version = "0.1" }
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# CLI
+clap = { version = "4", features = ["derive", "env"] }
 
 # Time
 chrono = { version = "0.4", features = ["serde"] }
+
+# GUI
+dioxus         = { version = "0.7.3", default-features = false, features = ["macro", "html", "signals", "hooks", "launch", "document"] }
+dioxus-desktop = { path = "../fs-desktop/vendor/dioxus-desktop" }
