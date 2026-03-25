@@ -9,14 +9,32 @@
 //
 // The Inventory is what the Bus, GUI, CLI, API, and Node all talk to.
 // Nobody talks to StoreReader or InstallRecord directly in normal operation.
+//
+// Persistence:
+//   Install records are stored at `settings.storage.data_dir/records.toml`.
+//   Call `save_records()` after any install/remove mutation.
 
 use std::sync::Arc;
+
+use anyhow::{Context, Result};
+use serde::{Deserialize, Serialize};
+use tracing::info;
 
 use crate::init::BootableInstaller;
 use crate::install_record::InstallRecord;
 use crate::package::Package;
+use crate::reader::StoreReader;
 use crate::release::PackageRelease;
 use crate::settings::StoreSettings;
+
+// ── RecordsFile ───────────────────────────────────────────────────────────────
+
+/// On-disk format for `records.toml` — a flat list of all install records.
+#[derive(Debug, Default, Serialize, Deserialize)]
+struct RecordsFile {
+    #[serde(default)]
+    records: Vec<InstallRecord>,
+}
 
 // ── NamespaceMap ──────────────────────────────────────────────────────────────
 
@@ -141,6 +159,8 @@ pub struct Inventory {
 }
 
 impl Inventory {
+    // ── Constructors ──────────────────────────────────────────────────────────
+
     /// Create an empty inventory with the given settings.
     pub fn new(settings: StoreSettings) -> Self {
         Self {
@@ -151,7 +171,28 @@ impl Inventory {
         }
     }
 
-    /// Find the `PackageState` for a package by id.
+    // ── Loading ───────────────────────────────────────────────────────────────
+
+    /// Fetch the Store catalog and merge it with local install records.
+    ///
+    /// After this call, `namespaces` contains all Store packages and `states`
+    /// contains a [`PackageState`] for each package, with install records
+    /// attached for any that are locally installed.
+    pub async fn load(&mut self, reader: &StoreReader) -> Result<()> {
+        self.namespaces = reader.load_all().await?;
+        let records = self.read_records()?;
+        self.states = self.build_states(records);
+        info!(
+            "Inventory: {} packages, {} installed",
+            self.states.len(),
+            self.installed().count()
+        );
+        Ok(())
+    }
+
+    // ── Queries ───────────────────────────────────────────────────────────────
+
+    /// Find the [`PackageState`] for a package by id.
     pub fn package_state(&self, id: &str) -> Option<&PackageState> {
         self.states.iter().find(|s| s.package.id() == id)
     }
@@ -164,5 +205,106 @@ impl Inventory {
     /// All packages that have an update available.
     pub fn with_updates(&self) -> impl Iterator<Item = &PackageState> {
         self.states.iter().filter(|s| s.has_update())
+    }
+
+    // ── Record mutations ──────────────────────────────────────────────────────
+
+    /// Register a newly installed package version.
+    ///
+    /// Any previously active record for the same package is deactivated.
+    /// Call [`save_records`] afterwards to persist.
+    ///
+    /// [`save_records`]: Inventory::save_records
+    pub fn record_installed(&mut self, record: InstallRecord) {
+        for state in &mut self.states {
+            if state.package.id() == record.package_id {
+                for r in &mut state.installed {
+                    r.is_active = false;
+                }
+                state.installed.push(record);
+                return;
+            }
+        }
+    }
+
+    /// Remove the install record for a specific package version.
+    ///
+    /// If no active record remains, the newest remaining version is activated.
+    /// Call [`save_records`] afterwards to persist.
+    ///
+    /// [`save_records`]: Inventory::save_records
+    pub fn record_removed(&mut self, package_id: &str, version: &str) {
+        for state in &mut self.states {
+            if state.package.id() == package_id {
+                state.installed.retain(|r| r.version != version);
+                // Re-activate the newest remaining record if needed.
+                if !state.installed.iter().any(|r| r.is_active) {
+                    if let Some(last) = state.installed.last_mut() {
+                        last.is_active = true;
+                    }
+                }
+                return;
+            }
+        }
+    }
+
+    // ── Persistence ───────────────────────────────────────────────────────────
+
+    /// Write all install records to disk.
+    ///
+    /// Records are stored at `settings.storage.data_dir/records.toml`.
+    /// The directory is created if it does not exist.
+    pub fn save_records(&self) -> Result<()> {
+        let path = self.records_path();
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)
+                .with_context(|| format!("creating directory '{}'", parent.display()))?;
+        }
+        let records: Vec<InstallRecord> = self
+            .states
+            .iter()
+            .flat_map(|s| s.installed.iter().cloned())
+            .collect();
+        let file = RecordsFile { records };
+        let text = toml::to_string_pretty(&file).context("serializing install records")?;
+        std::fs::write(&path, &text)
+            .with_context(|| format!("writing install records '{}'", path.display()))?;
+        Ok(())
+    }
+
+    // ── Private ───────────────────────────────────────────────────────────────
+
+    fn records_path(&self) -> std::path::PathBuf {
+        self.settings.storage.data_dir.join("records.toml")
+    }
+
+    fn read_records(&self) -> Result<Vec<InstallRecord>> {
+        let path = self.records_path();
+        if !path.exists() {
+            return Ok(Vec::new());
+        }
+        let text = std::fs::read_to_string(&path)
+            .with_context(|| format!("reading install records '{}'", path.display()))?;
+        let file: RecordsFile = toml::from_str(&text)
+            .with_context(|| format!("parsing install records '{}'", path.display()))?;
+        Ok(file.records)
+    }
+
+    fn build_states(&self, records: Vec<InstallRecord>) -> Vec<PackageState> {
+        self.namespaces
+            .all()
+            .map(|pkg| {
+                let installed = records
+                    .iter()
+                    .filter(|r| r.package_id == pkg.id())
+                    .cloned()
+                    .collect();
+                PackageState {
+                    package: Arc::clone(pkg),
+                    available: pkg.releases().to_vec(),
+                    installed,
+                }
+            })
+            .collect()
     }
 }
