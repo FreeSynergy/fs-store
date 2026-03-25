@@ -1,6 +1,6 @@
 [package]
 name        = "fs-store-app"
-description = "FreeSynergy Store — Dioxus GUI application"
+description = "FreeSynergy Store — GUI + CLI entry point"
 version.workspace   = true
 edition.workspace   = true
 license.workspace   = true
@@ -8,7 +8,7 @@ authors.workspace   = true
 repository.workspace = true
 
 [[bin]]
-name = "fs-store-app"
+name = "fs-store"
 path = "src/main.rs"
 
 [dependencies]
