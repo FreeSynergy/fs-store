@@ -1,3 +1,4 @@
+#![deny(clippy::all, clippy::pedantic, warnings)]
 // fs-store CLI — command-line interface for the FreeSynergy Store.
 //
 // Source detection (highest priority first):
@@ -85,7 +86,7 @@ async fn main() -> Result<()> {
 
     match cli.command {
         Command::List { namespace, search } => {
-            cmd_list(&inv, namespace.as_deref(), search.as_deref())
+            cmd_list(&inv, namespace.as_deref(), search.as_deref());
         }
         Command::Info { id } => cmd_info(&inv, &id),
         Command::Installed => cmd_installed(&inv),
@@ -101,14 +102,11 @@ fn cmd_list(inv: &Inventory, namespace: Option<&str>, search: Option<&str>) {
         .states
         .iter()
         .filter(|s| {
-            if let Some(ns) = namespace {
+            namespace.is_none_or(|ns| {
                 inv.namespaces
                     .namespace_of(s.package.id())
-                    .map(|n| n == ns)
-                    .unwrap_or(false)
-            } else {
-                true
-            }
+                    .is_some_and(|n| n == ns)
+            })
         })
         .filter(|s| {
             if let Some(q) = search {
@@ -263,14 +261,11 @@ fn cmd_installed(inv: &Inventory) {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 fn make_reader(local: Option<PathBuf>) -> StoreReader {
-    match local {
-        Some(path) => {
-            eprintln!("Source: local ({})", path.display());
-            StoreReader::new(StoreSource::Local(path))
-        }
-        None => {
-            eprintln!("Source: official store");
-            StoreReader::official()
-        }
+    if let Some(path) = local {
+        eprintln!("Source: local ({})", path.display());
+        StoreReader::new(StoreSource::Local(path))
+    } else {
+        eprintln!("Source: official store");
+        StoreReader::official()
     }
 }

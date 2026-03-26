@@ -288,6 +288,20 @@ pub(crate) struct RawRequires {
 
 // ── [[variables]] ─────────────────────────────────────────────────────────────
 
+/// Boolean flags for a `[[variables]]` entry — direct TOML field mapping.
+#[allow(clippy::struct_excessive_bools)]
+#[derive(Debug, Deserialize, Default)]
+pub(crate) struct RawVariableFlags {
+    #[serde(default)]
+    pub required: bool,
+    #[serde(default)]
+    pub needs_restart: bool,
+    #[serde(default)]
+    pub secret: bool,
+    #[serde(default)]
+    pub auto_generate: bool,
+}
+
 /// One entry in the `[[variables]]` array — a user-configurable setting.
 #[derive(Debug, Deserialize)]
 pub(crate) struct RawVariable {
@@ -297,17 +311,11 @@ pub(crate) struct RawVariable {
     #[serde(default)]
     pub description: Option<String>,
     #[serde(default)]
-    pub required: bool,
-    #[serde(default)]
     pub field_type: Option<String>,
     #[serde(default)]
     pub default: Option<String>,
-    #[serde(default)]
-    pub needs_restart: bool,
-    #[serde(default)]
-    pub secret: bool,
-    #[serde(default)]
-    pub auto_generate: bool,
+    #[serde(flatten)]
+    pub flags: RawVariableFlags,
 }
 
 // ── [contract] ────────────────────────────────────────────────────────────────

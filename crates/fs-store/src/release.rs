@@ -17,16 +17,19 @@ pub struct ReleaseChannel(String);
 
 impl ReleaseChannel {
     /// The default production channel.
+    #[must_use]
     pub fn stable() -> Self {
         Self("stable".to_owned())
     }
 
     /// Pre-release testing channel.
+    #[must_use]
     pub fn beta() -> Self {
         Self("beta".to_owned())
     }
 
     /// Bleeding-edge, built from HEAD.
+    #[must_use]
     pub fn nightly() -> Self {
         Self("nightly".to_owned())
     }
@@ -37,11 +40,13 @@ impl ReleaseChannel {
     }
 
     /// The channel name as a string slice.
+    #[must_use]
     pub fn as_str(&self) -> &str {
         &self.0
     }
 
     /// `true` for the `"stable"` channel.
+    #[must_use]
     pub fn is_stable(&self) -> bool {
         self.0 == "stable"
     }
@@ -95,11 +100,13 @@ pub struct DistributionMap(pub HashMap<Platform, String>);
 
 impl DistributionMap {
     /// Returns the download URL for the given platform, if available.
+    #[must_use]
     pub fn url_for(&self, platform: &Platform) -> Option<&str> {
         self.0.get(platform).map(String::as_str)
     }
 
     /// `true` if no platforms are listed.
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
@@ -109,12 +116,12 @@ impl DistributionMap {
 
 /// One released version of a package.
 ///
-/// The `version` string follows SemVer (e.g. `"1.3.0"`, `"2.0.0-beta.1"`).
+/// The `version` string follows `SemVer` (e.g. `"1.3.0"`, `"2.0.0-beta.1"`).
 ///
 /// TODO(fs-types): replace `version: String` with `fs_types::SemVer`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PackageRelease {
-    /// SemVer version string, e.g. `"1.3.0"`.
+    /// `SemVer` version string, e.g. `"1.3.0"`.
     pub version: String,
 
     /// Branch this release was built from, e.g. `"main"`, `"release/1.3"`.
@@ -169,6 +176,7 @@ pub enum VersionPin {
 
 impl VersionPin {
     /// `true` when the pin allows automatic updates.
+    #[must_use]
     pub fn allows_auto_update(&self) -> bool {
         !matches!(self, Self::Exact { .. })
     }

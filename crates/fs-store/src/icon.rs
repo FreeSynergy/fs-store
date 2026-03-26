@@ -46,7 +46,7 @@ pub struct StoreIconSource {
 
 #[async_trait]
 impl IconSource for StoreIconSource {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "FreeSynergy Store"
     }
 

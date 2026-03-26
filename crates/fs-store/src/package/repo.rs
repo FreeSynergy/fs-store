@@ -27,7 +27,7 @@ pub struct RepoPackage {
     #[serde(default)]
     pub branch: String,
 
-    /// `true` if the repository is verified by the FreeSynergy project.
+    /// `true` if the repository is verified by the `FreeSynergy` project.
     #[serde(default)]
     pub verified: bool,
 }
@@ -48,7 +48,7 @@ pub trait RepoExt: Package {
     /// Branch being tracked.
     fn branch(&self) -> &str;
 
-    /// `true` if verified by the FreeSynergy project.
+    /// `true` if verified by the `FreeSynergy` project.
     fn is_verified(&self) -> bool;
 }
 

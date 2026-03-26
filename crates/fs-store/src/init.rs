@@ -20,7 +20,7 @@ pub struct InitFile {
 
 // ── BootableInstaller trait ───────────────────────────────────────────────────
 
-/// The bootable USB installer for FreeSynergy.
+/// The bootable USB installer for `FreeSynergy`.
 ///
 /// Not a `Package` — has no catalog entry in the normal namespace. It is
 /// fetched via `installer::init` Bus namespace and built locally.
@@ -38,5 +38,9 @@ pub trait BootableInstaller: Send + Sync {
     ///
     /// `target_path` may point to a USB device (e.g. `/dev/sdb`) or a file
     /// (e.g. `/tmp/freesynergy-init.img`).
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if building or writing the image fails.
     fn build_image(&self, target: &Path) -> anyhow::Result<()>;
 }

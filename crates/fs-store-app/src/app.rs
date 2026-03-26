@@ -97,7 +97,7 @@ pub fn App() -> Element {
 
 // ── CSS ───────────────────────────────────────────────────────────────────────
 
-const CSS: &str = r#"
+const CSS: &str = r"
 :root {
     --bg-base:      #0f1117;
     --bg-surface:   #1a1d27;
@@ -297,4 +297,4 @@ body {
     padding: 0;
     text-decoration: underline;
 }
-"#;
+";

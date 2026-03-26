@@ -73,6 +73,7 @@ pub enum FtlKind {
 
 impl FtlKind {
     /// The filename for this FTL kind.
+    #[must_use]
     pub fn filename(&self) -> &'static str {
         match self {
             Self::Description => "description.ftl",

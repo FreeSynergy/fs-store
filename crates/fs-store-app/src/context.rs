@@ -61,7 +61,7 @@ impl StoreState {
         let search = self.search.to_lowercase();
         let ns = self.namespace_filter;
         self.rows.iter().filter(move |r| {
-            let ns_ok = ns.map(|n| r.namespace == n).unwrap_or(true);
+            let ns_ok = ns.is_none_or(|n| r.namespace == n);
             let q_ok = search.is_empty()
                 || r.id.to_lowercase().contains(&search)
                 || r.name.to_lowercase().contains(&search)

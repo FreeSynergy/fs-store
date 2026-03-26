@@ -101,7 +101,7 @@ pub struct PackageData {
 
 // ── Package trait ─────────────────────────────────────────────────────────────
 
-/// The base interface for every package in the FreeSynergy Store.
+/// The base interface for every package in the `FreeSynergy` Store.
 ///
 /// All concrete package types implement this trait. Callers that do not need
 /// type-specific behaviour work exclusively through `dyn Package`, enabling

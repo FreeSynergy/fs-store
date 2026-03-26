@@ -25,9 +25,10 @@ pub enum StoreSource {
 }
 
 impl StoreSource {
-    /// The official FreeSynergy Store over HTTP.
+    /// The official `FreeSynergy` Store over HTTP.
     ///
     /// Override via the `FS_STORE_URL` environment variable.
+    #[must_use]
     pub fn official() -> Self {
         let url = std::env::var("FS_STORE_URL").unwrap_or_else(|_| {
             "https://raw.githubusercontent.com/FreeSynergy/Store/main".to_owned()
@@ -44,6 +45,7 @@ impl StoreSource {
     /// let s = StoreSource::Http("https://example.com/store".to_owned());
     /// assert_eq!(s.resolve("catalog.toml"), "https://example.com/store/catalog.toml");
     /// ```
+    #[must_use]
     pub fn resolve(&self, rel_path: &str) -> String {
         match self {
             Self::Local(root) => root.join(rel_path).to_string_lossy().into_owned(),

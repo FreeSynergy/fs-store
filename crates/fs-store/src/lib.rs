@@ -1,3 +1,4 @@
+#![deny(clippy::all, clippy::pedantic, warnings)]
 // fs-store — FreeSynergy Store library
 //
 // This crate is the core of the FreeSynergy Store. It provides:

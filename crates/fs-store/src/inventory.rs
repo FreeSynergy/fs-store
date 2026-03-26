@@ -74,11 +74,13 @@ impl NamespaceMap {
     }
 
     /// Find a package by id across all namespaces.
+    #[must_use]
     pub fn find_by_id(&self, id: &str) -> Option<&Arc<dyn Package>> {
         self.all().find(|p| p.id() == id)
     }
 
     /// Total number of packages across all namespaces.
+    #[must_use]
     pub fn total_count(&self) -> usize {
         self.all().count()
     }
@@ -86,6 +88,7 @@ impl NamespaceMap {
     /// Return the namespace name for a package id, e.g. `"containers"`.
     ///
     /// Returns `None` if the id is not found in any namespace.
+    #[must_use]
     pub fn namespace_of(&self, id: &str) -> Option<&'static str> {
         if self.apps.iter().any(|p| p.id() == id) {
             return Some("apps");
@@ -141,16 +144,19 @@ pub struct PackageState {
 
 impl PackageState {
     /// `true` when at least one version of this package is installed.
+    #[must_use]
     pub fn is_installed(&self) -> bool {
         !self.installed.is_empty()
     }
 
     /// The currently active install record, if any.
+    #[must_use]
     pub fn active(&self) -> Option<&InstallRecord> {
         self.installed.iter().find(|r| r.is_active)
     }
 
     /// `true` when a newer version is available than the active installed one.
+    #[must_use]
     pub fn has_update(&self) -> bool {
         let Some(active) = self.active() else {
             return false;
@@ -162,6 +168,7 @@ impl PackageState {
     }
 
     /// The newest available release, if any.
+    #[must_use]
     pub fn latest_available(&self) -> Option<&PackageRelease> {
         self.available.first()
     }
@@ -169,7 +176,7 @@ impl PackageState {
 
 // ── Inventory ─────────────────────────────────────────────────────────────────
 
-/// The central domain object of the FreeSynergy Store.
+/// The central domain object of the `FreeSynergy` Store.
 ///
 /// All consumers (Bus, GUI, CLI, API, Node) interact through the Inventory.
 /// It owns the namespace map, the install records, and the settings.
@@ -199,6 +206,7 @@ impl Inventory {
     // ── Constructors ──────────────────────────────────────────────────────────
 
     /// Create an empty inventory with the given settings.
+    #[must_use]
     pub fn new(settings: StoreSettings) -> Self {
         Self {
             namespaces: NamespaceMap::default(),
@@ -215,10 +223,14 @@ impl Inventory {
     /// After this call, `namespaces` contains all Store packages and `states`
     /// contains a [`PackageState`] for each package, with install records
     /// attached for any that are locally installed.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if loading the catalog or reading install records fails.
     pub async fn load(&mut self, reader: &StoreReader) -> Result<()> {
         self.namespaces = reader.load_all().await?;
         let records = self.read_records()?;
-        self.states = self.build_states(records);
+        self.states = self.build_states(&records);
         info!(
             "Inventory: {} packages, {} installed",
             self.states.len(),
@@ -230,6 +242,7 @@ impl Inventory {
     // ── Queries ───────────────────────────────────────────────────────────────
 
     /// Find the [`PackageState`] for a package by id.
+    #[must_use]
     pub fn package_state(&self, id: &str) -> Option<&PackageState> {
         self.states.iter().find(|s| s.package.id() == id)
     }
@@ -291,6 +304,10 @@ impl Inventory {
     ///
     /// Records are stored at `settings.storage.data_dir/records.toml`.
     /// The directory is created if it does not exist.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if creating the directory or writing the file fails.
     pub fn save_records(&self) -> Result<()> {
         let path = self.records_path();
         if let Some(parent) = path.parent() {
@@ -327,7 +344,7 @@ impl Inventory {
         Ok(file.records)
     }
 
-    fn build_states(&self, records: Vec<InstallRecord>) -> Vec<PackageState> {
+    fn build_states(&self, records: &[InstallRecord]) -> Vec<PackageState> {
         self.namespaces
             .all()
             .map(|pkg| {

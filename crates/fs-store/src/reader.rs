@@ -27,7 +27,7 @@ use crate::source::StoreSource;
 
 // ── StoreReader ───────────────────────────────────────────────────────────────
 
-/// Fetches raw data from a FreeSynergy Store source.
+/// Fetches raw data from a `FreeSynergy` Store source.
 ///
 /// All methods are async and return `anyhow::Result`. Callers (the Inventory)
 /// are responsible for caching.
@@ -40,6 +40,7 @@ impl StoreReader {
     // ── Constructors ──────────────────────────────────────────────────────────
 
     /// Create a reader for the given source.
+    #[must_use]
     pub fn new(source: StoreSource) -> Self {
         Self {
             source,
@@ -47,7 +48,7 @@ impl StoreReader {
         }
     }
 
-    /// Create a reader pointed at the official FreeSynergy Store.
+    /// Create a reader pointed at the official `FreeSynergy` Store.
     pub fn official() -> Self {
         let source = StoreSource::official();
         info!("StoreReader: official store");
@@ -60,6 +61,10 @@ impl StoreReader {
     ///
     /// Packages that fail to parse are skipped with a warning so one broken
     /// entry does not prevent the rest of the catalog from loading.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if fetching or parsing any namespace index fails.
     pub async fn load_all(&self) -> Result<NamespaceMap> {
         let apps = self.load_namespace("packages/apps").await?;
         let containers = self.load_namespace("packages/containers").await?;
@@ -99,6 +104,10 @@ impl StoreReader {
     /// each package's individual `catalog.toml` listed in `[[packages]]`.
     ///
     /// Packages that fail to parse are skipped with a warning.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if fetching or parsing the namespace index fails.
     pub async fn load_namespace(&self, ns_path: &str) -> Result<Vec<Arc<dyn Package>>> {
         let index_path = format!("{ns_path}/catalog.toml");
         let index: NamespaceIndex = self
@@ -130,6 +139,10 @@ impl StoreReader {
     }
 
     /// Load and convert one package `catalog.toml` into a domain object.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if fetching or parsing the catalog file fails.
     pub async fn load_package(&self, catalog_path: &str) -> Result<Arc<dyn Package>> {
         let entry: RawCatalogEntry = self
             .fetch_toml(catalog_path)
@@ -142,6 +155,10 @@ impl StoreReader {
     // ── TOML ──────────────────────────────────────────────────────────────────
 
     /// Fetch and parse a TOML file at a Store-root-relative path.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the file cannot be fetched or parsed as TOML.
     pub async fn fetch_toml<T>(&self, rel_path: &str) -> Result<T>
     where
         T: serde::de::DeserializeOwned,
@@ -162,6 +179,10 @@ impl StoreReader {
     /// * `kind` — which FTL file to fetch
     ///
     /// Falls back to `"en"` if the requested locale is not available.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the file cannot be fetched even with the `"en"` fallback.
     pub async fn fetch_ftl(
         &self,
         catalog_dir: &str,
@@ -201,6 +222,10 @@ impl StoreReader {
     ///
     /// Snippet files live at `packages/i18n/{locale}/store.toml` (or similar).
     /// The raw TOML text is returned inside [`I18nSnippets::content`].
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the snippet file cannot be fetched.
     pub async fn fetch_i18n_snippets(&self, locale: &str) -> Result<I18nSnippets> {
         let path = format!("packages/i18n/{locale}/store.toml");
         let content = self.fetch_text(&path).await?;
@@ -218,6 +243,10 @@ impl StoreReader {
     /// Use this for content files (compose templates, theme CSS, i18n snippets)
     /// that are not catalog TOML files. The path is relative to the Store root,
     /// e.g. `"packages/containers/forgejo/compose.yml"`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the file cannot be fetched.
     pub async fn fetch_raw(&self, rel_path: &str) -> Result<String> {
         self.fetch_text(rel_path).await
     }
@@ -228,6 +257,10 @@ impl StoreReader {
     ///
     /// `icon_path` is the Store-relative path from `PackageData::icon_path`,
     /// e.g. `"packages/containers/forgejo/icon.svg"`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the icon file cannot be fetched.
     pub async fn fetch_icon(&self, icon_path: &str) -> Result<Vec<u8>> {
         let text = self.fetch_text(icon_path).await?;
         Ok(text.into_bytes())
@@ -267,26 +300,14 @@ impl StoreReader {
 
 // ── Catalog entry → domain object ────────────────────────────────────────────
 
-/// Convert a raw catalog entry into the appropriate typed domain object.
-///
-/// `catalog_path` is the Store-root-relative path, e.g.
-/// `"packages/apps/kanidm/catalog.toml"`. It is used to derive the package
-/// directory for `icon_path` and `help.base_path`.
-fn catalog_entry_to_package(
-    entry: RawCatalogEntry,
-    catalog_path: &str,
-) -> Result<Arc<dyn Package>> {
-    let pkg_dir = catalog_path.trim_end_matches("/catalog.toml");
-
+fn build_package_data(entry: &RawCatalogEntry, pkg_dir: &str) -> PackageData {
     let icon_path = entry
         .package
         .icon
         .as_ref()
         .map(|icon| format!("{pkg_dir}/{icon}"));
-
     let release = PackageRelease::catalog_only(&entry.package.version);
-
-    let data = PackageData {
+    PackageData {
         id: entry.package.id.clone(),
         name: entry.package.name.clone(),
         summary: entry.package.summary.clone(),
@@ -298,7 +319,20 @@ fn catalog_entry_to_package(
             base_path: pkg_dir.to_owned(),
             available_locales: vec!["en".to_owned()],
         },
-    };
+    }
+}
+
+/// Convert a raw catalog entry into the appropriate typed domain object.
+///
+/// `catalog_path` is the Store-root-relative path, e.g.
+/// `"packages/apps/kanidm/catalog.toml"`. It is used to derive the package
+/// directory for `icon_path` and `help.base_path`.
+fn catalog_entry_to_package(
+    entry: RawCatalogEntry,
+    catalog_path: &str,
+) -> Result<Arc<dyn Package>> {
+    let pkg_dir = catalog_path.trim_end_matches("/catalog.toml");
+    let data = build_package_data(&entry, pkg_dir);
 
     let pkg: Arc<dyn Package> = match entry.package.package_type.as_str() {
         "app" => Arc::new(AppPackage {
@@ -316,33 +350,30 @@ fn catalog_entry_to_package(
         "widget" => Arc::new(WidgetPackage { data }),
 
         "bundle" => {
-            let components = entry
-                .bundle
-                .map(|b| {
-                    b.components
-                        .into_iter()
-                        .map(|c| BundleComponent {
-                            id: c.id,
-                            version: None,
-                            required: true,
-                        })
-                        .collect()
-                })
-                .unwrap_or_default();
+            let components = entry.bundle.map_or_else(Vec::new, |b| {
+                b.components
+                    .into_iter()
+                    .map(|c| BundleComponent {
+                        id: c.id,
+                        version: None,
+                        required: true,
+                    })
+                    .collect()
+            });
             Arc::new(BundlePackage { data, components })
         }
 
         "theme" => Arc::new(ThemePackage { data }),
 
         "language" => {
-            let (locale, rtl) = entry
-                .language
-                .map(|l| {
+            let (locale, rtl) = entry.language.map_or_else(
+                || (entry.package.id.clone(), false),
+                |l| {
                     let loc = l.locale.unwrap_or_else(|| entry.package.id.clone());
-                    let rtl = l.direction.as_deref().map(|d| d == "rtl").unwrap_or(false);
+                    let rtl = l.direction.as_deref().is_some_and(|d| d == "rtl");
                     (loc, rtl)
-                })
-                .unwrap_or_else(|| (entry.package.id.clone(), false));
+                },
+            );
             Arc::new(LanguagePackage { data, locale, rtl })
         }
 
@@ -364,7 +395,7 @@ fn catalog_entry_to_package(
                 .as_ref()
                 .and_then(|r| r.branch.clone())
                 .unwrap_or_else(|| "main".to_owned()),
-            verified: entry.repo.map(|r| r.verified).unwrap_or(false),
+            verified: entry.repo.is_some_and(|r| r.verified),
         }),
 
         "external" => Arc::new(ExternalPackage {

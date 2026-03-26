@@ -36,7 +36,7 @@ impl Default for StorageSettings {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SourcesSettings {
     /// Ordered list of store sources. First match wins.
-    /// The official FreeSynergy Store is always the first entry.
+    /// The official `FreeSynergy` Store is always the first entry.
     pub sources: Vec<String>,
 }
 
@@ -171,7 +171,7 @@ pub trait Settings {
 
 // ── StoreSettings ─────────────────────────────────────────────────────────────
 
-/// Settings for the FreeSynergy Store.
+/// Settings for the `FreeSynergy` Store.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct StoreSettings {
     pub storage: StorageSettings,
@@ -184,6 +184,7 @@ pub struct StoreSettings {
 
 impl StoreSettings {
     /// Build a `StoreSource` list from the configured source URLs.
+    #[must_use]
     pub fn store_sources(&self) -> Vec<StoreSource> {
         self.sources
             .sources
@@ -217,19 +218,22 @@ impl Settings for StoreSettings {
 // ── Platform helpers ──────────────────────────────────────────────────────────
 
 fn dirs_base() -> std::path::PathBuf {
-    std::env::var("XDG_DATA_HOME")
-        .map(std::path::PathBuf::from)
-        .unwrap_or_else(|_| dirs_home().join(".local/share/freesynergy"))
+    std::env::var("XDG_DATA_HOME").map_or_else(
+        |_| dirs_home().join(".local/share/freesynergy"),
+        std::path::PathBuf::from,
+    )
 }
 
 fn cache_base() -> std::path::PathBuf {
-    std::env::var("XDG_CACHE_HOME")
-        .map(std::path::PathBuf::from)
-        .unwrap_or_else(|_| dirs_home().join(".cache/freesynergy"))
+    std::env::var("XDG_CACHE_HOME").map_or_else(
+        |_| dirs_home().join(".cache/freesynergy"),
+        std::path::PathBuf::from,
+    )
 }
 
 fn dirs_home() -> std::path::PathBuf {
-    std::env::var("HOME")
-        .map(std::path::PathBuf::from)
-        .unwrap_or_else(|_| std::path::PathBuf::from("/tmp"))
+    std::env::var("HOME").map_or_else(
+        |_| std::path::PathBuf::from("/tmp"),
+        std::path::PathBuf::from,
+    )
 }

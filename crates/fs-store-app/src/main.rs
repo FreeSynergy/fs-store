@@ -1,4 +1,5 @@
 // fs-store — FreeSynergy Store entry point.
+#![deny(clippy::all, clippy::pedantic, warnings)]
 // Dioxus components are PascalCase by convention — allow non_snake_case crate-wide.
 #![allow(non_snake_case)]
 //
