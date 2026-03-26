@@ -28,8 +28,12 @@ async fn load_all_returns_expected_counts() {
     let reader = StoreReader::new(StoreSource::Local(store_path));
     let map = reader.load_all().await.expect("load_all failed");
 
-    // Apps: node, kanidm, stalwart, tuwunel, zentinel, zentinel-control-plane, mistral, browser
-    assert_eq!(map.apps.len(), 8, "expected 8 app packages");
+    // Apps: node, kanidm, stalwart, tuwunel, zentinel, zentinel-control-plane, mistral, browser,
+    //       store, desktop, lenses, tasks, bots, ai, container-app, inventory, session, registry
+    assert_eq!(map.apps.len(), 18, "expected 18 app packages");
+
+    // Managers: language, theme, icons, cursor, container, bots, ai
+    assert_eq!(map.managers.len(), 7, "expected 7 manager packages");
 
     // Containers: forgejo, postgres, outline, cryptpad, dragonfly, vikunja, pretix, umap, openobserver, otel-collector
     assert_eq!(map.containers.len(), 10, "expected 10 container packages");

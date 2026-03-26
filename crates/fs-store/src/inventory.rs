@@ -46,6 +46,7 @@ struct RecordsFile {
 #[derive(Default)]
 pub struct NamespaceMap {
     pub apps: Vec<Arc<dyn Package>>,
+    pub managers: Vec<Arc<dyn Package>>,
     pub containers: Vec<Arc<dyn Package>>,
     pub themes: Vec<Arc<dyn Package>>,
     pub widgets: Vec<Arc<dyn Package>>,
@@ -62,6 +63,7 @@ impl NamespaceMap {
     pub fn all(&self) -> impl Iterator<Item = &Arc<dyn Package>> {
         self.apps
             .iter()
+            .chain(&self.managers)
             .chain(&self.containers)
             .chain(&self.themes)
             .chain(&self.widgets)
@@ -92,6 +94,9 @@ impl NamespaceMap {
     pub fn namespace_of(&self, id: &str) -> Option<&'static str> {
         if self.apps.iter().any(|p| p.id() == id) {
             return Some("apps");
+        }
+        if self.managers.iter().any(|p| p.id() == id) {
+            return Some("managers");
         }
         if self.containers.iter().any(|p| p.id() == id) {
             return Some("containers");

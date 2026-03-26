@@ -67,6 +67,7 @@ impl StoreReader {
     /// Returns an error if fetching or parsing any namespace index fails.
     pub async fn load_all(&self) -> Result<NamespaceMap> {
         let apps = self.load_namespace("packages/apps").await?;
+        let managers = self.load_namespace("packages/apps/managers").await?;
         let containers = self.load_namespace("packages/containers").await?;
         let themes = self.load_namespace("packages/themes").await?;
         let widgets = self.load_namespace("packages/widgets").await?;
@@ -79,6 +80,7 @@ impl StoreReader {
 
         let map = NamespaceMap {
             apps,
+            managers,
             containers,
             themes,
             widgets,

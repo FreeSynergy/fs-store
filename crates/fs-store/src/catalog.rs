@@ -107,6 +107,18 @@ pub(crate) struct RawCatalogEntry {
 
     #[serde(default)]
     pub contract: Option<RawContract>,
+
+    /// `[[binaries]]` — individual named binaries shipped in the package.
+    #[serde(default)]
+    pub binaries: Vec<RawBinary>,
+
+    /// `[distribution]` — per-platform download URL templates.
+    #[serde(default)]
+    pub distribution: HashMap<String, String>,
+
+    /// `[interfaces]` — which interfaces the package exposes.
+    #[serde(default)]
+    pub interfaces: Option<RawInterfaces>,
 }
 
 // ── [package] ─────────────────────────────────────────────────────────────────
@@ -344,4 +356,34 @@ pub(crate) struct RawRoute {
     pub proto: Option<String>,
     #[serde(default)]
     pub port: Option<u16>,
+}
+
+// ── [[binaries]] ──────────────────────────────────────────────────────────────
+
+/// One entry in `[[binaries]]` — a named executable shipped with the package.
+#[derive(Debug, Deserialize)]
+pub(crate) struct RawBinary {
+    /// Human-readable name, e.g. `"kanidmd"`.
+    pub name: String,
+    /// File name of the binary on disk, e.g. `"kanidmd"`.
+    pub binary: String,
+    /// Optional short description of what this binary does.
+    #[serde(default)]
+    pub description: Option<String>,
+}
+
+// ── [interfaces] ──────────────────────────────────────────────────────────────
+
+/// `[interfaces]` — which user-facing interfaces the package exposes.
+#[allow(clippy::struct_excessive_bools)]
+#[derive(Debug, Deserialize, Default)]
+pub(crate) struct RawInterfaces {
+    #[serde(default)]
+    pub cli: bool,
+    #[serde(default)]
+    pub api: bool,
+    #[serde(default)]
+    pub wgui: bool,
+    #[serde(default)]
+    pub tui: bool,
 }
