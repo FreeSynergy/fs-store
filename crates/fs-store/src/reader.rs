@@ -22,7 +22,7 @@ use crate::package::{
     AppPackage, BundlePackage, ContainerPackage, ExternalPackage, IconSetPackage, LanguagePackage,
     Package, PackageData, PackageHelp, RepoPackage, TaskPackage, ThemePackage, WidgetPackage,
 };
-use crate::release::PackageRelease;
+use crate::release::{DistributionMap, Platform, ReleaseChannel, PackageRelease};
 use crate::source::StoreSource;
 
 // ── StoreReader ───────────────────────────────────────────────────────────────
@@ -302,13 +302,42 @@ impl StoreReader {
 
 // ── Catalog entry → domain object ────────────────────────────────────────────
 
+fn platform_from_str(s: &str) -> Option<Platform> {
+    match s {
+        "linux-x86_64" => Some(Platform::LinuxX86_64),
+        "linux-aarch64" => Some(Platform::LinuxAarch64),
+        "macos-x86_64" => Some(Platform::MacosX86_64),
+        "macos-aarch64" => Some(Platform::MacosAarch64),
+        "windows-x86_64" => Some(Platform::WindowsX86_64),
+        _ => None,
+    }
+}
+
 fn build_package_data(entry: &RawCatalogEntry, pkg_dir: &str) -> PackageData {
     let icon_path = entry
         .package
         .icon
         .as_ref()
         .map(|icon| format!("{pkg_dir}/{icon}"));
-    let release = PackageRelease::catalog_only(&entry.package.version);
+
+    let distribution = DistributionMap(
+        entry
+            .distribution
+            .iter()
+            .filter_map(|(k, v)| platform_from_str(k).map(|p| (p, v.clone())))
+            .collect(),
+    );
+    let release = if distribution.is_empty() {
+        PackageRelease::catalog_only(&entry.package.version)
+    } else {
+        PackageRelease {
+            version: entry.package.version.clone(),
+            branch: String::new(),
+            channel: ReleaseChannel::default(),
+            distribution,
+        }
+    };
+
     PackageData {
         id: entry.package.id.clone(),
         name: entry.package.name.clone(),
