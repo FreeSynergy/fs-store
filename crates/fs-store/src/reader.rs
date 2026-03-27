@@ -22,7 +22,7 @@ use crate::package::{
     AppPackage, BundlePackage, ContainerPackage, ExternalPackage, IconSetPackage, LanguagePackage,
     Package, PackageData, PackageHelp, RepoPackage, TaskPackage, ThemePackage, WidgetPackage,
 };
-use crate::release::{DistributionMap, Platform, ReleaseChannel, PackageRelease};
+use crate::release::{DistributionMap, PackageRelease, Platform, ReleaseChannel};
 use crate::source::StoreSource;
 
 // ── StoreReader ───────────────────────────────────────────────────────────────
