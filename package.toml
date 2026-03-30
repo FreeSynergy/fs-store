@@ -1,0 +1,16 @@
+[package]
+name        = "fs-store"
+version     = "0.1.0"
+type        = "program"
+description = "FreeSynergy Store — package catalog, search, installation (GUI + CLI)"
+license     = "MIT"
+authors     = ["FreeSynergy.Net"]
+repository  = "https://github.com/FreeSynergy/fs-store"
+
+[capabilities]
+provides = ["store.catalog", "store.search", "store.install", "store.update"]
+requires = ["packages.install"]
+
+[metadata]
+category = "program"
+tags     = ["store", "packages", "catalog", "install", "gui", "cli"]
