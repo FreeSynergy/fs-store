@@ -44,8 +44,8 @@ async fn load_all_returns_expected_counts() {
     // Themes: midnight-blue, nordic-dark, cloud-white
     assert_eq!(map.themes.len(), 3, "expected 3 theme packages");
 
-    // Bundles: zentinel
-    assert_eq!(map.bundles.len(), 1, "expected 1 bundle package");
+    // Bundles: zentinel, server, workstation, minimal
+    assert_eq!(map.bundles.len(), 4, "expected 4 bundle packages");
 
     // Icons: freesynergy-default
     assert_eq!(map.icons.len(), 1, "expected 1 icon set");
