@@ -13,6 +13,8 @@ path = "src/main.rs"
 
 [dependencies]
 fs-store       = { workspace = true }
+fs-render      = { workspace = true }
+fs-i18n        = { workspace = true }
 tokio          = { workspace = true }
 tracing        = { workspace = true }
 anyhow         = { workspace = true }

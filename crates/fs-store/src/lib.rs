@@ -25,6 +25,7 @@ pub mod i18n;
 pub mod icon;
 pub mod init;
 pub mod install_record;
+pub mod installer;
 pub mod inventory;
 pub mod package;
 pub mod reader;

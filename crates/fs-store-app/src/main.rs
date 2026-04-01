@@ -14,6 +14,7 @@ mod app;
 mod context;
 mod view;
 mod views;
+mod wizard;
 
 fn has_display() -> bool {
     std::env::var("WAYLAND_DISPLAY").is_ok() || std::env::var("DISPLAY").is_ok()

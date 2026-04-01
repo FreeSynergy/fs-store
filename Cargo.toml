@@ -11,7 +11,9 @@ repository = "https://github.com/FreeSynergy/fs-store"
 
 [workspace.dependencies]
 # Workspace crates
-fs-store = { path = "crates/fs-store" }
+fs-store  = { path = "crates/fs-store" }
+fs-render = { path = "../fs-render" }
+fs-i18n   = { path = "../fs-i18n" }
 
 # Serde
 serde      = { version = "1", features = ["derive"] }
