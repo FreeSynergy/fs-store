@@ -5,6 +5,14 @@
 //
 // Registry operations (PackageRegistry::install / is_installed) are left to
 // the caller — this crate has no dependency on fs-db-desktop.
+//
+// Sub-modules:
+//   pipeline — Pipeline Pattern: InstallStep trait, Pipeline, InstallTarget,
+//              InstallContext, PipelineEvent, and all concrete step impls.
+
+pub mod pipeline;
+
+pub use pipeline::{InstallContext, InstallTarget, Pipeline, PipelineEvent, StepOutcome};
 
 use crate::StoreReader;
 

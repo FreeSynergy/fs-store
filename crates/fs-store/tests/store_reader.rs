@@ -35,8 +35,10 @@ async fn load_all_returns_expected_counts() {
     // Managers: language, theme, icons, cursor, container, bots, ai
     assert_eq!(map.managers.len(), 7, "expected 7 manager packages");
 
-    // Containers: forgejo, postgres, outline, cryptpad, dragonfly, vikunja, pretix, umap, openobserver, otel-collector
-    assert_eq!(map.containers.len(), 10, "expected 10 container packages");
+    // Containers: forgejo, postgres, outline, cryptpad, dragonfly, vikunja, pretix, umap,
+    //             openobserver, otel-collector, kanidm, stalwart, tuwunel, mistral,
+    //             zentinel, zentinel-plane, wikijs, bulwark
+    assert_eq!(map.containers.len(), 18, "expected 18 container packages");
 
     // Widgets: clock, system-info, messages, my-tasks, quick-notes, weather
     assert_eq!(map.widgets.len(), 6, "expected 6 widget packages");
@@ -44,8 +46,8 @@ async fn load_all_returns_expected_counts() {
     // Themes: midnight-blue, nordic-dark, cloud-white
     assert_eq!(map.themes.len(), 3, "expected 3 theme packages");
 
-    // Bundles: zentinel, server, workstation, minimal
-    assert_eq!(map.bundles.len(), 4, "expected 4 bundle packages");
+    // Bundles: minimal, server, workstation, zentinel, developer
+    assert_eq!(map.bundles.len(), 5, "expected 5 bundle packages");
 
     // Icons: freesynergy-default
     assert_eq!(map.icons.len(), 1, "expected 1 icon set");

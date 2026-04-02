@@ -40,6 +40,8 @@ pub use i18n::{FtlContent, FtlKind, I18nSnippets};
 pub use icon::IconSource;
 pub use init::BootableInstaller;
 pub use install_record::InstallRecord;
+pub use installer::pipeline::{InstallContext, InstallTarget, Pipeline, PipelineEvent};
+pub use installer::{InstallKind, InstallRequest};
 pub use inventory::{Inventory, NamespaceMap, PackageState};
 pub use package::{Package, PackageData, PackageHelp, RepoPackage};
 pub use reader::StoreReader;
