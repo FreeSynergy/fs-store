@@ -1,8 +1,13 @@
 // wizard/mod.rs — Multi-step install wizard (fs-store-app).
-#![allow(dead_code)] // infrastructure — will be wired up in H9b–H9d
+#![allow(dead_code)] // infrastructure — will be wired up when Dioxus is replaced (G2)
                      //
-                     // Step files:
-                     //   done.rs  — InstallResult + FsWidget output  (implemented)
-                     //   select.rs, confirm.rs, progress.rs          (planned — G2 / H9b–H9d)
+                     // Steps:
+                     //   select.rs   — package selection list
+                     //   confirm.rs  — details + env-var input
+                     //   progress.rs — live install progress
+                     //   done.rs     — success / failure result
 
+pub mod confirm;
 pub mod done;
+pub mod progress;
+pub mod select;
