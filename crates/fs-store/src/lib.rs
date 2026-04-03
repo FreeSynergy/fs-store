@@ -43,7 +43,7 @@ pub use install_record::InstallRecord;
 pub use installer::pipeline::{InstallContext, InstallTarget, Pipeline, PipelineEvent};
 pub use installer::{InstallKind, InstallRequest};
 pub use inventory::{Inventory, NamespaceMap, PackageState};
-pub use package::{Package, PackageData, PackageHelp, RepoPackage};
+pub use package::{ApiEndpoint, Package, PackageData, PackageHelp, RepoPackage, StoragePaths};
 pub use reader::StoreReader;
 pub use release::{DistributionMap, PackageRelease, Platform, ReleaseChannel, VersionPin};
 pub use settings::{Settings, StoreSettings};

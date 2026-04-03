@@ -19,8 +19,9 @@ use crate::i18n::{FtlContent, FtlKind, I18nSnippets};
 use crate::inventory::NamespaceMap;
 use crate::package::bundle::BundleComponent;
 use crate::package::{
-    AppPackage, BundlePackage, ContainerPackage, ExternalPackage, IconSetPackage, LanguagePackage,
-    Package, PackageData, PackageHelp, RepoPackage, TaskPackage, ThemePackage, WidgetPackage,
+    ApiEndpoint, AppPackage, BundlePackage, ContainerPackage, ExternalPackage, IconSetPackage,
+    LanguagePackage, Package, PackageData, PackageHelp, RepoPackage, StoragePaths, TaskPackage,
+    ThemePackage, WidgetPackage,
 };
 use crate::release::{DistributionMap, PackageRelease, Platform, ReleaseChannel};
 use crate::source::StoreSource;
@@ -376,6 +377,28 @@ fn catalog_entry_to_package(
             ports: vec![],
             variables: vec![],
             features: vec![],
+            storage: entry
+                .storage
+                .map_or_else(StoragePaths::default, |s| StoragePaths {
+                    user: s.user,
+                    global: s.global,
+                    config: s.config,
+                    cache: s.cache,
+                }),
+            api_endpoints: entry
+                .api
+                .map(|a| {
+                    a.rest
+                        .into_iter()
+                        .map(|e| ApiEndpoint {
+                            base: e.base,
+                            port: e.port,
+                            proto: e.proto.unwrap_or_else(|| "http".to_owned()),
+                            description: e.description.unwrap_or_default(),
+                        })
+                        .collect()
+                })
+                .unwrap_or_default(),
         }),
 
         "widget" => Arc::new(WidgetPackage { data }),

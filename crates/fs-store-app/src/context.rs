@@ -10,7 +10,7 @@
 //   a flat, cloneable list of PackageRow objects derived from the Inventory.
 
 use dioxus::prelude::*;
-use fs_store::{Inventory, StoreReader, StoreSettings, StoreSource};
+use fs_store::{ApiEndpoint, Inventory, StoragePaths, StoreReader, StoreSettings, StoreSource};
 
 // ── PackageRow ────────────────────────────────────────────────────────────────
 
@@ -30,6 +30,10 @@ pub struct PackageRow {
     pub is_installed: bool,
     pub installed_version: Option<String>,
     pub has_update: bool,
+    /// Filesystem paths declared by this package (`[storage]`).
+    pub storage: StoragePaths,
+    /// REST API endpoints declared by this package (`[[api.rest]]`).
+    pub api_endpoints: Vec<ApiEndpoint>,
 }
 
 // ── StoreState ────────────────────────────────────────────────────────────────
@@ -142,6 +146,8 @@ fn build_rows(inv: &Inventory) -> Vec<PackageRow> {
                 is_installed: s.is_installed(),
                 installed_version: s.active().map(|r| r.version.clone()),
                 has_update: s.has_update(),
+                storage: s.package.storage().cloned().unwrap_or_default(),
+                api_endpoints: s.package.api_endpoints().to_vec(),
             }
         })
         .collect()

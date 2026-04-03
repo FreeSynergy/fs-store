@@ -4,6 +4,7 @@
 // Components call pkg.list_item() / pkg.detail_panel() — zero logic in RSX.
 
 use dioxus::prelude::*;
+use fs_store::{ApiEndpoint, StoragePaths};
 
 use crate::context::{PackageRow, StoreSignal};
 
@@ -60,6 +61,8 @@ impl PackageView for PackageRow {
         let is_installed = self.is_installed;
         let installed_version = self.installed_version.clone();
         let has_update = self.has_update;
+        let storage = self.storage.clone();
+        let api_endpoints = self.api_endpoints.clone();
 
         rsx! {
             div { class: "pkg-detail",
@@ -127,6 +130,74 @@ impl PackageView for PackageRow {
                             disabled: true,
                             "Install (coming soon)"
                         }
+                    }
+                }
+
+                // Storage tab (only when paths are declared)
+                if !storage.is_empty() {
+                    {storage_tab(&storage)}
+                }
+
+                // API tab (only when endpoints are declared)
+                if !api_endpoints.is_empty() {
+                    {api_tab(&api_endpoints)}
+                }
+            }
+        }
+    }
+}
+
+// ── Sub-views ─────────────────────────────────────────────────────────────────
+
+fn storage_tab(storage: &StoragePaths) -> Element {
+    rsx! {
+        div { class: "pkg-detail__tab pkg-detail__tab--storage",
+            h3 { class: "pkg-detail__tab-title", "Storage" }
+            table { class: "pkg-detail__storage-table",
+                if let Some(ref path) = storage.user {
+                    tr {
+                        th { "User" }
+                        td { class: "pkg-detail__path", "{path}" }
+                    }
+                }
+                if let Some(ref path) = storage.global {
+                    tr {
+                        th { "Global" }
+                        td { class: "pkg-detail__path", "{path}" }
+                    }
+                }
+                if let Some(ref path) = storage.config {
+                    tr {
+                        th { "Config" }
+                        td { class: "pkg-detail__path", "{path}" }
+                    }
+                }
+                if let Some(ref path) = storage.cache {
+                    tr {
+                        th { "Cache" }
+                        td { class: "pkg-detail__path", "{path}" }
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn api_tab(endpoints: &[ApiEndpoint]) -> Element {
+    rsx! {
+        div { class: "pkg-detail__tab pkg-detail__tab--api",
+            h3 { class: "pkg-detail__tab-title", "API" }
+            for ep in endpoints {
+                div { class: "pkg-detail__api-endpoint",
+                    div { class: "pkg-detail__api-base",
+                        span { class: "pkg-detail__api-proto", "{ep.proto}://" }
+                        span { class: "pkg-detail__api-path", "{ep.base}" }
+                        if let Some(port) = ep.port {
+                            span { class: "pkg-detail__api-port", ":{port}" }
+                        }
+                    }
+                    if !ep.description.is_empty() {
+                        p { class: "pkg-detail__api-desc", "{ep.description}" }
                     }
                 }
             }

@@ -9,5 +9,6 @@
 
 pub mod confirm;
 pub mod done;
+pub mod engine_select;
 pub mod progress;
 pub mod select;

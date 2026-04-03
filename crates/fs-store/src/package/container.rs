@@ -5,6 +5,53 @@ use serde::{Deserialize, Serialize};
 use crate::category::{ContainerCategory, PackageCategory};
 use crate::package::mod_prelude::*;
 
+// ── Storage + API types ───────────────────────────────────────────────────────
+
+/// Filesystem paths reserved by a container package.
+///
+/// Mirrors the `[storage]` section of the package `catalog.toml`.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+pub struct StoragePaths {
+    /// Per-user private data directory, e.g. `"~/.local/share/freesynergy/{pkg}"`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub user: Option<String>,
+    /// Global/system-wide data directory, e.g. `"/var/lib/freesynergy/{pkg}"`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub global: Option<String>,
+    /// Configuration directory, e.g. `"/etc/freesynergy/{pkg}"`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub config: Option<String>,
+    /// Cache directory, e.g. `"/var/cache/freesynergy/{pkg}"`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cache: Option<String>,
+}
+
+impl StoragePaths {
+    /// `true` when at least one path is declared.
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.user.is_none()
+            && self.global.is_none()
+            && self.config.is_none()
+            && self.cache.is_none()
+    }
+}
+
+/// A REST API endpoint exposed by a container package.
+///
+/// Mirrors one entry of `[[api.rest]]` in the package `catalog.toml`.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ApiEndpoint {
+    /// URL path prefix, e.g. `"/api/v1"`.
+    pub base: String,
+    /// TCP port (defaults to 80 / 443 if absent).
+    pub port: Option<u16>,
+    /// Protocol: `"http"` or `"https"`.
+    pub proto: String,
+    /// Human-readable description of this endpoint.
+    pub description: String,
+}
+
 // ── Domain types ──────────────────────────────────────────────────────────────
 
 /// An exposed service port.
@@ -62,7 +109,8 @@ pub struct Feature {
 
 /// A server-side container service installable via Podman/Quadlet.
 ///
-/// Extends [`Package`] with ports, deployment variables, and feature toggles.
+/// Extends [`Package`] with ports, deployment variables, feature toggles,
+/// storage paths, and API endpoint metadata.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ContainerPackage {
     #[serde(flatten)]
@@ -79,6 +127,14 @@ pub struct ContainerPackage {
     /// Optional feature flags the user can enable or disable.
     #[serde(default)]
     pub features: Vec<Feature>,
+
+    /// Filesystem paths reserved by this package (from `[storage]`).
+    #[serde(default)]
+    pub storage: StoragePaths,
+
+    /// REST API endpoints exposed by this package (from `[[api.rest]]`).
+    #[serde(default)]
+    pub api_endpoints: Vec<ApiEndpoint>,
 }
 
 impl Package for ContainerPackage {
@@ -86,6 +142,16 @@ impl Package for ContainerPackage {
     fn category(&self) -> &'static dyn PackageCategory {
         static CAT: ContainerCategory = ContainerCategory;
         &CAT
+    }
+    fn storage(&self) -> Option<&StoragePaths> {
+        if self.storage.is_empty() {
+            None
+        } else {
+            Some(&self.storage)
+        }
+    }
+    fn api_endpoints(&self) -> &[ApiEndpoint] {
+        &self.api_endpoints
     }
 }
 
@@ -99,6 +165,12 @@ pub trait ContainerExt: Package {
 
     /// Optional feature flags.
     fn features(&self) -> &[Feature];
+
+    /// Filesystem paths reserved by this package.
+    fn container_storage(&self) -> &StoragePaths;
+
+    /// REST API endpoints exposed by this package.
+    fn container_api_endpoints(&self) -> &[ApiEndpoint];
 
     /// `true` when the user must provide at least one required variable.
     fn requires_configuration(&self) -> bool {
@@ -115,5 +187,11 @@ impl ContainerExt for ContainerPackage {
     }
     fn features(&self) -> &[Feature] {
         &self.features
+    }
+    fn container_storage(&self) -> &StoragePaths {
+        &self.storage
+    }
+    fn container_api_endpoints(&self) -> &[ApiEndpoint] {
+        &self.api_endpoints
     }
 }

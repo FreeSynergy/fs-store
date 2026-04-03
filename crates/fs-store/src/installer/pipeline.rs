@@ -121,6 +121,13 @@ pub struct InstallContext {
 
     /// Progress channel — send events so the UI can display them.
     pub progress: Option<mpsc::UnboundedSender<PipelineEvent>>,
+
+    /// Component install requests for bundle packages.
+    ///
+    /// Populated by the app layer before running the pipeline for a bundle.
+    /// Each entry is a fully resolved `InstallRequest` for one bundle component.
+    /// `BundleInstallStep` iterates these and runs a sub-pipeline for each.
+    pub bundle_components: Vec<InstallRequest>,
 }
 
 impl InstallContext {
@@ -137,6 +144,7 @@ impl InstallContext {
             inventory_url: None,
             bus_url: None,
             progress: None,
+            bundle_components: Vec::new(),
         }
     }
 
@@ -186,6 +194,11 @@ impl Pipeline {
             Box::new(ValidateStep),
             Box::new(InstallFileStep),
         ];
+
+        // Bundles: iterate and install each component.
+        if matches!(req.kind, InstallKind::Bundle) {
+            steps.push(Box::new(BundleInstallStep));
+        }
 
         // Auto-install adapter for program/container packages.
         if matches!(req.kind, InstallKind::Container | InstallKind::App) {
@@ -331,6 +344,78 @@ impl InstallStep for InstallFileStep {
         };
 
         ctx.artifact_path = path;
+        Ok(StepOutcome::Continue)
+    }
+}
+
+// ── BundleInstallStep ─────────────────────────────────────────────────────────
+
+/// Install each component of a bundle in sequence.
+///
+/// The app layer populates `ctx.bundle_components` before running the pipeline.
+/// This step runs a sub-pipeline for each component and emits per-component
+/// progress events.  A failed component is logged but does not abort the
+/// entire bundle install — the remaining components are still attempted.
+struct BundleInstallStep;
+
+#[async_trait]
+impl InstallStep for BundleInstallStep {
+    fn name(&self) -> &'static str {
+        "bundle-install"
+    }
+
+    async fn execute(&self, ctx: &mut InstallContext) -> Result<StepOutcome, String> {
+        if ctx.bundle_components.is_empty() {
+            return Ok(StepOutcome::Skip {
+                reason: "bundle has no components",
+            });
+        }
+
+        let components: Vec<InstallRequest> = ctx.bundle_components.drain(..).collect();
+        let total = components.len();
+
+        info!(
+            bundle = %ctx.request.id,
+            components = total,
+            "BundleInstallStep: installing bundle components"
+        );
+
+        for (i, component) in components.into_iter().enumerate() {
+            let step_name = format!("bundle-component[{}/{}]:{}", i + 1, total, component.id);
+
+            ctx.emit(PipelineEvent::StepStarted {
+                step: step_name.clone(),
+            });
+
+            let mut sub_ctx = InstallContext {
+                request: component.clone(),
+                target: ctx.target.clone(),
+                fs_dir: ctx.fs_dir.clone(),
+                artifact_path: None,
+                env_vars: String::new(),
+                registry_url: ctx.registry_url.clone(),
+                inventory_url: ctx.inventory_url.clone(),
+                bus_url: ctx.bus_url.clone(),
+                progress: ctx.progress.clone(),
+                bundle_components: Vec::new(),
+            };
+
+            let sub_pipeline = Pipeline::for_request(&component, &ctx.target);
+            match sub_pipeline.run(&mut sub_ctx).await {
+                Ok(()) => {
+                    info!(id = %component.id, "bundle component installed");
+                    ctx.emit(PipelineEvent::StepCompleted { step: step_name });
+                }
+                Err(e) => {
+                    warn!(id = %component.id, error = %e, "bundle component failed (continuing)");
+                    ctx.emit(PipelineEvent::StepSkipped {
+                        step: step_name,
+                        reason: e,
+                    });
+                }
+            }
+        }
+
         Ok(StepOutcome::Continue)
     }
 }

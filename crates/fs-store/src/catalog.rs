@@ -119,6 +119,18 @@ pub(crate) struct RawCatalogEntry {
     /// `[interfaces]` — which interfaces the package exposes.
     #[serde(default)]
     pub interfaces: Option<RawInterfaces>,
+
+    /// `[storage]` — filesystem paths reserved by this package.
+    #[serde(default)]
+    pub storage: Option<RawStorage>,
+
+    /// `[api]` — API endpoints exposed by this package.
+    #[serde(default)]
+    pub api: Option<RawApiSection>,
+
+    /// `[install_targets]` — supported installation methods.
+    #[serde(default)]
+    pub install_targets: Option<RawInstallTargets>,
 }
 
 // ── [package] ─────────────────────────────────────────────────────────────────
@@ -386,4 +398,78 @@ pub(crate) struct RawInterfaces {
     pub wgui: bool,
     #[serde(default)]
     pub tui: bool,
+}
+
+// ── [storage] ─────────────────────────────────────────────────────────────────
+
+/// `[storage]` — filesystem paths reserved by this package.
+#[derive(Debug, Deserialize, Default)]
+pub(crate) struct RawStorage {
+    /// Per-user private data directory, e.g. `"~/.local/share/freesynergy/{pkg}"`.
+    #[serde(default)]
+    pub user: Option<String>,
+    /// Global/system-wide data directory, e.g. `"/var/lib/freesynergy/{pkg}"`.
+    #[serde(default)]
+    pub global: Option<String>,
+    /// Configuration directory, e.g. `"/etc/freesynergy/{pkg}"`.
+    #[serde(default)]
+    pub config: Option<String>,
+    /// Cache directory, e.g. `"/var/cache/freesynergy/{pkg}"`.
+    #[serde(default)]
+    pub cache: Option<String>,
+}
+
+// ── [api] ─────────────────────────────────────────────────────────────────────
+
+/// One entry in `[[api.rest]]`.
+#[derive(Debug, Deserialize)]
+pub(crate) struct RawApiRestEndpoint {
+    pub base: String,
+    #[serde(default)]
+    pub port: Option<u16>,
+    #[serde(default)]
+    pub proto: Option<String>,
+    #[serde(default)]
+    pub description: Option<String>,
+    /// URL path to the `OpenAPI` spec, if available.
+    #[serde(default)]
+    pub spec: Option<String>,
+}
+
+/// One entry in `[[api.grpc]]`.
+#[derive(Debug, Deserialize)]
+pub(crate) struct RawApiGrpcEndpoint {
+    pub service: String,
+    #[serde(default)]
+    pub port: Option<u16>,
+    #[serde(default)]
+    pub description: Option<String>,
+}
+
+/// `[api]` — API endpoints exposed by this package.
+#[derive(Debug, Deserialize, Default)]
+pub(crate) struct RawApiSection {
+    #[serde(default)]
+    pub rest: Vec<RawApiRestEndpoint>,
+    #[serde(default)]
+    pub grpc: Vec<RawApiGrpcEndpoint>,
+}
+
+// ── [install_targets] ─────────────────────────────────────────────────────────
+
+/// `[install_targets]` — supported installation methods.
+#[allow(clippy::struct_excessive_bools)]
+#[derive(Debug, Deserialize, Default)]
+pub(crate) struct RawInstallTargets {
+    #[serde(default)]
+    pub container: bool,
+    #[serde(default)]
+    pub rpm: bool,
+    #[serde(default)]
+    pub deb: bool,
+    #[serde(default)]
+    pub flatpak: bool,
+    /// Pure Rust library crate — loaded as an artifact (no binary).
+    #[serde(default)]
+    pub artifact: bool,
 }

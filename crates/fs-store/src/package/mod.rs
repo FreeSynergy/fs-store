@@ -31,7 +31,7 @@ pub mod widget;
 
 pub use app::AppPackage;
 pub use bundle::BundlePackage;
-pub use container::ContainerPackage;
+pub use container::{ApiEndpoint, ContainerPackage, StoragePaths};
 pub use external::ExternalPackage;
 pub use icon_set::IconSetPackage;
 pub use language::LanguagePackage;
@@ -142,6 +142,20 @@ pub trait Package: Send + Sync {
 
     /// Help file metadata (paths and available locales).
     fn help(&self) -> &PackageHelp;
+
+    /// Filesystem paths reserved by this package.
+    ///
+    /// Non-container packages return `None`.
+    fn storage(&self) -> Option<&StoragePaths> {
+        None
+    }
+
+    /// REST API endpoints exposed by this package.
+    ///
+    /// Non-container packages return an empty slice.
+    fn api_endpoints(&self) -> &[ApiEndpoint] {
+        &[]
+    }
 
     /// The latest available release, if any.
     fn latest_release(&self) -> Option<&PackageRelease> {
