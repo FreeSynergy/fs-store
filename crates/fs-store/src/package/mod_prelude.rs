@@ -43,6 +43,15 @@ macro_rules! impl_package_data {
         fn changelog_url(&self) -> Option<&str> {
             self.data.changelog_url.as_deref()
         }
+        fn secondary_icon_path(&self) -> Option<&str> {
+            self.data.secondary_icon_path.as_deref()
+        }
+        fn overlap_factor(&self) -> f32 {
+            self.data.overlap_factor.clamp(0.0, 1.0)
+        }
+        fn caption(&self) -> Option<&str> {
+            self.data.caption.as_deref()
+        }
     };
 }
 pub(crate) use impl_package_data;

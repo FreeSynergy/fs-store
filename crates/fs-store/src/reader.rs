@@ -364,6 +364,9 @@ fn build_package_data(entry: &RawCatalogEntry, pkg_dir: &str) -> PackageData {
             .map(|s| format!("{pkg_dir}/{s}"))
             .collect(),
         changelog_url: entry.package.changelog.clone(),
+        secondary_icon_path: None,
+        overlap_factor: 0.3,
+        caption: None,
     }
 }
 

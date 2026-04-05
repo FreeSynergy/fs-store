@@ -86,6 +86,28 @@ pub struct PackageData {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub icon_path: Option<String>,
 
+    /// Optional secondary (badge) icon path — shown overlapping the primary icon
+    /// to indicate that this is one of multiple running instances of the same program.
+    ///
+    /// Maps to `secondary_icon = "badge.svg"` in `package.toml`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub secondary_icon_path: Option<String>,
+
+    /// How far the secondary icon overlaps the primary (0.0 = outside, 1.0 = centred on top).
+    ///
+    /// Clamped to `[0.0, 1.0]` at read time.  Defaults to `0.3`.
+    /// Maps to `overlap_factor = 0.3` in `package.toml`.
+    #[serde(default = "default_overlap_factor")]
+    pub overlap_factor: f32,
+
+    /// Optional user-defined display name for an installed instance of this package.
+    ///
+    /// Mirrors `InstalledResource::caption` in `fs-inventory`.  Stored in `package.toml`
+    /// so the Store catalog can provide a suggested caption for well-known multi-instance
+    /// packages (e.g. `"wiki.team-a"`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub caption: Option<String>,
+
     /// Search and filter tags.
     #[serde(default)]
     pub tags: Vec<String>,
@@ -113,6 +135,10 @@ pub struct PackageData {
     /// URL to the changelog / release notes for this package.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub changelog_url: Option<String>,
+}
+
+fn default_overlap_factor() -> f32 {
+    0.3
 }
 
 // ── Package trait ─────────────────────────────────────────────────────────────
@@ -177,6 +203,27 @@ pub trait Package: Send + Sync {
 
     /// URL to the changelog / release notes.
     fn changelog_url(&self) -> Option<&str> {
+        None
+    }
+
+    /// Store-relative path to the secondary (badge) SVG icon, if any.
+    ///
+    /// When `Some`, the engine renders this icon slightly overlapping `icon_path`
+    /// (at `overlap_factor` ratio) to indicate that multiple instances exist.
+    fn secondary_icon_path(&self) -> Option<&str> {
+        None
+    }
+
+    /// Overlap factor for the secondary icon — value in `[0.0, 1.0]`.
+    ///
+    /// `0.0` = secondary entirely outside primary bounds.
+    /// `1.0` = secondary centred on top of primary.
+    fn overlap_factor(&self) -> f32 {
+        0.3
+    }
+
+    /// Suggested display name for an installed instance of this package.
+    fn caption(&self) -> Option<&str> {
         None
     }
 

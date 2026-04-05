@@ -259,6 +259,9 @@ mod tests {
                 homepage: Some("https://example.com".into()),
                 screenshots: vec![],
                 changelog_url: None,
+                secondary_icon_path: None,
+                overlap_factor: 0.3,
+                caption: None,
             },
         }
     }
