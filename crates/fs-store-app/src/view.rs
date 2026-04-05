@@ -28,6 +28,7 @@ impl PackageView for PackageRow {
         let summary = self.summary.clone();
         let ns = self.namespace;
         let is_installed = self.is_installed;
+        let is_incomplete = self.is_incomplete;
         let is_selected = ctx.read().selected_id.as_deref() == Some(self.id.as_str());
 
         rsx! {
@@ -40,6 +41,9 @@ impl PackageView for PackageRow {
                     div { class: "pkg-row__summary", "{summary}" }
                 }
                 div { class: "pkg-row__right",
+                    if is_incomplete {
+                        span { class: "pkg-row__badge pkg-row__badge--incomplete", "!" }
+                    }
                     span { class: "pkg-row__ns", "{ns}" }
                     span { class: "pkg-row__version", "v{version}" }
                     if is_installed {
@@ -61,6 +65,9 @@ impl PackageView for PackageRow {
         let is_installed = self.is_installed;
         let installed_version = self.installed_version.clone();
         let has_update = self.has_update;
+        let is_incomplete = self.is_incomplete;
+        let license = self.license.clone();
+        let homepage = self.homepage.clone();
         let storage = self.storage.clone();
         let api_endpoints = self.api_endpoints.clone();
 
@@ -84,11 +91,22 @@ impl PackageView for PackageRow {
                 div { class: "pkg-detail__meta",
                     span { class: "pkg-detail__ns", "{ns}" }
                     span { class: "pkg-detail__version", "v{version}" }
+                    if !license.is_empty() {
+                        span { class: "pkg-detail__license", "{license}" }
+                    }
                     if is_installed {
                         span { class: "pkg-detail__installed", "Installed" }
                     }
                     if has_update {
                         span { class: "pkg-detail__update", "Update available" }
+                    }
+                    if is_incomplete {
+                        span { class: "pkg-detail__incomplete", "Incomplete metadata" }
+                    }
+                }
+                if let Some(ref url) = homepage {
+                    p { class: "pkg-detail__homepage",
+                        a { href: "{url}", target: "_blank", "{url}" }
                     }
                 }
 

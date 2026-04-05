@@ -10,7 +10,9 @@
 //   a flat, cloneable list of PackageRow objects derived from the Inventory.
 
 use dioxus::prelude::*;
-use fs_store::{ApiEndpoint, Inventory, StoragePaths, StoreReader, StoreSettings, StoreSource};
+use fs_store::{
+    ApiEndpoint, CatalogValidator, Inventory, StoragePaths, StoreReader, StoreSettings, StoreSource,
+};
 
 // ── PackageRow ────────────────────────────────────────────────────────────────
 
@@ -34,6 +36,12 @@ pub struct PackageRow {
     pub storage: StoragePaths,
     /// REST API endpoints declared by this package (`[[api.rest]]`).
     pub api_endpoints: Vec<ApiEndpoint>,
+    /// `true` when the package fails catalog completeness checks.
+    pub is_incomplete: bool,
+    /// License string (SPDX), e.g. `"MIT"`.
+    pub license: String,
+    /// Upstream homepage URL.
+    pub homepage: Option<String>,
 }
 
 // ── StoreState ────────────────────────────────────────────────────────────────
@@ -50,6 +58,8 @@ pub struct StoreState {
     pub search: String,
     /// Active namespace filter; `None` = show all.
     pub namespace_filter: Option<&'static str>,
+    /// Active tag filter; `None` = show all.
+    pub tag_filter: Option<String>,
 }
 
 impl StoreState {
@@ -60,18 +70,39 @@ impl StoreState {
         }
     }
 
-    /// Packages matching the current search + namespace filter.
+    /// Packages matching the current search + namespace + tag filter.
     pub fn filtered(&self) -> impl Iterator<Item = &PackageRow> {
         let search = self.search.to_lowercase();
         let ns = self.namespace_filter;
+        let tag = self.tag_filter.clone();
         self.rows.iter().filter(move |r| {
             let ns_ok = ns.is_none_or(|n| r.namespace == n);
+            let tag_ok = tag
+                .as_deref()
+                .is_none_or(|t| r.tags.iter().any(|rt| rt == t));
             let q_ok = search.is_empty()
                 || r.id.to_lowercase().contains(&search)
                 || r.name.to_lowercase().contains(&search)
                 || r.summary.to_lowercase().contains(&search);
-            ns_ok && q_ok
+            ns_ok && tag_ok && q_ok
         })
+    }
+
+    /// All packages that have updates available.
+    pub fn with_updates(&self) -> impl Iterator<Item = &PackageRow> {
+        self.rows.iter().filter(|r| r.has_update)
+    }
+
+    /// All unique tags across all packages, sorted alphabetically.
+    pub fn all_tags(&self) -> Vec<String> {
+        let mut tags: Vec<String> = self
+            .rows
+            .iter()
+            .flat_map(|r| r.tags.iter().cloned())
+            .collect();
+        tags.sort_unstable();
+        tags.dedup();
+        tags
     }
 
     pub fn selected(&self) -> Option<&PackageRow> {
@@ -127,6 +158,7 @@ fn make_reader() -> StoreReader {
 }
 
 fn build_rows(inv: &Inventory) -> Vec<PackageRow> {
+    let validator = CatalogValidator::new();
     inv.states
         .iter()
         .map(|s| {
@@ -134,6 +166,7 @@ fn build_rows(inv: &Inventory) -> Vec<PackageRow> {
                 .namespaces
                 .namespace_of(s.package.id())
                 .unwrap_or("unknown");
+            let is_incomplete = !validator.is_complete(s.package.as_ref());
             PackageRow {
                 id: s.package.id().to_owned(),
                 name: s.package.name().to_owned(),
@@ -148,6 +181,9 @@ fn build_rows(inv: &Inventory) -> Vec<PackageRow> {
                 has_update: s.has_update(),
                 storage: s.package.storage().cloned().unwrap_or_default(),
                 api_endpoints: s.package.api_endpoints().to_vec(),
+                is_incomplete,
+                license: s.package.license().to_owned(),
+                homepage: s.package.homepage().map(str::to_owned),
             }
         })
         .collect()

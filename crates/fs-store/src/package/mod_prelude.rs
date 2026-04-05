@@ -31,6 +31,18 @@ macro_rules! impl_package_data {
         fn help(&self) -> &PackageHelp {
             &self.data.help
         }
+        fn license(&self) -> &str {
+            &self.data.license
+        }
+        fn homepage(&self) -> Option<&str> {
+            self.data.homepage.as_deref()
+        }
+        fn screenshots(&self) -> &[String] {
+            &self.data.screenshots
+        }
+        fn changelog_url(&self) -> Option<&str> {
+            self.data.changelog_url.as_deref()
+        }
     };
 }
 pub(crate) use impl_package_data;

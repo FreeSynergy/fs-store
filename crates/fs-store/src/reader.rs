@@ -351,6 +351,19 @@ fn build_package_data(entry: &RawCatalogEntry, pkg_dir: &str) -> PackageData {
             base_path: pkg_dir.to_owned(),
             available_locales: vec!["en".to_owned()],
         },
+        license: entry.package.license.clone(),
+        homepage: entry
+            .package
+            .origin
+            .as_ref()
+            .and_then(|o| o.website.clone()),
+        screenshots: entry
+            .package
+            .screenshots
+            .iter()
+            .map(|s| format!("{pkg_dir}/{s}"))
+            .collect(),
+        changelog_url: entry.package.changelog.clone(),
     }
 }
 

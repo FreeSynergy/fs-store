@@ -97,6 +97,22 @@ pub struct PackageData {
     /// Help file metadata for this package.
     #[serde(default)]
     pub help: PackageHelp,
+
+    /// SPDX license identifier, e.g. `"MIT"`.
+    #[serde(default)]
+    pub license: String,
+
+    /// Upstream homepage URL.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub homepage: Option<String>,
+
+    /// Store-relative paths to screenshot images (PNG/JPEG).
+    #[serde(default)]
+    pub screenshots: Vec<String>,
+
+    /// URL to the changelog / release notes for this package.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub changelog_url: Option<String>,
 }
 
 // ── Package trait ─────────────────────────────────────────────────────────────
@@ -142,6 +158,27 @@ pub trait Package: Send + Sync {
 
     /// Help file metadata (paths and available locales).
     fn help(&self) -> &PackageHelp;
+
+    /// SPDX license identifier, e.g. `"MIT"`.
+    #[allow(clippy::unnecessary_literal_bound)]
+    fn license(&self) -> &str {
+        ""
+    }
+
+    /// Upstream homepage URL, if declared.
+    fn homepage(&self) -> Option<&str> {
+        None
+    }
+
+    /// Store-relative screenshot paths, if any.
+    fn screenshots(&self) -> &[String] {
+        &[]
+    }
+
+    /// URL to the changelog / release notes.
+    fn changelog_url(&self) -> Option<&str> {
+        None
+    }
 
     /// Filesystem paths reserved by this package.
     ///

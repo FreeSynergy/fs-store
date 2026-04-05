@@ -161,6 +161,12 @@ pub(crate) struct RawPackageMeta {
     pub protected: bool,
     #[serde(default)]
     pub origin: Option<RawOrigin>,
+    /// Store-relative paths to screenshot images.
+    #[serde(default)]
+    pub screenshots: Vec<String>,
+    /// URL to the changelog or release notes.
+    #[serde(default)]
+    pub changelog: Option<String>,
 }
 
 /// The `[package.origin]` sub-section.

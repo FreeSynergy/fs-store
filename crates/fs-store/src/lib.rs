@@ -32,6 +32,7 @@ pub mod reader;
 pub mod release;
 pub mod settings;
 pub mod source;
+pub mod validator;
 
 // ── Top-level re-exports ──────────────────────────────────────────────────────
 
@@ -48,3 +49,4 @@ pub use reader::StoreReader;
 pub use release::{DistributionMap, PackageRelease, Platform, ReleaseChannel, VersionPin};
 pub use settings::{Settings, StoreSettings};
 pub use source::StoreSource;
+pub use validator::{CatalogIssue, CatalogValidator};

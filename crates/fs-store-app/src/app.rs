@@ -17,6 +17,7 @@ use crate::context::{use_store_context, StoreSignal};
 use crate::views::installed::InstalledList;
 use crate::views::package_detail::PackageDetail;
 use crate::views::package_list::PackageList;
+use crate::views::updates::UpdatesList;
 
 // ── Sidebar tab ───────────────────────────────────────────────────────────────
 
@@ -24,6 +25,7 @@ use crate::views::package_list::PackageList;
 enum Tab {
     Browse,
     Installed,
+    Updates,
 }
 
 // ── App ───────────────────────────────────────────────────────────────────────
@@ -37,6 +39,7 @@ pub fn App() -> Element {
     let error = state.error.clone();
     let pkg_count = state.rows.len();
     let has_selection = state.selected_id.is_some();
+    let update_count = state.with_updates().count();
     drop(state);
 
     rsx! {
@@ -68,6 +71,15 @@ pub fn App() -> Element {
                         onclick: move |_| tab.set(Tab::Installed),
                         "Installed"
                     }
+                    button {
+                        class: if *tab.read() == Tab::Updates { "fs-sidebar__item fs-sidebar__item--active" } else { "fs-sidebar__item" },
+                        onclick: move |_| tab.set(Tab::Updates),
+                        if update_count > 0 {
+                            "Updates ({update_count})"
+                        } else {
+                            "Updates"
+                        }
+                    }
                 }
 
                 // Content
@@ -87,6 +99,7 @@ pub fn App() -> Element {
                         match *tab.read() {
                             Tab::Browse    => rsx! { PackageList { ctx } },
                             Tab::Installed => rsx! { InstalledList { ctx } },
+                            Tab::Updates   => rsx! { UpdatesList { ctx } },
                         }
                     }
                 }
@@ -198,6 +211,35 @@ body {
 .ns-tab:hover       { border-color: var(--accent); color: var(--text-primary); }
 .ns-tab--active     { background: var(--accent); border-color: var(--accent); color: #000; font-weight: 600; }
 
+.pkg-list__tag-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 6px 12px;
+    background: var(--bg-base);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    max-height: 80px;
+    overflow-y: auto;
+}
+.tag-tab {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    padding: 3px 8px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 11px;
+}
+.tag-tab:hover       { border-color: var(--accent); color: var(--text-primary); }
+.tag-tab--active     { background: #00404040; border-color: var(--accent); color: var(--accent); }
+
+/* Updates list */
+.updates-list        { padding: 24px; overflow-y: auto; width: 100%; }
+.updates-list__title { font-size: 18px; font-weight: 600; margin-bottom: 16px; }
+.updates-list__empty { color: var(--text-muted); }
+.updates-list__count { margin-top: 12px; font-size: 12px; color: var(--text-muted); }
+
 .pkg-list__search { padding: 8px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
 .search-input {
     width: 100%;
@@ -230,7 +272,8 @@ body {
 .pkg-row__right        { display: flex; align-items: center; gap: 8px; flex-shrink: 0; margin-left: 12px; }
 .pkg-row__ns           { font-size: 11px; color: var(--text-muted); background: var(--bg-elevated); padding: 2px 6px; border-radius: 10px; }
 .pkg-row__version      { font-size: 11px; color: var(--text-muted); font-family: monospace; }
-.pkg-row__badge        { font-size: 11px; color: var(--accent); }
+.pkg-row__badge                    { font-size: 11px; color: var(--accent); }
+.pkg-row__badge--incomplete        { color: #e0a040; font-weight: 700; }
 
 /* Package detail */
 .pkg-detail         { padding: 24px; overflow-y: auto; width: 100%; }
@@ -256,6 +299,10 @@ body {
 .pkg-detail__version      { font-size: 11px; background: var(--bg-elevated); padding: 3px 8px; border-radius: 10px; font-family: monospace; }
 .pkg-detail__installed    { font-size: 11px; background: #1a3a1a; color: #6aba6a; padding: 3px 8px; border-radius: 10px; }
 .pkg-detail__update       { font-size: 11px; background: #3a3a1a; color: #baba6a; padding: 3px 8px; border-radius: 10px; }
+.pkg-detail__incomplete   { font-size: 11px; background: #3a2a0a; color: #e0a040; padding: 3px 8px; border-radius: 10px; }
+.pkg-detail__license      { font-size: 11px; background: var(--bg-elevated); padding: 3px 8px; border-radius: 10px; color: var(--text-muted); }
+.pkg-detail__homepage     { font-size: 12px; margin-bottom: 12px; }
+.pkg-detail__homepage a   { color: var(--accent); }
 
 .pkg-detail__summary      { font-size: 15px; margin-bottom: 12px; color: var(--text-primary); }
 .pkg-detail__description  { color: var(--text-muted); margin-bottom: 16px; line-height: 1.6; }
