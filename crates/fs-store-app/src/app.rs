@@ -321,6 +321,11 @@ body {
 .installed-list__hint  { margin-top: 8px; font-size: 13px; }
 .installed-list__count { margin-top: 12px; font-size: 12px; color: var(--text-muted); }
 
+/* Screenshots */
+.pkg-detail__screenshots      { margin-bottom: 20px; }
+.pkg-detail__screenshot-row   { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; }
+.pkg-detail__screenshot       { height: 180px; border-radius: var(--radius-md); border: 1px solid var(--border); object-fit: cover; flex-shrink: 0; }
+
 /* Buttons */
 .btn {
     padding: 8px 16px;

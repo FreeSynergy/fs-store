@@ -42,6 +42,8 @@ pub struct PackageRow {
     pub license: String,
     /// Upstream homepage URL.
     pub homepage: Option<String>,
+    /// Store-relative screenshot paths declared by this package.
+    pub screenshots: Vec<String>,
 }
 
 // ── StoreState ────────────────────────────────────────────────────────────────
@@ -60,6 +62,8 @@ pub struct StoreState {
     pub namespace_filter: Option<&'static str>,
     /// Active tag filter; `None` = show all.
     pub tag_filter: Option<String>,
+    /// `true` once the catalog is loaded without error — gates the Install button.
+    pub store_available: bool,
 }
 
 impl StoreState {
@@ -137,10 +141,12 @@ pub fn use_store_context() -> StoreSignal {
                 let rows = build_rows(&inv);
                 state.write().rows = rows;
                 state.write().loading = false;
+                state.write().store_available = true;
             }
             Err(e) => {
                 state.write().loading = false;
                 state.write().error = Some(e.to_string());
+                state.write().store_available = false;
             }
         }
     });
@@ -184,6 +190,7 @@ fn build_rows(inv: &Inventory) -> Vec<PackageRow> {
                 is_incomplete,
                 license: s.package.license().to_owned(),
                 homepage: s.package.homepage().map(str::to_owned),
+                screenshots: s.package.screenshots().to_vec(),
             }
         })
         .collect()

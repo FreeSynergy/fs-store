@@ -70,6 +70,8 @@ impl PackageView for PackageRow {
         let homepage = self.homepage.clone();
         let storage = self.storage.clone();
         let api_endpoints = self.api_endpoints.clone();
+        let screenshots = self.screenshots.clone();
+        let store_available = ctx.read().store_available;
 
         rsx! {
             div { class: "pkg-detail",
@@ -129,6 +131,11 @@ impl PackageView for PackageRow {
                     }
                 }
 
+                // Screenshots (only when declared)
+                if !screenshots.is_empty() {
+                    {screenshot_strip(&screenshots)}
+                }
+
                 // Install status + action
                 div { class: "pkg-detail__actions",
                     if is_installed {
@@ -138,15 +145,23 @@ impl PackageView for PackageRow {
                             }
                             button {
                                 class: "btn btn--danger",
-                                disabled: true,
-                                "Remove (coming soon)"
+                                disabled: !store_available,
+                                onclick: move |_| {
+                                    // Remove wizard is wired in G2 (Dioxus → iced migration).
+                                    let _ = &id;
+                                },
+                                "Remove"
                             }
                         }
                     } else {
                         button {
                             class: "btn btn--primary",
-                            disabled: true,
-                            "Install (coming soon)"
+                            disabled: !store_available,
+                            onclick: move |_| {
+                                // Install wizard is wired in G2 (Dioxus → iced migration).
+                                let _ = &id;
+                            },
+                            "Install"
                         }
                     }
                 }
@@ -166,6 +181,24 @@ impl PackageView for PackageRow {
 }
 
 // ── Sub-views ─────────────────────────────────────────────────────────────────
+
+fn screenshot_strip(screenshots: &[String]) -> Element {
+    rsx! {
+        div { class: "pkg-detail__screenshots",
+            h3 { class: "pkg-detail__tab-title", "Screenshots" }
+            div { class: "pkg-detail__screenshot-row",
+                for path in screenshots {
+                    img {
+                        class: "pkg-detail__screenshot",
+                        src: "{path}",
+                        alt: "Screenshot",
+                        loading: "lazy",
+                    }
+                }
+            }
+        }
+    }
+}
 
 fn storage_tab(storage: &StoragePaths) -> Element {
     rsx! {
