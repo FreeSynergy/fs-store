@@ -17,6 +17,8 @@ Ideas from the function analysis `temp/research/craft-launcher.md` are used as i
 | `signature` – checking bytes against a signature | Strategy (`SignatureVerifier`) | The OpenPGP implementation is swappable; tests use a fake. |
 | `signature` – `VerifiedPackage` | Capability object | Only the policy can hand it out; holding it is the right to install. An unsigned package cannot even be passed to an installer. |
 | `fs-launcher-pgp` – rPGP behind `SignatureVerifier` | Adapter | Wraps the foreign `pgp` crate in our trait, so the core stays free of dependencies. rPGP (MIT OR Apache-2.0), not sequoia (LGPL). |
+| `fs-launcher-sources` – TOML file | Repository (file-backed) | The file holds only the user's sources and a `disabled` list; the reference source is never an entry, so deleting it from the file cannot remove it. |
+| `words` – texts for people | none | Sentences as constants with named placeholders (coding rules 2a); no behaviour besides one pure fill function. |
 | `strategy` – how a package is installed | Strategy (`InstallStrategy`) | rpm via dnf, Flatpak, AppImage, tar.gz: one trait, one implementation per way. |
 | `state` – course of one installation | State (enum plus one transition fn) | `Failed` has exactly one way out: `RolledBack`. |
 | `update` – update and roll back | State plus `InstallStrategy::restore` | There is one operation so far (install/update with undo); a `Command` trait with `apply`/`invert` comes when remove is added and there are two or more commands. |
@@ -61,5 +63,8 @@ Risk marks (ADR 0021): `install`, `update`, `removeSource` are write operations 
 - Name of the program "Launcher" and crate names are provisional.
 
 ## State
-Design and core traits with in-memory test doubles. Not built: network, `gix`, OpenPGP verification, real
-installers, self-replacement of the executable, GUI/CLI, the capnp file, persistence of the source list.
+Core traits and value types; rPGP adapter (`fs-launcher-pgp`, built-in release key and the revoked key as files, tested with
+generated test keys); TOML source list (`fs-launcher-sources`); `words.rs`. 27 tests. Not built: network, `gix`, real
+installers, self-replacement of the executable, GUI/CLI, the capnp file, a `Command` trait (comes with remove),
+key expiry checks and subkey rules in `fs-launcher-pgp` (provisional: a valid signature by the primary key or a public
+subkey of a non-revoked trusted key counts), translation of `words.rs`, atomic write of the source file.

@@ -8,6 +8,7 @@ pub mod source;
 pub mod state;
 pub mod strategy;
 pub mod update;
+pub mod words;
 
 pub use package::{Format, Kind, Package, PackageName, Version};
 pub use signature::{
