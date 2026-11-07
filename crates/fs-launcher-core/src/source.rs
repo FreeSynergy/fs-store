@@ -18,6 +18,24 @@ pub struct Source {
     pub reference: bool,
 }
 
+/// Id of the built-in reference source.
+pub const REFERENCE_ID: &str = "freesynergy";
+/// Git URL of the built-in reference source (provisional).
+pub const REFERENCE_URL: &str = "https://github.com/FreeSynergy/fs-packages";
+
+impl Source {
+    /// The built-in reference source, enabled.
+    #[must_use]
+    pub fn reference() -> Self {
+        Self {
+            id: SourceId(REFERENCE_ID.to_owned()),
+            url: REFERENCE_URL.to_owned(),
+            enabled: true,
+            reference: true,
+        }
+    }
+}
+
 /// Why a source operation failed.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SourceError {
