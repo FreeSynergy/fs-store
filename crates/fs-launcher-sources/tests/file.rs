@@ -19,7 +19,8 @@ fn changes_survive_save_and_load() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("sources.toml");
     let mut s = FileSources::load(&path).unwrap();
-    s.add("https://example.org/p.git", SourceId("mine".into())).unwrap();
+    s.add("https://example.org/p.git", SourceId("mine".into()))
+        .unwrap();
     s.set_enabled(&reference(), false).unwrap();
     s.save().unwrap();
     let again = FileSources::load(&path).unwrap();
@@ -35,7 +36,11 @@ fn reference_deleted_from_the_file_comes_back_with_its_switch() {
     s.set_enabled(&reference(), false).unwrap();
     s.save().unwrap();
     // Someone removes the reference entry but leaves its disabled mark in place.
-    std::fs::write(&path, "disabled = [\"freesynergy\"]\n\n[[source]]\nid = \"mine\"\nurl = \"u\"\n").unwrap();
+    std::fs::write(
+        &path,
+        "disabled = [\"freesynergy\"]\n\n[[source]]\nid = \"mine\"\nurl = \"u\"\n",
+    )
+    .unwrap();
     let again = FileSources::load(&path).unwrap();
     assert_eq!(again.list()[0].id, reference());
     assert!(!again.list()[0].enabled);
@@ -53,7 +58,11 @@ fn reference_cannot_be_removed_and_cannot_be_faked() {
     assert_eq!(s.remove(&reference()), Err(SourceError::ReferenceSource));
     assert_eq!(s.add("evil", reference()), Err(SourceError::Duplicate));
     // A file entry with the reference id cannot change the built-in URL or become a second one.
-    std::fs::write(&path, "[[source]]\nid = \"freesynergy\"\nurl = \"https://evil\"\n").unwrap();
+    std::fs::write(
+        &path,
+        "[[source]]\nid = \"freesynergy\"\nurl = \"https://evil\"\n",
+    )
+    .unwrap();
     let again = FileSources::load(&path).unwrap();
     assert_eq!(again.list().len(), 1);
     assert_ne!(again.list()[0].url, "https://evil");
