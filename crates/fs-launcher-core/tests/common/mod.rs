@@ -14,11 +14,15 @@ pub fn pkg(version: (u64, u64, u64)) -> Package {
 }
 
 pub fn good() -> SignatureOutcome {
-    SignatureOutcome::Valid { fingerprint: TRUSTED_FINGERPRINT.into() }
+    SignatureOutcome::Valid {
+        fingerprint: TRUSTED_FINGERPRINT.into(),
+    }
 }
 
 pub fn verified(version: (u64, u64, u64)) -> VerifiedPackage {
-    SignaturePolicy::default().admit(pkg(version), good()).unwrap()
+    SignaturePolicy::default()
+        .admit(pkg(version), good())
+        .unwrap()
 }
 
 /// In-memory source list with the reference source built in.
@@ -34,7 +38,10 @@ impl MemSources {
         }])
     }
     fn find(&mut self, id: &SourceId) -> Result<usize, SourceError> {
-        self.0.iter().position(|s| &s.id == id).ok_or(SourceError::NotFound)
+        self.0
+            .iter()
+            .position(|s| &s.id == id)
+            .ok_or(SourceError::NotFound)
     }
 }
 
@@ -46,7 +53,12 @@ impl SourceRepository for MemSources {
         if self.0.iter().any(|s| s.id == id) {
             return Err(SourceError::Duplicate);
         }
-        self.0.push(Source { id, url: url.into(), enabled: true, reference: false });
+        self.0.push(Source {
+            id,
+            url: url.into(),
+            enabled: true,
+            reference: false,
+        });
         Ok(())
     }
     fn set_enabled(&mut self, id: &SourceId, enabled: bool) -> Result<(), SourceError> {

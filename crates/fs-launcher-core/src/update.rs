@@ -3,7 +3,7 @@
 
 use crate::package::Version;
 use crate::signature::VerifiedPackage;
-use crate::state::InstallState;
+use crate::state::{Event, InstallState};
 use crate::strategy::InstallStrategy;
 
 /// Asks the system whether a program is running.
@@ -41,6 +41,23 @@ pub fn run_update(
     strategy: &mut dyn InstallStrategy,
     running: &dyn RunningCheck,
 ) -> Result<InstallState, UpdateError> {
-    let _ = (update, strategy, running);
-    todo!()
+    let name = update.package.package().name.as_str();
+    if running.is_running(name) {
+        return Err(UpdateError::Running);
+    }
+    // The sequence below is fixed and always valid, so the fallback never applies.
+    let step = |s: InstallState, e| s.next(e).unwrap_or(s);
+    let state = step(InstallState::Pending, Event::Verify);
+    let state = step(state, Event::Start);
+    if strategy.install(update.package).is_ok() {
+        return Ok(step(state, Event::Finish));
+    }
+    let failed = step(state, Event::Fail);
+    match strategy.restore(name, update.previous) {
+        Ok(()) => {
+            debug_assert_eq!(step(failed, Event::Rollback), InstallState::RolledBack);
+            Err(UpdateError::RolledBack)
+        }
+        Err(_) => Err(UpdateError::RollbackFailed),
+    }
 }

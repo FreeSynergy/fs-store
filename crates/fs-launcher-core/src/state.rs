@@ -48,7 +48,15 @@ impl InstallState {
     /// # Errors
     /// `TransitionError` when the event is not allowed here.
     pub fn next(self, event: Event) -> Result<Self, TransitionError> {
-        let _ = event;
-        todo!("{self:?}")
+        use Event::{Fail, Finish, Rollback, Start, Verify};
+        use InstallState::{Failed, Installed, Installing, Pending, RolledBack, Verified};
+        match (self, event) {
+            (Pending, Verify) => Ok(Verified),
+            (Verified, Start) => Ok(Installing),
+            (Installing, Finish) => Ok(Installed),
+            (Pending | Verified | Installing, Fail) => Ok(Failed),
+            (Failed, Rollback) => Ok(RolledBack),
+            (from, event) => Err(TransitionError { from, event }),
+        }
     }
 }

@@ -11,7 +11,9 @@ fn only_valid_signature_of_trusted_key_admits() {
         SignatureOutcome::Invalid,
         SignatureOutcome::Missing,
         SignatureOutcome::UnknownKey,
-        SignatureOutcome::Valid { fingerprint: "DEADBEEF".into() },
+        SignatureOutcome::Valid {
+            fingerprint: "DEADBEEF".into(),
+        },
     ] {
         assert_eq!(policy.admit(pkg((1, 0, 0)), bad.clone()), Err(bad));
     }
@@ -21,10 +23,17 @@ fn only_valid_signature_of_trusted_key_admits() {
 fn missing_signature_never_passes_through_a_verifier() {
     let v = FixedVerifier(SignatureOutcome::Missing);
     let outcome = v.verify(b"data", None);
-    assert!(SignaturePolicy::default().admit(pkg((1, 0, 0)), outcome).is_err());
+    assert!(
+        SignaturePolicy::default()
+            .admit(pkg((1, 0, 0)), outcome)
+            .is_err()
+    );
 }
 
 #[test]
 fn built_in_fingerprint_is_the_documented_one() {
-    assert_eq!(TRUSTED_FINGERPRINT, "16A4A3EE563AEF51FCF0C55DED7B57C4A1904342");
+    assert_eq!(
+        TRUSTED_FINGERPRINT,
+        "16A4A3EE563AEF51FCF0C55DED7B57C4A1904342"
+    );
 }

@@ -33,8 +33,14 @@ fn cannot_install_without_verification() {
 fn update_installs() {
     let v = verified((2, 0, 0));
     let mut inst = FakeInstaller::default();
-    let u = Update { package: &v, previous: Some(Version(1, 0, 0)) };
-    assert_eq!(run_update(&u, &mut inst, &Running(false)), Ok(InstallState::Installed));
+    let u = Update {
+        package: &v,
+        previous: Some(Version(1, 0, 0)),
+    };
+    assert_eq!(
+        run_update(&u, &mut inst, &Running(false)),
+        Ok(InstallState::Installed)
+    );
     assert_eq!(inst.installed, vec![Version(2, 0, 0)]);
 }
 
@@ -42,24 +48,49 @@ fn update_installs() {
 fn running_program_is_not_replaced() {
     let v = verified((2, 0, 0));
     let mut inst = FakeInstaller::default();
-    let u = Update { package: &v, previous: None };
-    assert_eq!(run_update(&u, &mut inst, &Running(true)), Err(UpdateError::Running));
+    let u = Update {
+        package: &v,
+        previous: None,
+    };
+    assert_eq!(
+        run_update(&u, &mut inst, &Running(true)),
+        Err(UpdateError::Running)
+    );
     assert!(inst.installed.is_empty() && inst.restored.is_empty());
 }
 
 #[test]
 fn failed_update_is_rolled_back_to_previous() {
     let v = verified((2, 0, 0));
-    let mut inst = FakeInstaller { fail_install: true, ..Default::default() };
-    let u = Update { package: &v, previous: Some(Version(1, 0, 0)) };
-    assert_eq!(run_update(&u, &mut inst, &Running(false)), Err(UpdateError::RolledBack));
+    let mut inst = FakeInstaller {
+        fail_install: true,
+        ..Default::default()
+    };
+    let u = Update {
+        package: &v,
+        previous: Some(Version(1, 0, 0)),
+    };
+    assert_eq!(
+        run_update(&u, &mut inst, &Running(false)),
+        Err(UpdateError::RolledBack)
+    );
     assert_eq!(inst.restored, vec![Some(Version(1, 0, 0))]);
 }
 
 #[test]
 fn failed_rollback_is_reported() {
     let v = verified((2, 0, 0));
-    let mut inst = FakeInstaller { fail_install: true, fail_restore: true, ..Default::default() };
-    let u = Update { package: &v, previous: None };
-    assert_eq!(run_update(&u, &mut inst, &Running(false)), Err(UpdateError::RollbackFailed));
+    let mut inst = FakeInstaller {
+        fail_install: true,
+        fail_restore: true,
+        ..Default::default()
+    };
+    let u = Update {
+        package: &v,
+        previous: None,
+    };
+    assert_eq!(
+        run_update(&u, &mut inst, &Running(false)),
+        Err(UpdateError::RollbackFailed)
+    );
 }

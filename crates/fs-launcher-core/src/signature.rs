@@ -48,7 +48,9 @@ pub struct SignaturePolicy {
 
 impl Default for SignaturePolicy {
     fn default() -> Self {
-        Self { trusted: TRUSTED_FINGERPRINT.to_owned() }
+        Self {
+            trusted: TRUSTED_FINGERPRINT.to_owned(),
+        }
     }
 }
 
@@ -56,7 +58,9 @@ impl SignaturePolicy {
     /// A policy trusting another fingerprint (for tests).
     #[must_use]
     pub fn with_fingerprint(trusted: &str) -> Self {
-        Self { trusted: trusted.to_owned() }
+        Self {
+            trusted: trusted.to_owned(),
+        }
     }
 
     /// True when the outcome is a valid signature by the trusted key.
@@ -74,6 +78,10 @@ impl SignaturePolicy {
         package: Package,
         outcome: SignatureOutcome,
     ) -> Result<VerifiedPackage, SignatureOutcome> {
-        if self.is_satisfied_by(&outcome) { Ok(VerifiedPackage(package)) } else { Err(outcome) }
+        if self.is_satisfied_by(&outcome) {
+            Ok(VerifiedPackage(package))
+        } else {
+            Err(outcome)
+        }
     }
 }
