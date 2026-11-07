@@ -1,4 +1,5 @@
-//! Pattern: Command (`apply` / `invert`) driving the State; Strategy for the running check.
+//! Pattern: State driven by one fixed sequence (verify, install, on failure restore); Strategy for the running check.
+//! The undo is `InstallStrategy::restore`; there is no `Command` trait yet.
 //! A running program is never replaced; a failed update is undone.
 
 use crate::package::Version;

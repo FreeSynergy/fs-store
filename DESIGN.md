@@ -18,7 +18,7 @@ Ideas from the function analysis `temp/research/craft-launcher.md` are used as i
 | `signature` – `VerifiedPackage` | Capability object | Only the policy can hand it out; holding it is the right to install. An unsigned package cannot even be passed to an installer. |
 | `strategy` – how a package is installed | Strategy (`InstallStrategy`) | rpm via dnf, Flatpak, AppImage, tar.gz: one trait, one implementation per way. |
 | `state` – course of one installation | State (enum plus one transition fn) | `Failed` has exactly one way out: `RolledBack`. |
-| `update` – update and roll back | Command (`apply` / `invert`) | An update knows how to undo itself. |
+| `update` – update and roll back | State plus `InstallStrategy::restore` | There is one operation so far (install/update with undo); a `Command` trait with `apply`/`invert` comes when remove is added and there are two or more commands. |
 | `update` – running check | Strategy (`RunningCheck`) | The OS check is outside the core. |
 
 ## Engine and frontend (ADR 0021)
