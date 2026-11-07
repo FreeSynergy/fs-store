@@ -1,4 +1,6 @@
 //! Tests of the OpenPGP check with test keys made here; no real private key is used or stored.
+use std::fmt::Write;
+
 use fs_launcher_core::{SignatureOutcome, SignaturePolicy, SignatureVerifier, TRUSTED_FINGERPRINT};
 use fs_launcher_pgp::{KeyError, PgpVerifier};
 use pgp::composed::{
@@ -34,11 +36,19 @@ fn sign(key: &SignedSecretKey, data: &[u8]) -> Vec<u8> {
 }
 
 fn armored_public(key: &SignedSecretKey) -> String {
-    key.to_public_key().to_armored_string(ArmorOptions::default()).unwrap()
+    key.to_public_key()
+        .to_armored_string(ArmorOptions::default())
+        .unwrap()
 }
 
 fn fingerprint(key: &SignedSecretKey) -> String {
-    key.fingerprint().as_bytes().iter().map(|b| format!("{b:02X}")).collect()
+    key.fingerprint()
+        .as_bytes()
+        .iter()
+        .fold(String::new(), |mut s, b| {
+            let _ = write!(s, "{b:02X}");
+            s
+        })
 }
 
 #[test]
@@ -46,7 +56,12 @@ fn valid_signature_of_the_trusted_test_key_is_accepted() {
     let key = test_key("release");
     let v = PgpVerifier::from_armored(&[&armored_public(&key)]).unwrap();
     let outcome = v.verify(b"payload", Some(&sign(&key, b"payload")));
-    assert_eq!(outcome, SignatureOutcome::Valid { fingerprint: fingerprint(&key) });
+    assert_eq!(
+        outcome,
+        SignatureOutcome::Valid {
+            fingerprint: fingerprint(&key)
+        }
+    );
     let policy = SignaturePolicy::with_fingerprint(&fingerprint(&key));
     assert!(policy.is_satisfied_by(&outcome));
 }
@@ -71,7 +86,10 @@ fn changed_file_is_rejected() {
 fn missing_and_garbage_signatures_are_rejected() {
     let v = PgpVerifier::builtin();
     assert_eq!(v.verify(b"x", None), SignatureOutcome::Missing);
-    assert_eq!(v.verify(b"x", Some(b"not a signature")), SignatureOutcome::Invalid);
+    assert_eq!(
+        v.verify(b"x", Some(b"not a signature")),
+        SignatureOutcome::Invalid
+    );
 }
 
 #[test]
@@ -85,7 +103,10 @@ fn builtin_key_has_the_documented_fingerprint() {
 #[test]
 fn old_revoked_key_is_refused() {
     let armored = include_str!("../keys/revoked-release-key-C40F0FBA.asc");
-    assert_eq!(PgpVerifier::from_armored(&[armored]).unwrap_err(), KeyError::Revoked);
+    assert_eq!(
+        PgpVerifier::from_armored(&[armored]).unwrap_err(),
+        KeyError::Revoked
+    );
 }
 
 #[test]
