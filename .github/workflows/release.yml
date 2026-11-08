@@ -11,6 +11,7 @@ jobs:
     uses: FreeSynergy/fs-release/.github/workflows/release.yml@main
     with:
       binaries: fs-store
+      cargo-package: fs-store
       name: fs-store
       kind: app
       app-id: net.freesynergy.Store
