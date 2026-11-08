@@ -1,3 +1,4 @@
+//! Pattern: Adapter (`ureq` and `gix` behind our `Fetch` trait and a clone function).
 //! Network and Git: `HttpsFetch` (release files) and `clone_catalog` (`gix`, shallow clone of a source).
 
 use std::io::Read;

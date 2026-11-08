@@ -96,6 +96,12 @@ the OpenPGP check does not look at key or signature expiry, subkey flags or subk
 not see programs started through an interpreter; the real error behind `RolledBack` is not carried up; a symlink in a
 package archive is refused, which will need a rule (relative and inside the package) when a package needs one.
 
+## Packaging and gate (step 7, prepared 2026-11-08)
+`.github/workflows/check.yml` (push gate of `fs-release`) and `release.yml` (binaries `fs-store` = CLI and `fs-store-app` = GUI, app id
+`net.freesynergy.Store`). Workspace version `0.1.0-rc.1`, so the first tag is `v0.1.0-rc.1`, a pre-release; the draft is signed only
+once the repo has the signing secrets. `check_rust_rules.py` is green locally (0 errors); `lib.rs` files hold only modules and re-exports.
+Not yet tried: the remote run of both workflows, build dependencies of Blinc on the CI runner (`apt-packages` may be needed), rpm via dnf.
+
 ## Provisional decisions
 - Versions are `major.minor.patch` with an optional pre-release `-alpha|beta|rc[.N]` (`~` accepted as in `AppStream`/rpm); a pre-release is older than its release. Anything else is skipped with a reason.
 - Only one trusted fingerprint for now; sources may later bring their own keys, never replacing the built-in one.
