@@ -1,15 +1,33 @@
 //! Pattern: Strategy selection (how this store was installed decides how it installs the rest).
 //! Installed by rpm -> programs come as rpm; unpacked by hand or by itself -> programs come as `tar.gz`.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use fs_store_core::{Format, Version};
 
+/// The path of the running executable. After the store updated itself by rpm, Linux reports the old file as
+/// `/usr/bin/fs-store (deleted)`; that suffix is dropped, so the new file at the same path is used. Never use
+/// `std::env::current_exe` directly for starting, linking or asking rpm.
+///
+/// # Errors
+/// `io::Error` when the system cannot say.
+pub fn own_exe() -> std::io::Result<PathBuf> {
+    Ok(without_deleted_suffix(&std::env::current_exe()?))
+}
+
+/// `/usr/bin/fs-store (deleted)` becomes `/usr/bin/fs-store`; every other path stays as it is.
+#[must_use]
+pub fn without_deleted_suffix(path: &Path) -> PathBuf {
+    path.to_str()
+        .and_then(|t| t.strip_suffix(" (deleted)"))
+        .map_or_else(|| path.to_owned(), PathBuf::from)
+}
+
 /// `Rpm` when the running executable belongs to an installed rpm, else `TarGz`.
 #[must_use]
 pub fn preferred_format() -> Format {
-    let Ok(exe) = std::env::current_exe() else {
+    let Ok(exe) = own_exe() else {
         return Format::TarGz;
     };
     if is_rpm_owned(&exe) {

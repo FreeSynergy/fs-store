@@ -168,7 +168,7 @@ pub fn ensure_own_menu_entry(apps_dir: &Path) -> io::Result<bool> {
     if file.exists() {
         return Ok(false);
     }
-    let exe = std::env::current_exe()?;
+    let exe = crate::own_exe()?;
     fs::create_dir_all(apps_dir)?;
     fs::write(
         &file,

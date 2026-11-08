@@ -86,7 +86,7 @@ impl UpdateService for FileUpdates {
     }
 
     fn check(&self) -> Result<(), String> {
-        let exe = std::env::current_exe().map_err(|e| e.to_string())?;
+        let exe = fs_store_engine::own_exe().map_err(|e| e.to_string())?;
         let status = Command::new(exe)
             .arg("background")
             .stdin(Stdio::null())

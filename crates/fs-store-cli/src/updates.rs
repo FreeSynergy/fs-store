@@ -185,7 +185,7 @@ pub(crate) fn timer(rest: &[String]) -> Result<(), String> {
     };
     match rest.first().map(String::as_str) {
         Some("enable") => {
-            let exe = std::env::current_exe().map_err(|e| e.to_string())?;
+            let exe = fs_store_engine::own_exe().map_err(|e| e.to_string())?;
             let every = match fs_store_sources::Settings::load(&root().join("settings.toml")).map(|s| s.check) {
                 Ok(fs_store_sources::CheckEvery::Hourly) => "1h",
                 Ok(fs_store_sources::CheckEvery::Daily) => "1d",
