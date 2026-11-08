@@ -12,6 +12,7 @@ jobs:
     with:
       binaries: fs-store
       cargo-package: fs-store
+      ignore-binaries: "fs-store-tuf-publish"   # the TUF publisher is for fs-catalog CI, not for people
       name: fs-store
       kind: app
       app-id: net.freesynergy.Store
