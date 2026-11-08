@@ -5,4 +5,4 @@
 
 mod catalog;
 
-pub use catalog::{Catalog, CatalogEntry, CatalogError, RpmFile, Skipped, parse_catalog};
+pub use catalog::{Catalog, CatalogEntry, CatalogError, Icon, RpmFile, Skipped, parse_catalog};

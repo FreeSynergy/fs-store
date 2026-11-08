@@ -64,3 +64,19 @@ fn a_command_name_that_is_not_ours_is_never_taken_over() {
     unlink_facets(&root, "people", &facets, &bin, &apps).unwrap();
     assert_eq!(fs::read_to_string(bin.join("contacts")).unwrap(), "mine");
 }
+
+#[test]
+fn a_stored_icon_goes_into_the_menu_entries_of_the_program_and_its_facets() {
+    let tmp = tempfile::tempdir().unwrap();
+    let root = installed(tmp.path());
+    fs::create_dir_all(root.join("icons")).unwrap();
+    fs::write(root.join("icons/people.png"), b"x").unwrap();
+    let (bin, apps) = (tmp.path().join("bin"), tmp.path().join("apps"));
+    link_facets(&root, "people", &["contacts".to_owned()], &bin, &apps).unwrap();
+    let want = format!("Icon={}", root.join("icons/people.png").display());
+    for name in ["people", "contacts"] {
+        let entry =
+            fs::read_to_string(apps.join(format!("net.freesynergy.{name}.desktop"))).unwrap();
+        assert!(entry.contains(&want), "{name}: {entry}");
+    }
+}

@@ -42,11 +42,20 @@ fn display_name(command: &str) -> String {
     format!("FreeSynergy.{first}{}", chars.as_str())
 }
 
-fn desktop(command: &str, exec: &str) -> String {
+fn desktop(command: &str, exec: &str, icon: Option<&Path>) -> String {
+    let icon = icon.map_or_else(String::new, |p| format!("Icon={}\n", p.display()));
     format!(
-        "[Desktop Entry]\nType=Application\nName={}\nExec={exec}\nTerminal=false\nCategories=Office;\nX-FreeSynergy-Managed=true\n",
+        "[Desktop Entry]\nType=Application\nName={}\nExec={exec}\n{icon}Terminal=false\nCategories=Office;\nX-FreeSynergy-Managed=true\n",
         display_name(command)
     )
+}
+
+/// The icon of a command: its own `icons/<command>.png`, else the program's `icons/<package>.png`.
+fn icon_for(root: &Path, command: &str, package: &str) -> Option<PathBuf> {
+    [command, package]
+        .iter()
+        .map(|n| root.join("icons").join(format!("{n}.png")))
+        .find(|p| p.is_file())
 }
 
 /// Makes the commands for `facets` (links to the program) and menu entries for them and for the program.
@@ -94,7 +103,14 @@ pub fn link_facets(
         let ours = !file.exists()
             || fs::read_to_string(&file).is_ok_and(|t| t.contains("X-FreeSynergy-Managed=true"));
         if ours {
-            fs::write(&file, desktop(command, command))?;
+            fs::write(
+                &file,
+                desktop(
+                    command,
+                    command,
+                    icon_for(root, command, package).as_deref(),
+                ),
+            )?;
         }
     }
     Ok(made)

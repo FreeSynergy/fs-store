@@ -23,6 +23,8 @@ pub struct CatalogEntry {
     pub signature_url: String,
     /// The rpm files of the same release (`fs-format="rpm"` artifacts for this machine); empty when there are none.
     pub rpms: Vec<RpmFile>,
+    /// The icon, when the component has a remote icon with a hash (an icon without a hash is not used).
+    pub icon: Option<Icon>,
     /// Facets the program offers (ADR 0061), `fs:facets`, comma separated.
     pub facets: Vec<String>,
 }
@@ -36,6 +38,15 @@ pub struct RpmFile {
     pub sha256: String,
     /// Download address of its detached OpenPGP signature (`fs-signature` on the artifact).
     pub signature_url: String,
+}
+
+/// The icon of a package: its address and the SHA-256 of the file (the catalog is signed, so the hash is trusted).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Icon {
+    /// Download address (PNG).
+    pub url: String,
+    /// SHA-256 of the file (`fs-sha256` on the `<icon type="remote">` element).
+    pub sha256: String,
 }
 
 /// A component that could not be offered, and why.
@@ -191,6 +202,7 @@ fn entry(c: roxmltree::Node) -> Result<CatalogEntry, (String, String)> {
         sha256,
         signature_url,
         rpms,
+        icon: icon(c),
         facets,
     })
 }
@@ -218,4 +230,15 @@ fn collect_rpms(art: roxmltree::Node) -> Vec<RpmFile> {
             })
         })
         .collect()
+}
+
+/// `<icon type="remote" fs-sha256="...">URL</icon>`; one without a hash is never used.
+fn icon(c: roxmltree::Node) -> Option<Icon> {
+    let n = c
+        .children()
+        .find(|n| n.has_tag_name("icon") && n.attribute("type") == Some("remote"))?;
+    Some(Icon {
+        url: n.text()?.trim().to_owned(),
+        sha256: n.attribute("fs-sha256")?.to_owned(),
+    })
 }

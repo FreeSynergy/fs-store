@@ -142,3 +142,16 @@ fn rpm_artifacts_are_collected_and_do_not_replace_the_primary_tar_gz() {
         assert_eq!(names, ["app.rpm", "srv.rpm"]); // the unsigned rpm is never offered
     }
 }
+
+#[test]
+fn a_remote_icon_needs_a_hash_to_be_used() {
+    let with = r#"<components version="1.0"><component><id>a</id><icon type="remote" fs-sha256="ab">https://x/a.png</icon><releases><release version="1.0.0"><artifacts><artifact type="binary"><location>l</location><checksum type="sha256">1</checksum></artifact></artifacts></release></releases><custom><value key="fs:signature">s</value></custom></component></components>"#;
+    let c = parse_catalog(with).unwrap();
+    let icon = c.entries[0].icon.as_ref().unwrap();
+    assert_eq!(
+        (icon.url.as_str(), icon.sha256.as_str()),
+        ("https://x/a.png", "ab")
+    );
+    let without = with.replace(r#" fs-sha256="ab""#, "");
+    assert!(parse_catalog(&without).unwrap().entries[0].icon.is_none());
+}

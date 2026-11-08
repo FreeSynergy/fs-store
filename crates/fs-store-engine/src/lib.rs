@@ -3,6 +3,7 @@
 #![deny(missing_docs)]
 
 mod facets;
+mod icons;
 mod links;
 mod mode;
 pub mod net;
@@ -13,6 +14,7 @@ pub mod service;
 mod targz;
 
 pub use facets::{default_apps_dir, ensure_own_menu_entry, link_facets, unlink_facets};
+pub use icons::store_icon;
 pub use links::{default_bin_dir, link_programs, unlink_programs};
 pub use mode::{preferred_format, rpm_installed_version};
 pub use proc::ProcRunningCheck;

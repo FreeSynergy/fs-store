@@ -204,6 +204,10 @@ pub(crate) fn cmd_install(
         let v = installer
             .install(&catalog, &sig, name, current)
             .map_err(|e| format!("{url}: {e:?}"))?;
+        // The icon comes with a hash in the signed catalog; one that does not match is not stored.
+        if let Some((icon, Ok(bytes))) = offered.icon.as_ref().map(|i| (i, AnyFetch.get(&i.url))) {
+            let _ = fs_store_engine::store_icon(root, name, &bytes, &icon.sha256);
+        }
         let mut registry = fs_store_sources::Registry::load(&root.join("installed.toml"))
             .map_err(|e| format!("{e:?}"))?;
         registry.record(name, &v.to_string(), &url);
