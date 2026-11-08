@@ -72,6 +72,7 @@ fn run(
         verifier: &Fake,
         fetch: &f,
         running: &Idle,
+        policy: SignaturePolicy::default(),
     };
     let r = i.install(catalog(&sha).as_bytes(), cat_sig, "tasks", None);
     (r, tmp)

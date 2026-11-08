@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use fs_store_catalog::parse_catalog;
-use fs_store_core::Version;
+use fs_store_core::{SignaturePolicy, Version};
 use fs_store_engine::ProcRunningCheck;
 use fs_store_engine::net::{HttpsFetch, clone_catalog};
 use fs_store_engine::service::{Fetch, FileFetch, Installer};
@@ -38,7 +38,26 @@ fn installed(root: &std::path::Path, name: &str) -> Option<Version> {
     Version::parse(target.file_name()?.to_str()?)
 }
 
-fn run(args: &[String]) -> Result<(), String> {
+fn run(all: &[String]) -> Result<(), String> {
+    // `--trust-key <file>`: also trust this public key (test key of a local source). Never the default.
+    let extra = all
+        .iter()
+        .position(|a| a == "--trust-key")
+        .map(|i| all.get(i + 1).ok_or("--trust-key needs a file"))
+        .transpose()?;
+    let args: Vec<String> = {
+        let mut it = all.iter().peekable();
+        let mut v = Vec::new();
+        while let Some(a) = it.next() {
+            if a == "--trust-key" {
+                it.next();
+            } else {
+                v.push(a.clone());
+            }
+        }
+        v
+    };
+    let args = &args[..];
     let root = root();
     let (cmd, source) = match args {
         [c, s, ..] if c == "available" || c == "install" => (c.as_str(), s.as_str()),
@@ -66,6 +85,7 @@ fn run(args: &[String]) -> Result<(), String> {
     };
     let work = root.join("sources").join("work");
     let _ = fs::remove_dir_all(&work);
+    fs::create_dir_all(work.parent().unwrap_or(&root)).map_err(|e| e.to_string())?;
     clone_catalog(source, &work)?;
     let catalog = fs::read(work.join("catalog.xml")).map_err(|e| e.to_string())?;
     let sig = fs::read(work.join("catalog.xml.asc")).map_err(|e| e.to_string())?;
@@ -80,7 +100,16 @@ fn run(args: &[String]) -> Result<(), String> {
         return Ok(());
     }
     let name = args.get(2).ok_or("install needs a package name")?;
-    let verifier = PgpVerifier::builtin();
+    let (verifier, policy) = match extra {
+        None => (PgpVerifier::builtin(), SignaturePolicy::default()),
+        Some(file) => {
+            let armored = fs::read_to_string(file).map_err(|e| format!("{file}: {e}"))?;
+            let v = PgpVerifier::builtin_and(&armored).map_err(|e| format!("{file}: {e:?}"))?;
+            let fp = v.fingerprints().pop().ok_or("no key")?;
+            eprintln!("fs-store: also trusting test key {fp} for this run");
+            (v, SignaturePolicy::default().also_trusting(&fp))
+        }
+    };
     let running = ProcRunningCheck::new(&root);
     let i = Installer {
         root: root.clone(),
@@ -88,6 +117,7 @@ fn run(args: &[String]) -> Result<(), String> {
         verifier: &verifier,
         fetch: &AnyFetch,
         running: &running,
+        policy,
     };
     let v = i
         .install(&catalog, &sig, name, installed(&root, name))

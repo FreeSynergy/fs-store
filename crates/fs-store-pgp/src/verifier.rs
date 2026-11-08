@@ -35,6 +35,14 @@ impl PgpVerifier {
         Self::from_armored(&[BUILTIN_KEY]).expect("built-in release key is valid")
     }
 
+    /// The built-in key plus one more armored public key (a test key of a local source, chosen by the person).
+    ///
+    /// # Errors
+    /// `Unreadable` or `Revoked` for the extra key.
+    pub fn builtin_and(extra: &str) -> Result<Self, KeyError> {
+        Self::from_armored(&[BUILTIN_KEY, extra])
+    }
+
     /// A verifier trusting the given armored public keys.
     ///
     /// # Errors

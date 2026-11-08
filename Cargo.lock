@@ -904,6 +904,8 @@ dependencies = [
  "fs-store-core",
  "fs-store-pgp",
  "gix",
+ "pgp",
+ "rand 0.8.8",
  "sha2",
  "tar",
  "tempfile",

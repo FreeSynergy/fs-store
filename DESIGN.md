@@ -72,9 +72,14 @@ Risk marks (ADR 0021): `install`, `update`, `removeSource` are write operations 
 Draft `v0.6.1-rc.2` of `fs-tasks` (made by `fs-release`, fetched with `gh release download`, because drafts are not
 public): the built-in `PgpVerifier` accepts `fs-tasks-server-0.6.1-rc.2-linux-x86_64.tar.gz` with its `.asc` as `Valid`
 for `16A4…4342`, and rejects it after one flipped byte (`crates/fs-store-pgp/tests/real_release.rs`, runs when
-`FS_PROBE_FILE`/`FS_PROBE_SIG` are set). **Not yet done:** installing it through a catalog. Blockers: (1) fixed 2026-11-08: `Version` now has a pre-release part; (2) a local
+`FS_PROBE_FILE`/`FS_PROBE_SIG` are set). **Done 2026-11-08:** the whole chain through a local `file://` Git catalog: `fs-store install file:///tmp/probe/cat fs-tasks-server --trust-key testkey.pub.asc` cloned it with `gix`, verified the catalog (signed by a throw-away test key made with gpg), checked sha256 and the real release signature, installed `0.6.1-rc.2` and `fs-store installed` lists it. Without `--trust-key` the same catalog is refused (`CatalogSignature`). `--trust-key <file>` trusts an extra public key for that one run only; the built-in key always stays trusted. The old note follows.
+
+Old note: installing it through a catalog. Blockers: (1) fixed 2026-11-08: `Version` now has a pre-release part; (2) a local
 catalog needs a signature by the release key, which only the user holds. Options for (2): the user signs a test catalog,
 or a test-only trusted key for local sources.
+
+Known gap: the release archive has one top directory (`fs-tasks-server-0.6.1-rc.2-linux-x86_64/`); `TarGz` keeps it, so
+the program sits one level down in `current/<name>/`. Stripping a single common top directory is the next change.
 
 ## Provisional decisions
 - Versions are `major.minor.patch` with an optional pre-release `-alpha|beta|rc[.N]` (`~` accepted as in `AppStream`/rpm); a pre-release is older than its release. Anything else is skipped with a reason.

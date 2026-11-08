@@ -43,13 +43,13 @@ impl VerifiedPackage {
 /// The rule "only the trusted key counts".
 #[derive(Debug, Clone)]
 pub struct SignaturePolicy {
-    trusted: String,
+    trusted: Vec<String>,
 }
 
 impl Default for SignaturePolicy {
     fn default() -> Self {
         Self {
-            trusted: TRUSTED_FINGERPRINT.to_owned(),
+            trusted: vec![TRUSTED_FINGERPRINT.to_owned()],
         }
     }
 }
@@ -59,14 +59,22 @@ impl SignaturePolicy {
     #[must_use]
     pub fn with_fingerprint(trusted: &str) -> Self {
         Self {
-            trusted: trusted.to_owned(),
+            trusted: vec![trusted.to_owned()],
         }
     }
 
-    /// True when the outcome is a valid signature by the trusted key.
+    /// Additionally trusts `fingerprint` (a test key of a local source, chosen explicitly by the person);
+    /// the built-in key stays trusted.
+    #[must_use]
+    pub fn also_trusting(mut self, fingerprint: &str) -> Self {
+        self.trusted.push(fingerprint.to_owned());
+        self
+    }
+
+    /// True when the outcome is a valid signature by a trusted key.
     #[must_use]
     pub fn is_satisfied_by(&self, outcome: &SignatureOutcome) -> bool {
-        matches!(outcome, SignatureOutcome::Valid { fingerprint } if fingerprint.eq_ignore_ascii_case(&self.trusted))
+        matches!(outcome, SignatureOutcome::Valid { fingerprint } if self.trusted.iter().any(|t| fingerprint.eq_ignore_ascii_case(t)))
     }
 
     /// Hands out the right to install, or the unsatisfied outcome back.

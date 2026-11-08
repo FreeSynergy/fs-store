@@ -64,6 +64,8 @@ pub struct Installer<'a> {
     pub fetch: &'a dyn Fetch,
     /// Running check.
     pub running: &'a dyn RunningCheck,
+    /// Who may sign; `SignaturePolicy::default()` trusts only the FreeSynergy release key.
+    pub policy: SignaturePolicy,
 }
 
 impl Installer<'_> {
@@ -78,7 +80,7 @@ impl Installer<'_> {
         name: &str,
         previous: Option<Version>,
     ) -> Result<Version, InstallFailure> {
-        let policy = SignaturePolicy::default();
+        let policy = &self.policy;
         if !policy.is_satisfied_by(&self.verifier.verify(catalog, Some(catalog_sig))) {
             return Err(InstallFailure::CatalogSignature);
         }
