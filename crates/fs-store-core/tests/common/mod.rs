@@ -32,7 +32,7 @@ impl MemSources {
     pub fn new() -> Self {
         Self(vec![Source {
             id: SourceId("fs".into()),
-            url: "https://github.com/FreeSynergy/fs-packages".into(),
+            url: "https://github.com/FreeSynergy/fs-catalog".into(),
             enabled: true,
             reference: true,
         }])

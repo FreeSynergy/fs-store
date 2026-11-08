@@ -152,6 +152,17 @@ cannot literally be the TUF root key. Proposal that keeps the chain of trust on 
   the OpenPGP signature protects the content, and works without TUF for a plain download.
 The user must make the root keys; the CI keys are made in `fs-catalog` by a workflow. Not built yet.
 
+## Register, automatic updates, commands on the PATH (2026-11-08)
+`installed.toml` (in the store root) records per package: version, source (Git address) and `auto_update` (default on).
+`fs-store update` / `update --all` updates every package with automatic updates on, each from its own source; one failing
+package does not stop the others. `fs-store auto <name> on|off` switches one package. `fs-store timer enable|disable|status`
+installs a systemd **user** timer (daily, 5 min after boot, random delay) that runs `fs-store update --all`; the store updates
+itself the same way (package `fs-store` in the catalog). After an install the executables at the top of the package are linked
+into `~/.local/bin` (or `FS_STORE_BIN`) through `current/<name>/`; foreign files of the same name are never replaced; `remove`
+takes the links away. Rollback is the one of `run_update`. **Not yet:** TUF checks in the update path (catalog signature and
+the no-downgrade rule apply), programs asking the store for updates through `store.capnp` (needs the server), a per-program
+reminder in the programs. The reference source is now `https://github.com/FreeSynergy/fs-catalog`.
+
 ## Provisional decisions
 - Versions are `major.minor.patch` with an optional pre-release `-alpha|beta|rc[.N]` (`~` accepted as in `AppStream`/rpm); a pre-release is older than its release. Anything else is skipped with a reason.
 - Only one trusted fingerprint for now; sources may later bring their own keys, never replacing the built-in one.

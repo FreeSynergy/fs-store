@@ -32,7 +32,7 @@ impl Fetch for AnyFetch {
     }
 }
 
-fn root() -> PathBuf {
+pub(crate) fn root() -> PathBuf {
     std::env::var_os("FS_STORE_ROOT").map_or_else(
         || {
             PathBuf::from(std::env::var_os("HOME").unwrap_or_default())
@@ -42,17 +42,17 @@ fn root() -> PathBuf {
     )
 }
 
-fn installed(root: &Path, name: &str) -> Option<Version> {
+pub(crate) fn installed(root: &Path, name: &str) -> Option<Version> {
     let target = fs::read_link(root.join("current").join(name)).ok()?;
     Version::parse(target.file_name()?.to_str()?)
 }
 
-fn sources(root: &Path) -> Result<FileSources, String> {
+pub(crate) fn sources(root: &Path) -> Result<FileSources, String> {
     FileSources::load(&root.join("sources.toml")).map_err(|e| format!("{e:?}"))
 }
 
 /// Source argument to Git addresses: an id from the list, a Git address, or all enabled sources.
-fn addresses(root: &Path, arg: Option<&String>) -> Result<Vec<String>, String> {
+pub(crate) fn addresses(root: &Path, arg: Option<&String>) -> Result<Vec<String>, String> {
     let list = sources(root)?.list();
     match arg {
         None => Ok(list
@@ -103,7 +103,7 @@ fn id_from_url(url: &str) -> String {
         .to_owned()
 }
 
-fn trust(extra: Option<&String>) -> Result<(PgpVerifier, SignaturePolicy), String> {
+pub(crate) fn trust(extra: Option<&String>) -> Result<(PgpVerifier, SignaturePolicy), String> {
     match extra {
         None => Ok((PgpVerifier::builtin(), SignaturePolicy::default())),
         Some(file) => {
@@ -194,7 +194,7 @@ fn cmd_available(root: &Path, arg: Option<&String>, extra: Option<&String>) -> R
 }
 
 /// Installs or updates; `only_newer` makes it an update.
-fn cmd_install(
+pub(crate) fn cmd_install(
     root: &Path,
     name: &str,
     arg: Option<&String>,
@@ -238,17 +238,15 @@ fn cmd_install(
         let v = installer
             .install(&catalog, &sig, name, current)
             .map_err(|e| format!("{url}: {e:?}"))?;
+        let mut registry = fs_store_sources::Registry::load(&root.join("installed.toml"))
+            .map_err(|e| format!("{e:?}"))?;
+        registry.record(name, &v.to_string(), &url);
+        registry.save().map_err(|e| format!("{e:?}"))?;
         println!("installed {name} {v}");
+        crate::updates::link(root, name);
         return Ok(());
     }
     Err(last)
-}
-
-fn cmd_remove(root: &Path, name: &str) -> Result<(), String> {
-    let running = ProcRunningCheck::new(root);
-    fs_store_engine::remove(root, name, &running).map_err(|e| format!("{name}: {e:?}"))?;
-    println!("removed {name}");
-    Ok(())
 }
 
 /// Runs one command (`sources`, `available`, `install`, `update`, `installed`) with its arguments.
@@ -282,9 +280,16 @@ pub fn run(all: &[String]) -> Result<(), String> {
         [c, s] if c == "available" => cmd_available(&root, Some(s), extra),
         [c, n] if c == "install" => cmd_install(&root, n, None, extra, false),
         [c, n, s] if c == "install" => cmd_install(&root, n, Some(s), extra, false),
-        [c, n] if c == "remove" => cmd_remove(&root, n),
-        [c, n] if c == "update" => cmd_install(&root, n, None, extra, true),
+        [c, n] if c == "remove" => crate::updates::remove(&root, n),
+        [c] if c == "update" => crate::updates::update_all(&root, extra),
+        [c, a] if c == "update" && a == "--all" => crate::updates::update_all(&root, extra),
+        [c, n] if c == "update" => {
+            let source = crate::updates::registered_source(&root, n);
+            cmd_install(&root, n, source.as_ref(), extra, true)
+        }
+        [c, n, m] if c == "auto" => crate::updates::auto(&root, n, m),
+        [c, rest @ ..] if c == "timer" => crate::updates::timer(rest),
         [c, n, s] if c == "update" => cmd_install(&root, n, Some(s), extra, true),
-        _ => Err("usage: fs-store sources | available [source] | install <name> [source] | update <name> [source] | remove <name> | installed".into()),
+        _ => Err("usage: fs-store sources | available [source] | install <name> [source] | update <name> [source] | update --all | auto <name> on|off | timer enable|disable|status | remove <name> | installed".into()),
     }
 }

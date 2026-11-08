@@ -21,7 +21,7 @@ pub struct Source {
 /// Id of the built-in reference source.
 pub const REFERENCE_ID: &str = "freesynergy";
 /// Git URL of the built-in reference source (provisional).
-pub const REFERENCE_URL: &str = "https://github.com/FreeSynergy/fs-packages";
+pub const REFERENCE_URL: &str = "https://github.com/FreeSynergy/fs-catalog";
 
 impl Source {
     /// The built-in reference source, enabled.

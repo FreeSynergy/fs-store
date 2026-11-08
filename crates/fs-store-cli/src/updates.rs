@@ -1,0 +1,154 @@
+//! Pattern: Command (the automatic part: update everything, per-package switch, the systemd user timer).
+
+use std::path::Path;
+
+use fs_store_sources::Registry;
+
+use crate::commands::cmd_install;
+
+fn registry(root: &Path) -> Result<Registry, String> {
+    Registry::load(&root.join("installed.toml")).map_err(|e| format!("{e:?}"))
+}
+
+/// The source a package was installed from, if the register knows it.
+pub(crate) fn registered_source(root: &Path, name: &str) -> Option<String> {
+    registry(root).ok()?.get(name).map(|e| e.source.clone())
+}
+
+/// Updates every installed package that has automatic updates on, each from its own source.
+/// One failing package does not stop the others; the result says how many failed.
+pub(crate) fn update_all(root: &Path, extra: Option<&String>) -> Result<(), String> {
+    let entries: Vec<_> = registry(root)?.list().to_vec();
+    let mut failed = 0;
+    for e in entries {
+        if !e.auto_update {
+            println!("{}: automatic updates are off", e.name);
+            continue;
+        }
+        if let Err(message) = cmd_install(root, &e.name, Some(&e.source), extra, true) {
+            eprintln!("{}: {message}", e.name);
+            failed += 1;
+        }
+    }
+    if failed == 0 {
+        Ok(())
+    } else {
+        Err(format!("{failed} package(s) could not be updated"))
+    }
+}
+
+/// `fs-store remove <name>`: takes the package away and forgets it in the register.
+pub(crate) fn remove(root: &Path, name: &str) -> Result<(), String> {
+    let running = fs_store_engine::ProcRunningCheck::new(root);
+    fs_store_engine::remove(root, name, &running).map_err(|e| format!("{name}: {e:?}"))?;
+    let _ = fs_store_engine::unlink_programs(root, name, &bin_dir());
+    let mut registry = registry(root)?;
+    registry.forget(name);
+    registry.save().map_err(|e| format!("{e:?}"))?;
+    println!("removed {name}");
+    Ok(())
+}
+
+/// Where the commands of installed programs are linked: `FS_STORE_BIN`, else `~/.local/bin`.
+fn bin_dir() -> std::path::PathBuf {
+    std::env::var_os("FS_STORE_BIN").map_or_else(
+        || {
+            std::path::PathBuf::from(std::env::var_os("HOME").unwrap_or_default())
+                .join(".local/bin")
+        },
+        std::path::PathBuf::from,
+    )
+}
+
+/// Puts the programs of `name` on the PATH; says what it did, never fails the install.
+pub(crate) fn link(root: &Path, name: &str) {
+    match fs_store_engine::link_programs(root, name, &bin_dir()) {
+        Ok((linked, skipped)) => {
+            if !linked.is_empty() {
+                println!("commands in {}: {}", bin_dir().display(), linked.join(", "));
+            }
+            for s in skipped {
+                eprintln!("{s}: another file of that name is in the way, not linked");
+            }
+        }
+        Err(e) => eprintln!("{name}: commands not linked: {e}"),
+    }
+}
+
+/// `fs-store auto <name> on|off`.
+pub(crate) fn auto(root: &Path, name: &str, mode: &str) -> Result<(), String> {
+    let on = match mode {
+        "on" => true,
+        "off" => false,
+        _ => return Err("usage: fs-store auto <name> on|off".into()),
+    };
+    let mut r = registry(root)?;
+    if !r.set_auto_update(name, on) {
+        return Err(format!("{name} is not installed"));
+    }
+    r.save().map_err(|e| format!("{e:?}"))?;
+    println!("{name}: automatic updates {mode}");
+    Ok(())
+}
+
+/// The two systemd user unit files that run `fs-store update --all` every day and a little after login.
+#[must_use]
+pub(crate) fn unit_files(exe: &str) -> (String, String) {
+    let service = format!(
+        "[Unit]\nDescription=FreeSynergy.Store: update installed programs\n\n[Service]\nType=oneshot\nExecStart={exe} update --all\n"
+    );
+    let timer = "[Unit]\nDescription=FreeSynergy.Store: look for updates\n\n[Timer]\nOnBootSec=5min\nOnUnitActiveSec=1d\nRandomizedDelaySec=30min\nPersistent=true\n\n[Install]\nWantedBy=timers.target\n".to_owned();
+    (service, timer)
+}
+
+/// `fs-store timer enable|disable|status`: the user timer that updates by itself.
+pub(crate) fn timer(rest: &[String]) -> Result<(), String> {
+    let home = std::env::var_os("HOME").ok_or("HOME is not set")?;
+    let dir = Path::new(&home).join(".config/systemd/user");
+    let run = |args: &[&str]| -> Result<(), String> {
+        let out = std::process::Command::new("systemctl")
+            .arg("--user")
+            .args(args)
+            .output()
+            .map_err(|e| format!("systemctl: {e}"))?;
+        print!("{}", String::from_utf8_lossy(&out.stdout));
+        if out.status.success() {
+            Ok(())
+        } else {
+            Err(String::from_utf8_lossy(&out.stderr).trim().to_owned())
+        }
+    };
+    match rest.first().map(String::as_str) {
+        Some("enable") => {
+            let exe = std::env::current_exe().map_err(|e| e.to_string())?;
+            let (service, timer) = unit_files(&exe.to_string_lossy());
+            std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+            std::fs::write(dir.join("fs-store-update.service"), service)
+                .map_err(|e| e.to_string())?;
+            std::fs::write(dir.join("fs-store-update.timer"), timer).map_err(|e| e.to_string())?;
+            run(&["daemon-reload"])?;
+            run(&["enable", "--now", "fs-store-update.timer"])
+        }
+        Some("disable") => {
+            run(&["disable", "--now", "fs-store-update.timer"])?;
+            for f in ["fs-store-update.service", "fs-store-update.timer"] {
+                let _ = std::fs::remove_file(dir.join(f));
+            }
+            run(&["daemon-reload"])
+        }
+        Some("status") => run(&["status", "fs-store-update.timer", "--no-pager"]),
+        _ => Err("usage: fs-store timer enable|disable|status".into()),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::unit_files;
+
+    #[test]
+    fn units_run_the_update_command_of_this_binary() {
+        let (service, timer) = unit_files("/home/u/.local/bin/fs-store");
+        assert!(service.contains("ExecStart=/home/u/.local/bin/fs-store update --all"));
+        assert!(timer.contains("OnUnitActiveSec=1d") && timer.contains("WantedBy=timers.target"));
+    }
+}
