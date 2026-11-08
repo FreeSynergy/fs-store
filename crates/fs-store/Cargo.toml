@@ -21,4 +21,5 @@ gui = ["dep:fs-store-app"]
 fs-store-cli = { path = "../fs-store-cli" }
 fs-store-engine = { path = "../fs-store-engine" }
 fs-store-core = { path = "../fs-store-core" }
+fs-store-server = { path = "../fs-store-server" }
 fs-store-app = { path = "../fs-store-app", optional = true }
