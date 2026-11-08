@@ -1,0 +1,19 @@
+[package]
+name = "fs-store-app"
+description = "FreeSynergy.Store, first window: sources, available and installed packages, progress of the running job; on fs-components"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version = "1.89"
+
+[dependencies]
+fs-store-core = { path = "../fs-store-core" }
+fs-store-catalog = { path = "../fs-store-catalog" }
+fs-store-engine = { path = "../fs-store-engine" }
+fs-store-pgp = { path = "../fs-store-pgp" }
+fs-store-sources = { path = "../fs-store-sources" }
+fs-components-app = { git = "https://github.com/FreeSynergy/fs-components", tag = "v0.3.0" }
+fs-components-primitives = { git = "https://github.com/FreeSynergy/fs-components", tag = "v0.3.0" }
+blinc_cn = "0.6"
+blinc_core = "0.6"
+blinc_layout = "0.6"
