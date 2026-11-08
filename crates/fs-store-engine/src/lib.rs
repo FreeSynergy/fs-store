@@ -15,7 +15,7 @@ mod rpm;
 pub mod service;
 mod targz;
 
-pub use batch::Observer;
+pub use batch::{CommitObserver, Observer};
 pub use facets::{default_apps_dir, ensure_own_menu_entry, link_facets, unlink_facets};
 pub use icons::store_icon;
 pub use links::{default_bin_dir, link_programs, unlink_programs};

@@ -13,6 +13,8 @@ use crate::{Commander, Prepared, Rpm, SystemCommander, TarGz};
 
 /// Something to tell while a batch runs: which package reached which phase.
 pub type Observer<'a> = &'a (dyn Fn(&str, InstallState) + Sync);
+/// The same for the install step, which runs on one thread.
+pub type CommitObserver<'a> = &'a dyn Fn(&str, InstallState);
 
 impl Installer<'_> {
     /// Downloads and checks all plans at the same time (one thread each). The answers keep the order of `plans`.
@@ -68,7 +70,7 @@ impl Installer<'_> {
     pub fn commit_observed(
         &self,
         prepared: Vec<Prepared>,
-        observe: Observer<'_>,
+        observe: CommitObserver<'_>,
     ) -> Vec<(String, Result<Version, InstallFailure>)> {
         let mut results = Vec::new();
         let (rpm, rest): (Vec<_>, Vec<_>) = prepared
@@ -117,7 +119,7 @@ impl Installer<'_> {
     pub fn commit_rpm_with<C: Commander>(
         &self,
         group: Vec<Prepared>,
-        observe: Observer<'_>,
+        observe: CommitObserver<'_>,
         commander: C,
     ) -> Vec<(String, Result<Version, InstallFailure>)> {
         let Some(first) = group.first().map(|p| p.verified.clone()) else {

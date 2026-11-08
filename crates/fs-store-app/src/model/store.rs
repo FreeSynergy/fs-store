@@ -26,7 +26,8 @@ pub struct StoreModel {
     pub(super) installed: Vec<InstalledRow>,
     pub(super) offers: Vec<PackageRow>,
     pub(super) details: HashMap<String, InstalledDetails>,
-    pub(super) job: Option<JobView>,
+    pub(super) jobs: Vec<JobView>,
+    pub(super) stash: HashMap<String, crate::backend::Prepared>,
     pub(super) problems: Vec<Problem>,
     pub(super) new_source: String,
     pub(super) updates: Arc<dyn UpdateService>,
@@ -51,7 +52,8 @@ impl StoreModel {
             installed: Vec::new(),
             offers: Vec::new(),
             details: HashMap::new(),
-            job: None,
+            jobs: Vec::new(),
+            stash: HashMap::new(),
             problems: Vec::new(),
             new_source: String::new(),
             updates: Arc::new(NoUpdates),
@@ -92,13 +94,7 @@ impl StoreModel {
         }
         self.shown = Some(view);
         self.admin.note = None;
-        if self
-            .job
-            .as_ref()
-            .is_some_and(|j| j.phase == Phase::Installed)
-        {
-            self.job = None;
-        }
+        self.jobs.retain(|j| j.phase != Phase::Installed);
         if view == View::Cards {
             self.enter_available();
         } else {
@@ -130,10 +126,22 @@ impl StoreModel {
         self.details.get(name).cloned().unwrap_or_default()
     }
 
-    /// The running or last job.
+    /// The last job started (running, or the last one that ended).
     #[must_use]
     pub fn job(&self) -> Option<&JobView> {
-        self.job.as_ref()
+        self.jobs.last()
+    }
+
+    /// True while a program is being taken away (installing and updating do not block each other).
+    #[must_use]
+    pub fn is_removing(&self) -> bool {
+        self.ui.removing.is_some()
+    }
+
+    /// All jobs of the queue, in the order they were started.
+    #[must_use]
+    pub fn jobs(&self) -> &[JobView] {
+        &self.jobs
     }
 
     /// Things to tell the person, oldest first.

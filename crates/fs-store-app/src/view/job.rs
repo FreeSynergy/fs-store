@@ -6,7 +6,7 @@ use std::sync::Arc;
 use blinc_layout::div::{Div, div};
 use blinc_layout::prelude::text;
 
-use crate::backend::{JobError, Phase};
+use crate::backend::{JobError, JobKind, Phase, StoreBackend};
 use crate::model::StoreModel;
 use crate::words;
 
@@ -47,7 +47,7 @@ pub(super) fn job_bar(model: &StoreModel) -> Div {
     bar
 }
 
-/// Starts the job of `name` on a worker thread; every phase asks the window to draw again.
+/// Puts the job of `name` into the queue; its download starts at once, next to the others.
 pub(super) fn start_job(shared: &Shared, name: &str) {
     let (backend, kind, name) = {
         let mut model = locked(shared);
@@ -60,19 +60,61 @@ pub(super) fn start_job(shared: &Shared, name: &str) {
         (model.backend(), kind, name)
     };
     rebuild();
+    spawn_prepare(shared, backend, kind, name);
+}
+
+/// "Update all": every program with an update goes into the queue; they share one install step.
+pub(super) fn start_all_updates(shared: &Shared) {
+    let (backend, items) = {
+        let mut model = locked(shared);
+        let items = model.begin_all_updates();
+        (model.backend(), items)
+    };
+    rebuild();
+    for (kind, name) in items {
+        spawn_prepare(shared, Arc::clone(&backend), kind, name);
+    }
+}
+
+/// Downloads and checks on a worker thread; then, if every download of the queue is done, installs the batch.
+fn spawn_prepare(shared: &Shared, backend: Arc<dyn StoreBackend>, kind: JobKind, name: String) {
     let shared = Arc::clone(shared);
     std::thread::spawn(move || {
         // A panic in the worker must not leave the job "running" for ever, silently.
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            backend.run(kind, &name, &mut |phase| {
-                locked(&shared).observe(phase);
+            backend.prepare(kind, &name)
+        }))
+        .unwrap_or_else(|_| Err(JobError::Other(words::JOB_PANICKED.to_owned())));
+        locked(&shared).prepared(&name, result);
+        rebuild();
+        drive(&shared, backend.as_ref());
+    });
+}
+
+/// Installs the batch when nothing downloads any more; repeats for what became ready meanwhile.
+/// Only one thread installs at a time (the model hands the batch out once).
+fn drive(shared: &Shared, backend: &dyn StoreBackend) {
+    loop {
+        let Some(batch) = locked(shared).take_commit() else {
+            return;
+        };
+        rebuild();
+        let names: Vec<String> = batch.iter().map(|(n, _)| n.clone()).collect();
+        let results = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            backend.commit(batch, &mut |name, phase| {
+                locked(shared).observe_job(name, phase);
                 rebuild();
             })
         }))
-        .unwrap_or_else(|_| Err(JobError::Other(words::JOB_PANICKED.to_owned())));
-        locked(&shared).finish(result);
+        .unwrap_or_else(|_| {
+            names
+                .into_iter()
+                .map(|n| (n, Err(JobError::Other(words::JOB_PANICKED.to_owned()))))
+                .collect()
+        });
+        locked(shared).committed(results);
         rebuild();
-    });
+    }
 }
 
 /// Takes the confirmed program away on a worker thread (`pkexec` may wait for a password); the window is asked

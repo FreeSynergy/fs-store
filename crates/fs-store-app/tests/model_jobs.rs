@@ -98,15 +98,80 @@ fn failed_rollback_stays_failed() {
 }
 
 #[test]
-fn only_one_job_at_a_time() {
+fn a_second_job_joins_the_queue_but_the_same_one_twice_is_refused() {
     let f = fake(Vec::new(), None);
     let mut m = model(&f);
     assert!(m.begin_job("fs-theme").is_some());
     assert!(m.is_busy());
-    assert!(m.begin_job("fs-tasks").is_none());
+    assert!(
+        m.begin_job("fs-tasks").is_some(),
+        "downloads run side by side"
+    );
+    assert!(m.begin_job("fs-theme").is_none());
     assert_eq!(m.problems(), [Problem::Busy("fs-theme".into())]);
-    m.observe(Phase::Verified);
-    assert_eq!(m.job().unwrap().phase, Phase::Verified);
-    m.finish(Ok(v(1, 0, 0)));
-    assert!(!m.is_busy());
+    assert_eq!(m.jobs().len(), 2);
+}
+
+#[test]
+fn installing_waits_until_every_download_is_ready_and_then_takes_all_at_once() {
+    let f = fake(Vec::new(), None);
+    let mut m = model(&f);
+    m.begin_job("fs-theme").unwrap();
+    m.begin_job("fs-tasks").unwrap();
+    let backend = m.backend();
+    m.prepared("fs-theme", backend.prepare(JobKind::Install, "fs-theme"));
+    assert!(m.take_commit().is_none(), "fs-tasks still downloads");
+    m.prepared("fs-tasks", backend.prepare(JobKind::Install, "fs-tasks"));
+    let batch = m.take_commit().unwrap();
+    assert_eq!(batch.len(), 2);
+    assert!(m.jobs().iter().all(|j| j.phase == Phase::Installing));
+    assert!(m.take_commit().is_none(), "the batch is handed out once");
+    let results = backend.commit(batch, &mut |_, _| {});
+    m.committed(results);
+    assert!(m.jobs().iter().all(|j| j.phase == Phase::Installed));
+}
+
+#[test]
+fn a_failed_download_stays_on_its_card_and_the_rest_is_installed() {
+    let f = fake(Vec::new(), None);
+    let mut m = model(&f);
+    m.begin_job("fs-theme").unwrap();
+    m.begin_job("fs-tasks").unwrap();
+    let backend = m.backend();
+    m.prepared("fs-theme", Err(JobError::Checksum));
+    m.prepared("fs-tasks", backend.prepare(JobKind::Install, "fs-tasks"));
+    let batch = m.take_commit().unwrap();
+    assert_eq!(batch.len(), 1);
+    m.committed(backend.commit(batch, &mut |_, _| {}));
+    let cards = m.cards();
+    let theme = cards.iter().find(|c| c.name == "fs-theme").unwrap();
+    assert!(theme.failure.is_some());
+    assert_eq!(
+        m.jobs()
+            .iter()
+            .find(|j| j.name == "fs-tasks")
+            .unwrap()
+            .phase,
+        Phase::Installed
+    );
+}
+
+#[test]
+fn update_all_queues_every_update_once_and_counts_them() {
+    let row = |n: &str, ver| InstalledRow {
+        name: n.to_owned(),
+        version: ver,
+    };
+    let f = fake(
+        vec![row("fs-tasks", v(0, 6, 0)), row("fs-store", v(0, 1, 0))],
+        None,
+    );
+    let mut m = model(&f);
+    m.refresh();
+    let waiting = m.updates_waiting();
+    assert_eq!(waiting, 2);
+    let started = m.begin_all_updates();
+    assert_eq!(started.len(), waiting);
+    assert_eq!(m.updates_waiting(), 0);
+    assert!(m.begin_all_updates().is_empty());
 }

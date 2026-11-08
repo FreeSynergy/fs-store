@@ -135,9 +135,9 @@ impl StoreModel {
     /// The name of what runs now (a job or an uninstall), if anything.
     pub(super) fn busy_name(&self) -> Option<String> {
         self.ui.removing.clone().or_else(|| {
-            self.job
-                .as_ref()
-                .filter(|j| !j.is_finished())
+            self.jobs
+                .iter()
+                .find(|j| !j.is_finished())
                 .map(|j| j.name.clone())
         })
     }

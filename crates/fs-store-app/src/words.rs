@@ -50,6 +50,8 @@ pub const PROJECT_URL: &str = "https://github.com/FreeSynergy/fs-store";
 pub const BUTTON_INSTALL: &str = "Install";
 /// Button: update a package.
 pub const BUTTON_UPDATE: &str = "Update";
+/// Button on top: updates every program that has an update. Placeholder `{count}`.
+pub const BUTTON_UPDATE_ALL: &str = "Update all ({count})";
 /// Button: switch a source on.
 pub const BUTTON_SWITCH_ON: &str = "Switch on";
 /// Button: switch a source off.
@@ -137,7 +139,7 @@ pub fn kind(kind: Kind) -> &'static str {
 pub fn phase_name(phase: Phase) -> &'static str {
     match phase {
         Phase::Pending => "Waiting",
-        Phase::Verified => "Checked",
+        Phase::Verified => "Ready, waiting for the others",
         Phase::Installing => "Installing",
         Phase::Installed => "Installed",
         Phase::Failed => "Failed",

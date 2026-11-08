@@ -11,6 +11,7 @@ use crate::model::{Card, StoreModel, columns};
 use crate::words;
 
 use super::card::{CARD_W, card};
+use super::job::start_all_updates;
 use super::shell::{Shared, button, locked, rebuild};
 
 /// Space between cards and around the page, in pixels.
@@ -61,7 +62,9 @@ pub(super) fn cards(
     width: f32,
 ) -> Div {
     let refresh = Arc::clone(shared);
-    let top = div().flex_row().child(
+    let waiting = model.updates_waiting();
+    let all_updates = Arc::clone(shared);
+    let mut top = div().flex_row().gap(GAP / 4.0).child(
         button(
             "refresh",
             words::BUTTON_REFRESH,
@@ -73,6 +76,17 @@ pub(super) fn cards(
             rebuild();
         }),
     );
+    if waiting > 0 {
+        top = top.child(
+            button(
+                "update-all",
+                &words::fill(words::BUTTON_UPDATE_ALL, &[("count", &waiting.to_string())]),
+                ButtonVariant::Primary,
+                true,
+            )
+            .on_click(move |_| start_all_updates(&all_updates)),
+        );
+    }
     let all = model.cards();
     if all.is_empty() {
         return div().flex_col().w_full().child(top).child(
@@ -87,7 +101,7 @@ pub(super) fn cards(
     for chunk in all.chunks(columns(room, CARD_W, GAP)) {
         let mut row = div().flex_row().gap(GAP / 4.0);
         for one in chunk {
-            row = row.child(card(one, model.is_busy(), shared, launcher));
+            row = row.child(card(one, model.is_removing(), shared, launcher));
         }
         grid = grid.child(row);
     }

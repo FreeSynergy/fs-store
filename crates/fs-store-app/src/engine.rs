@@ -6,20 +6,19 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, PoisonError};
 
-use fs_store_catalog::{CatalogEntry, parse_catalog};
+use fs_store_catalog::parse_catalog;
 use fs_store_core::{SignaturePolicy, SignatureVerifier, SourceId, SourceRepository, Version};
-use fs_store_engine::ProcRunningCheck;
 use fs_store_engine::net::{HttpsFetch, clone_catalog};
-use fs_store_engine::service::{Fetch, FileFetch, Installer};
+use fs_store_engine::service::{Fetch, FileFetch};
 use fs_store_pgp::PgpVerifier;
 use fs_store_sources::FileSources;
 
 use crate::backend::{
     BackendError, InstalledDetails, InstalledRow, JobError, JobKind, Listing, PackageRow, Phase,
-    SourceRow, StoreBackend,
+    Prepared, SourceRow, StoreBackend,
 };
 
-struct AnyFetch;
+pub(crate) struct AnyFetch;
 
 impl Fetch for AnyFetch {
     fn get(&self, url: &str) -> Result<Vec<u8>, String> {
@@ -61,6 +60,14 @@ impl EngineBackend {
         ))
     }
 
+    pub(crate) fn root(&self) -> &std::path::Path {
+        &self.root
+    }
+
+    pub(crate) fn sources_file(&self) -> Result<FileSources, BackendError> {
+        self.file()
+    }
+
     fn file(&self) -> Result<FileSources, BackendError> {
         FileSources::load(&self.root.join("sources.toml")).map_err(other)
     }
@@ -81,7 +88,7 @@ impl EngineBackend {
     }
 
     /// Catalog entries of one source, after its signature was checked.
-    fn read_source(
+    pub(crate) fn read_source(
         &self,
         url: &str,
     ) -> Result<(fs_store_catalog::Catalog, Vec<u8>, Vec<u8>), String> {
@@ -102,7 +109,7 @@ impl EngineBackend {
 
     /// After a good install: note it in the register and put the commands on the PATH, as the commands do.
     /// Neither may fail the install that already happened.
-    fn remember(&self, name: &str, version: Version, source: &str, facets: &[String]) {
+    pub(crate) fn remember(&self, name: &str, version: Version, source: &str, facets: &[String]) {
         let path = self.root.join("installed.toml");
         if let Ok(mut registry) = fs_store_sources::Registry::load(&path) {
             registry.record(name, &version.to_string(), source);
@@ -121,7 +128,7 @@ impl EngineBackend {
             fs_store_engine::link_programs(&self.root, name, &fs_store_engine::default_bin_dir());
     }
 
-    fn installed_version(&self, name: &str) -> Option<Version> {
+    pub(crate) fn installed_version(&self, name: &str) -> Option<Version> {
         let known = crate::installed::detect(
             &self.root,
             &fs_store_engine::rpm_installed_version,
@@ -138,7 +145,7 @@ fn other(error: impl std::fmt::Debug) -> BackendError {
     BackendError::Other(format!("{error:?}"))
 }
 
-use crate::engine_map::{id_from_url, job_error, row};
+use crate::engine_map::{id_from_url, row};
 
 impl StoreBackend for EngineBackend {
     fn sources(&self) -> Result<Vec<SourceRow>, BackendError> {
@@ -241,46 +248,23 @@ impl StoreBackend for EngineBackend {
         name: &str,
         observe: &mut dyn FnMut(Phase),
     ) -> Result<Version, JobError> {
-        let current = self.installed_version(name);
-        if kind == JobKind::Update && current.is_none() {
-            return Err(JobError::NotOffered);
-        }
-        let verifier = PgpVerifier::builtin();
-        let running = ProcRunningCheck::new(&self.root);
-        let installer = Installer {
-            root: self.root.clone(),
-            verifier: &verifier,
-            fetch: &AnyFetch,
-            running: &running,
-            prefer: fs_store_engine::preferred_format(),
-            policy: SignaturePolicy::default(),
-        };
-        let sources = self.file().map_err(|e| JobError::Other(format!("{e:?}")))?;
-        let mut last = JobError::NotOffered;
-        for source in sources.list().into_iter().filter(|s| s.enabled) {
-            let (catalog, bytes, sig) = match self.read_source(&source.url) {
-                Ok(x) => x,
-                Err(detail) => {
-                    last = JobError::Other(format!("{}: {detail}", source.id.0));
-                    continue;
-                }
-            };
-            let offered: Option<&CatalogEntry> =
-                catalog.entries.iter().find(|e| e.name.as_str() == name);
-            if offered.is_none() {
-                continue;
-            }
-            let version = installer
-                .install_observed(&bytes, &sig, name, current, observe)
-                .map_err(job_error)?;
-            self.remember(
-                name,
-                version,
-                &source.url,
-                &offered.map(|o| o.facets.clone()).unwrap_or_default(),
-            );
-            return Ok(version);
-        }
-        Err(last)
+        let prepared = self.prepare(kind, name)?;
+        observe(Phase::Verified);
+        observe(Phase::Installing);
+        self.commit(vec![(name.to_owned(), prepared)], &mut |_, _| {})
+            .pop()
+            .map_or(Err(JobError::NotOffered), |(_, r)| r)
+    }
+
+    fn prepare(&self, kind: JobKind, name: &str) -> Result<Prepared, JobError> {
+        self.prepare_job(kind, name)
+    }
+
+    fn commit(
+        &self,
+        batch: Vec<(String, Prepared)>,
+        observe: &mut dyn FnMut(&str, Phase),
+    ) -> Vec<(String, Result<Version, JobError>)> {
+        self.commit_jobs(batch, observe)
     }
 }

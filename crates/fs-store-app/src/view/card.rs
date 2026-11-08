@@ -226,12 +226,15 @@ pub(super) fn card(card: &Card, busy: bool, shared: &Shared, launcher: &Arc<dyn 
         Some(what) => working(what),
         None => actions(card, busy, shared, launcher),
     };
-    div()
+    let mut body = div()
         .class("fs-card")
         .class(state_class)
         .w(CARD_W)
         .flex_col()
         .gap(3.0)
-        .child(head(card, shared))
-        .child(foot)
+        .child(head(card, shared));
+    if let Some(why) = &card.failure {
+        body = body.child(text(why.clone()).class("fs-store-sub"));
+    }
+    body.child(foot)
 }

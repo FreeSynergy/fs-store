@@ -87,6 +87,8 @@ pub struct Card {
     pub selected: bool,
     /// What it is busy with, or waits for.
     pub working: Option<Working>,
+    /// Why its last job failed, as a sentence; stays on the card until the next try.
+    pub failure: Option<String>,
     /// Its buttons.
     pub buttons: Buttons,
     /// Its stand-in logo.
@@ -235,9 +237,9 @@ impl StoreModel {
         } else if self.ui.confirm.as_deref() == Some(name) {
             Some(Working::Asking)
         } else {
-            self.job
-                .as_ref()
-                .filter(|j| j.name == name && !j.is_finished())
+            self.jobs
+                .iter()
+                .find(|j| j.name == name && !j.is_finished())
                 .map(|j| Working::Job(j.kind, j.phase))
         };
         Card {
@@ -254,6 +256,12 @@ impl StoreModel {
             hovered: self.ui.hovered.as_deref() == Some(name),
             selected: self.ui.selected.as_deref() == Some(name),
             working,
+            failure: self
+                .jobs
+                .iter()
+                .find(|j| j.name == name)
+                .and_then(|j| j.error.as_ref())
+                .map(|e| super::text::job_failed_line(name, e)),
             buttons: buttons_for(state),
             placeholder: placeholder(name),
             icon: self.backend.icon_path(name),

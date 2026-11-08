@@ -122,6 +122,15 @@ pub enum JobError {
     Other(String),
 }
 
+/// A job whose download is done and checked; only the backend that made it can open it.
+pub struct Prepared(pub Box<dyn std::any::Any + Send>);
+
+impl std::fmt::Debug for Prepared {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("Prepared")
+    }
+}
+
 /// The store, as the window sees it.
 pub trait StoreBackend: Send + Sync {
     /// All sources, reference first.
@@ -179,4 +188,31 @@ pub trait StoreBackend: Send + Sync {
         name: &str,
         observe: &mut dyn FnMut(Phase),
     ) -> Result<Version, JobError>;
+    /// First half of a job: download and check, change nothing on the machine. Many run at the same time.
+    /// The default does nothing and leaves the work to [`StoreBackend::commit`] (simple backends, tests).
+    ///
+    /// # Errors
+    /// `JobError`.
+    fn prepare(&self, kind: JobKind, name: &str) -> Result<Prepared, JobError> {
+        Ok(Prepared(Box::new((kind, name.to_owned()))))
+    }
+    /// Second half: installs everything prepared in ONE step (one password for all rpm), and tells `observe`
+    /// `Installing` for each name. Returns one result per name; one failing does not stop the others.
+    /// The default runs [`StoreBackend::run`] for each, one after the other.
+    fn commit(
+        &self,
+        batch: Vec<(String, Prepared)>,
+        observe: &mut dyn FnMut(&str, Phase),
+    ) -> Vec<(String, Result<Version, JobError>)> {
+        batch
+            .into_iter()
+            .map(|(name, prepared)| {
+                let result = match prepared.0.downcast::<(JobKind, String)>() {
+                    Ok(job) => self.run(job.0, &name, &mut |p| observe(&name, p)),
+                    Err(_) => Err(JobError::Other("not prepared by this backend".to_owned())),
+                };
+                (name, result)
+            })
+            .collect()
+    }
 }

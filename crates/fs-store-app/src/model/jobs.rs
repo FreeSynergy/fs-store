@@ -1,10 +1,11 @@
-//! Pattern: State (the job moves along one fixed course of phases). Job course: `Pending`, `Verified`,
+//! Pattern: State (each job moves along one fixed course of phases) and Unit of Work (the jobs of the page form
+//! the batch: downloads run at once, installing starts when none is `Pending` any more). Job course: `Pending`, `Verified`,
 //! `Installing`, `Installed`; on an error `Failed` and then `RolledBack` (nothing is left half done;
 //! `RollbackFailed` stays at `Failed`).
 
 use fs_store_core::Version;
 
-use crate::backend::{JobError, JobKind, Phase};
+use crate::backend::{JobError, JobKind, Phase, Prepared};
 
 use super::store::StoreModel;
 use super::types::{Action, Problem};
@@ -47,17 +48,22 @@ pub struct Ticket<'a> {
 }
 
 impl StoreModel {
-    /// True while a job or an uninstall runs: only one at a time.
+    /// True while a job or an uninstall runs.
     #[must_use]
     pub fn is_busy(&self) -> bool {
         self.busy_name().is_some()
     }
 
-    /// Starts the job the button of `name` stands for: `Pending`. `None` (and a problem when busy) if there is
-    /// nothing to start. Run the job with the backend, tell [`StoreModel::observe`], then [`StoreModel::finish`].
+    /// Puts the job the button of `name` stands for into the queue: `Pending` (its download starts at once).
+    /// `None` (and a problem) if there is nothing to start, the program is being removed, or it is queued already.
+    /// Run it with [`StoreBackend::prepare`], tell [`StoreModel::prepared`], then [`StoreModel::take_commit`].
     pub fn begin_job(&mut self, name: &str) -> Option<Ticket<'_>> {
-        if let Some(busy) = self.busy_name() {
-            self.problems = vec![Problem::Busy(busy)];
+        if self.ui.removing.is_some() {
+            self.problems = vec![Problem::Busy(self.ui.removing.clone().unwrap_or_default())];
+            return None;
+        }
+        if self.jobs.iter().any(|j| j.name == name && !j.is_finished()) {
+            self.problems = vec![Problem::Busy(name.to_owned())];
             return None;
         }
         self.problems.clear();
@@ -74,7 +80,8 @@ impl StoreModel {
                 return None;
             }
         };
-        self.job = Some(JobView {
+        self.jobs.retain(|j| j.name != name);
+        self.jobs.push(JobView {
             kind,
             name: name.to_owned(),
             phase: Phase::Pending,
@@ -82,55 +89,143 @@ impl StoreModel {
             version: None,
             error: None,
         });
-        let job = self.job.as_ref()?;
+        let job = self.jobs.last()?;
         Some(Ticket {
             kind,
             name: &job.name,
         })
     }
 
-    /// The backend reports a phase.
-    pub fn observe(&mut self, phase: Phase) {
-        if let Some(job) = self.job.as_mut().filter(|j| !j.is_finished()) {
+    /// Every program that has an update and is not queued yet goes into the queue, in the order of the cards.
+    /// Returns what to start.
+    pub fn begin_all_updates(&mut self) -> Vec<(JobKind, String)> {
+        let names: Vec<String> = self
+            .available
+            .iter()
+            .filter(|r| r.action == Action::Update)
+            .map(|r| r.package.name.clone())
+            .collect();
+        names
+            .into_iter()
+            .filter_map(|n| self.begin_job(&n).map(|t| (t.kind, t.name.to_owned())))
+            .collect()
+    }
+
+    /// How many programs have an update waiting (the number on "Update all").
+    #[must_use]
+    pub fn updates_waiting(&self) -> usize {
+        self.available
+            .iter()
+            .filter(|r| r.action == Action::Update)
+            .filter(|r| {
+                !self
+                    .jobs
+                    .iter()
+                    .any(|j| j.name == r.package.name && !j.is_finished())
+            })
+            .count()
+    }
+
+    /// The backend reports a phase of the job `name`.
+    pub fn observe_job(&mut self, name: &str, phase: Phase) {
+        if let Some(job) = self
+            .jobs
+            .iter_mut()
+            .find(|j| j.name == name && !j.is_finished() && !j.history.contains(&phase))
+        {
             job.phase = phase;
             job.history.push(phase);
         }
     }
 
-    /// The backend is done: `Installed`, or `Failed` and then `RolledBack`. Reads the installed list again; a failure is told as a problem.
+    /// The backend reports a phase of the last job (one job at a time: tests, and programs without a window).
+    pub fn observe(&mut self, phase: Phase) {
+        if let Some(name) = self.jobs.last().map(|j| j.name.clone()) {
+            self.observe_job(&name, phase);
+        }
+    }
+
+    /// The download of `name` is done: `Verified` (it waits for the others), or the job failed.
+    pub fn prepared(&mut self, name: &str, result: Result<Prepared, JobError>) {
+        match result {
+            Ok(p) => {
+                self.stash.insert(name.to_owned(), p);
+                self.observe_job(name, Phase::Verified);
+            }
+            Err(error) => self.fail_job(name, error),
+        }
+    }
+
+    /// When no download is running any more and nothing installs, the names that are ready now go to the
+    /// installer ALL AT ONCE; they are `Installing` from here. Otherwise `None`.
+    pub fn take_commit(&mut self) -> Option<Vec<(String, Prepared)>> {
+        let waiting = |p: Phase| self.jobs.iter().any(|j| j.phase == p);
+        if waiting(Phase::Pending) || waiting(Phase::Installing) || !waiting(Phase::Verified) {
+            return None;
+        }
+        let names: Vec<String> = self
+            .jobs
+            .iter()
+            .filter(|j| j.phase == Phase::Verified)
+            .map(|j| j.name.clone())
+            .collect();
+        let mut batch = Vec::new();
+        for n in names {
+            self.observe_job(&n, Phase::Installing);
+            if let Some(p) = self.stash.remove(&n) {
+                batch.push((n, p));
+            }
+        }
+        Some(batch)
+    }
+
+    /// The installer is done with the batch: one result per name.
+    pub fn committed(&mut self, results: Vec<(String, Result<Version, JobError>)>) {
+        for (name, result) in results {
+            self.end_job(&name, result);
+        }
+        self.read_installed();
+        self.merge();
+    }
+
+    /// The backend is done with the last job: `Installed`, or `Failed` and then `RolledBack`.
     pub fn finish(&mut self, result: Result<Version, JobError>) {
-        if let Some(job) = self.job.as_mut() {
-            match result {
-                Ok(version) => {
+        if let Some(name) = self.jobs.last().map(|j| j.name.clone()) {
+            self.end_job(&name, result);
+        }
+        self.read_installed();
+        self.merge();
+    }
+
+    fn fail_job(&mut self, name: &str, error: JobError) {
+        let Some(job) = self.jobs.iter_mut().find(|j| j.name == name) else {
+            return;
+        };
+        job.history.push(Phase::Failed);
+        job.phase = Phase::Failed;
+        if error != JobError::RollbackFailed {
+            job.history.push(Phase::RolledBack);
+            job.phase = Phase::RolledBack;
+        }
+        self.problems.push(Problem::JobFailed {
+            name: job.name.clone(),
+            error: error.clone(),
+        });
+        job.error = Some(error);
+    }
+
+    fn end_job(&mut self, name: &str, result: Result<Version, JobError>) {
+        match result {
+            Ok(version) => {
+                if let Some(job) = self.jobs.iter_mut().find(|j| j.name == name) {
                     job.version = Some(version);
                     job.phase = Phase::Installed;
                     job.history.push(Phase::Installed);
                 }
-                Err(error) => {
-                    job.history.push(Phase::Failed);
-                    job.phase = Phase::Failed;
-                    if error != JobError::RollbackFailed {
-                        job.history.push(Phase::RolledBack);
-                        job.phase = Phase::RolledBack;
-                    }
-                    self.problems.push(Problem::JobFailed {
-                        name: job.name.clone(),
-                        error: error.clone(),
-                    });
-                    job.error = Some(error);
-                }
+                self.updated(name);
             }
+            Err(error) => self.fail_job(name, error),
         }
-        let done = self
-            .job
-            .as_ref()
-            .filter(|j| j.phase == Phase::Installed)
-            .map(|j| j.name.clone());
-        if let Some(name) = done {
-            self.updated(&name);
-        }
-        self.read_installed();
-        self.merge();
     }
 
     /// Runs the job of `name` to its end on this thread (tests, and programs without a window).
@@ -140,11 +235,18 @@ impl StoreModel {
         };
         let (kind, name) = (ticket.kind, ticket.name.to_owned());
         let backend = self.backend();
+        let result = backend.prepare(kind, &name);
+        self.prepared(&name, result);
+        let Some(batch) = self.take_commit() else {
+            self.read_installed();
+            self.merge();
+            return;
+        };
         let mut seen = Vec::new();
-        let result = backend.run(kind, &name, &mut |p| seen.push(p));
-        for phase in seen {
-            self.observe(phase);
+        let results = backend.commit(batch, &mut |n, ph| seen.push((n.to_owned(), ph)));
+        for (n, ph) in seen {
+            self.observe_job(&n, ph);
         }
-        self.finish(result);
+        self.committed(results);
     }
 }

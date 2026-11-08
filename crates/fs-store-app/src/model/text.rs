@@ -10,7 +10,7 @@ impl StoreModel {
     /// One sentence about the job, or about there being none.
     #[must_use]
     pub fn job_line(&self) -> String {
-        let Some(job) = &self.job else {
+        let Some(job) = self.job() else {
             return words::NO_JOB.to_owned();
         };
         let version = job.version.map(|v| v.to_string()).unwrap_or_default();
@@ -101,7 +101,7 @@ impl StoreModel {
     }
 }
 
-fn job_failed_line(name: &str, error: &JobError) -> String {
+pub(super) fn job_failed_line(name: &str, error: &JobError) -> String {
     let detail = match error {
         JobError::Other(text) | JobError::Unsupported(text) => text.as_str(),
         _ => "",

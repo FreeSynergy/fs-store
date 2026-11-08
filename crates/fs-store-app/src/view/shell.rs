@@ -85,7 +85,7 @@ impl Surface for StoreSurface {
                     }
                 }
             });
-        if model.job().is_some() {
+        if model.jobs().len() == 1 {
             page = page.child(job_bar(&model));
         }
         if view != View::Cards {
