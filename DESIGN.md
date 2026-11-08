@@ -274,6 +274,13 @@ Store side: `crates/fs-store-cli/src/tuf.rs` uses `FS_STORE_TUF_ROOT` if set, el
 checks nothing. Once it exists every source must carry valid TUF metadata that signs its exact `catalog.xml` (a source without `tuf/metadata` is
 refused, so metadata cannot be stripped).
 
+## Install queue and servers (2026-11-08, user wish after the test)
+
+- **Two halves of an install.** `plan` (verified catalog, which files), `download`, `check` (sum, signature) change nothing on the machine; `commit` installs. Several packages are one batch (Unit of Work): `prepare_all` runs the downloads side by side, `commit_all` installs when none is left. All rpm of a batch go into ONE `pkexec dnf install` (one password); tar.gz are unpacked one after the other. A failed download does not stop the others; its error stays on its card. A package added after the install step starts a new batch.
+- **Window.** The model holds a list of jobs (one phase each); `take_commit` hands the ready jobs out once. Button "Update all (N)" shows only when updates wait; `fs-store update --all` is one batch too.
+- **Running servers.** `fs-<name> serve` never blocks an update: the store sends SIGTERM (never SIGKILL), waits up to 15 s, installs, starts the server again with the same options if it ran (also when the install failed). A server that does not end in time keeps the update away ("still running"). Only processes of the same person are touched.
+- **Open.** Window asks the program to "save the session and restart" through the update hint (ADR 0065 point 7); the real `pkexec dnf` path of a batch and the window itself are not tried by hand yet.
+
 ## Provisional decisions
 - Versions are `major.minor.patch` with an optional pre-release `-alpha|beta|rc[.N]` (`~` accepted as in `AppStream`/rpm); a pre-release is older than its release. Anything else is skipped with a reason.
 - Only one trusted fingerprint for now; sources may later bring their own keys, never replacing the built-in one.
