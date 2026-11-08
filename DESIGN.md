@@ -103,6 +103,14 @@ once the repo has the signing secrets. `check_rust_rules.py` is green locally (0
 rpm (done in code, tested with a fake commander only): `Rpm` writes the verified bytes to a private file (0700 dir, 0600, `O_EXCL|O_NOFOLLOW`) and runs `pkexec dnf install -y <file>`; root is asked by pkexec, never by us. dnf is one transaction, so `restore` has nothing to undo; a downgrade is the person's decision. Limit: the running check does not see programs installed under `/usr`. Not yet run for real.
 Not yet tried: the remote run of both workflows, build dependencies of Blinc on the CI runner (`apt-packages` may be needed), rpm via dnf.
 
+## Lesson of v0.1.0-rc.1 (2026-11-08)
+The release workflow signs with the **subkey** `372A…C097`, but the public key embedded in `fs-store-pgp` was the older file
+without that subkey, so our own verifier rejected the store's own release (`Invalid`) while `gpg` accepted it. Found by the
+real-file probe (`FS_PROBE_FILE`), not by the generated-key tests. Fixed in `0.1.0-rc.2` by embedding the current
+`fs-release/release-signing-key.asc`. rc.1 is public and cannot install anything signed by the subkey; use rc.2.
+When `fs-release` rotates the key or subkey, the file in `crates/fs-store-pgp/keys/` must follow (a test against a
+real signed release belongs in the release checklist).
+
 ## Provisional decisions
 - Versions are `major.minor.patch` with an optional pre-release `-alpha|beta|rc[.N]` (`~` accepted as in `AppStream`/rpm); a pre-release is older than its release. Anything else is skipped with a reason.
 - Only one trusted fingerprint for now; sources may later bring their own keys, never replacing the built-in one.
