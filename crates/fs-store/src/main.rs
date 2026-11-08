@@ -21,7 +21,17 @@ fn main() -> ExitCode {
     }
 }
 
+/// True when this process runs as root. The store works in the person's own folders and asks for root itself (`pkexec`)
+/// only for an rpm; started as root it would read and write `/root/.local/share/fs-store`, a second, different store.
+fn is_root() -> bool {
+    use std::os::unix::fs::MetadataExt;
+    std::fs::metadata("/proc/self").is_ok_and(|m| m.uid() == 0)
+}
+
 fn dispatch(args: &[String]) -> Result<(), String> {
+    if is_root() && std::env::var_os("FS_STORE_ALLOW_ROOT").is_none() {
+        return Err("do not run fs-store as root (sudo): it works in your own folders and asks for the password itself when an rpm needs it. Running as root would use /root/.local/share/fs-store, a different store than yours. (FS_STORE_ALLOW_ROOT=1 overrides.)".into());
+    }
     match args.first().map(String::as_str) {
         None => window(&[]),
         Some("version" | "--version" | "-V") => {
