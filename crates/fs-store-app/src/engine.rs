@@ -247,6 +247,7 @@ impl StoreBackend for EngineBackend {
             verifier: &verifier,
             fetch: &AnyFetch,
             running: &running,
+            prefer: fs_store_engine::preferred_format(),
             policy: SignaturePolicy::default(),
         };
         let sources = self.file().map_err(|e| JobError::Other(format!("{e:?}")))?;

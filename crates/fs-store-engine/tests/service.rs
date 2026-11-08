@@ -71,6 +71,7 @@ fn run(
         verifier: &Fake,
         fetch: &f,
         running: &Idle,
+        prefer: Format::TarGz,
         policy: SignaturePolicy::default(),
     };
     let r = i.install(catalog(&sha).as_bytes(), cat_sig, "tasks", None);
@@ -122,6 +123,7 @@ fn an_older_catalog_than_the_installed_version_is_refused() {
         verifier: &Fake,
         fetch: &f,
         running: &Idle,
+        prefer: Format::TarGz,
         policy: SignaturePolicy::default(),
     };
     // the catalog offers 1.2.3; 2.0.0 is installed

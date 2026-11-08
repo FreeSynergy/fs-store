@@ -44,17 +44,17 @@ impl Commander for SystemCommander {
 /// (`dnf downgrade`), the store does not do it silently.
 pub struct Rpm<C: Commander> {
     dir: PathBuf,
-    bytes: Vec<u8>,
+    files: Vec<Vec<u8>>,
     commander: C,
 }
 
 impl<C: Commander> Rpm<C> {
     /// `dir` is a private directory for the file handed to dnf (created with mode 0700).
     #[must_use]
-    pub fn new(dir: &Path, bytes: Vec<u8>, commander: C) -> Self {
+    pub fn new(dir: &Path, files: Vec<Vec<u8>>, commander: C) -> Self {
         Self {
             dir: dir.to_owned(),
-            bytes,
+            files,
             commander,
         }
     }
@@ -74,28 +74,42 @@ impl<C: Commander> InstallStrategy for Rpm<C> {
             std::os::unix::fs::PermissionsExt::from_mode(0o700),
         )
         .map_err(io)?;
-        // A name nobody can guess, created exclusively and never through a link: nothing to swap after the check.
-        let file = self.dir.join(format!(
-            "{}-{}-{}.rpm",
-            p.name.as_str(),
-            p.version,
-            std::process::id()
-        ));
-        let _ = fs::remove_file(&file);
-        let mut f = fs::OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .mode(0o600)
-            .custom_flags(0x2_0000) // O_NOFOLLOW
-            .open(&file)
-            .map_err(io)?;
-        f.write_all(&self.bytes).map_err(io)?;
-        drop(f);
-        let path = file.to_string_lossy().into_owned();
-        let result = self
-            .commander
-            .run("pkexec", &["dnf", "install", "-y", &path]);
-        let _ = fs::remove_file(&file);
+        // Names nobody can guess, created exclusively and never through a link: nothing to swap after the check.
+        let mut paths = Vec::new();
+        let mut written = Ok(());
+        for (n, bytes) in self.files.iter().enumerate() {
+            let file = self.dir.join(format!(
+                "{}-{}-{}-{n}.rpm",
+                p.name.as_str(),
+                p.version,
+                std::process::id()
+            ));
+            let _ = fs::remove_file(&file);
+            let one = fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .mode(0o600)
+                .custom_flags(0x2_0000) // O_NOFOLLOW
+                .open(&file)
+                .and_then(|mut f| f.write_all(bytes));
+            paths.push(file);
+            if let Err(e) = one {
+                written = Err(e);
+                break;
+            }
+        }
+        let result = written.map_err(|e| e.to_string()).and_then(|()| {
+            let names: Vec<String> = paths
+                .iter()
+                .map(|f| f.to_string_lossy().into_owned())
+                .collect();
+            let mut args = vec!["dnf", "install", "-y"];
+            args.extend(names.iter().map(String::as_str));
+            self.commander.run("pkexec", &args)
+        });
+        for f in &paths {
+            let _ = fs::remove_file(f);
+        }
         result.map_err(InstallError)
     }
 

@@ -31,7 +31,7 @@ fn facets_become_links_and_menu_entries_and_go_away_again() {
     let facets = vec!["contacts".to_owned()];
     assert_eq!(
         link_facets(&root, "people", &facets, &bin, &apps).unwrap(),
-        facets
+        vec!["people".to_owned(), "contacts".to_owned()]
     );
     assert_eq!(
         fs::read_link(bin.join("contacts")).unwrap(),
@@ -40,7 +40,7 @@ fn facets_become_links_and_menu_entries_and_go_away_again() {
     let entry = fs::read_to_string(apps.join("net.freesynergy.contacts.desktop")).unwrap();
     assert!(entry.contains("Name=FreeSynergy.Contacts") && entry.contains("Exec=contacts"));
     let program = fs::read_to_string(apps.join("net.freesynergy.people.desktop")).unwrap();
-    assert!(program.contains("Name=FreeSynergy.People") && program.contains("Exec=people-app"));
+    assert!(program.contains("Name=FreeSynergy.People") && program.contains("Exec=people"));
     unlink_facets(&root, "people", &facets, &bin, &apps).unwrap();
     assert!(fs::symlink_metadata(bin.join("contacts")).is_err());
     assert_eq!(fs::read_dir(&apps).unwrap().count(), 0);
@@ -58,7 +58,7 @@ fn a_command_name_that_is_not_ours_is_never_taken_over() {
         link_facets(&root, "people", &facets, &bin, &apps)
             .unwrap()
             .len(),
-        0
+        1
     );
     assert_eq!(fs::read_to_string(bin.join("contacts")).unwrap(), "mine");
     unlink_facets(&root, "people", &facets, &bin, &apps).unwrap();

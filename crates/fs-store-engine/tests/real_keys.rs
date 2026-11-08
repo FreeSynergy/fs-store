@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::fmt::Write;
 use std::fs;
 
-use fs_store_core::{RunningCheck, SignaturePolicy, Version};
+use fs_store_core::{Format, RunningCheck, SignaturePolicy, Version};
 use fs_store_engine::service::{Fetch, InstallFailure, Installer};
 use fs_store_pgp::PgpVerifier;
 use pgp::composed::{
@@ -98,6 +98,7 @@ fn local_source_with_an_explicitly_trusted_test_key_installs_a_pre_release() {
         verifier: &verifier,
         fetch: &fetch,
         running: &Idle,
+        prefer: Format::TarGz,
         policy,
     };
     let sig = sign(&k, catalog.as_bytes());

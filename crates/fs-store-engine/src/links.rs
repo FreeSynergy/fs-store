@@ -35,7 +35,13 @@ pub fn link_programs(
         let entry = entry?;
         let file = entry.file_name().to_string_lossy().into_owned();
         let meta = fs::metadata(entry.path())?;
-        if !meta.is_file() || meta.permissions().mode() & 0o111 == 0 || file.starts_with('.') {
+        // `<name>-app` and `<name>-server` are reached through the one command `<name>` (see `link_facets`)
+        let plain = file == format!("{name}-app") || file == format!("{name}-server");
+        if !meta.is_file()
+            || meta.permissions().mode() & 0o111 == 0
+            || file.starts_with('.')
+            || plain
+        {
             continue;
         }
         let link = bin_dir.join(&file);

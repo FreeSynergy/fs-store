@@ -21,8 +21,21 @@ pub struct CatalogEntry {
     pub sha256: String,
     /// Download address of the detached OpenPGP signature of the release file.
     pub signature_url: String,
+    /// The rpm files of the same release (`fs-format="rpm"` artifacts for this machine); empty when there are none.
+    pub rpms: Vec<RpmFile>,
     /// Facets the program offers (ADR 0061), `fs:facets`, comma separated.
     pub facets: Vec<String>,
+}
+
+/// One rpm file of a release (a program may come as several rpms, e.g. app and server).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RpmFile {
+    /// Download address.
+    pub location: String,
+    /// SHA-256 of the file.
+    pub sha256: String,
+    /// Download address of its detached OpenPGP signature (`fs-signature` on the artifact).
+    pub signature_url: String,
 }
 
 /// A component that could not be offered, and why.
@@ -113,6 +126,7 @@ fn entry(c: roxmltree::Node) -> Result<CatalogEntry, (String, String)> {
         let Some(art) = r.descendants().find(|n| {
             n.has_tag_name("artifact")
                 && n.attribute("type") != Some("source")
+                && n.attribute("fs-format") != Some("rpm")
                 && n.attribute("platform").is_none_or(fits_this_machine)
         }) else {
             continue;
@@ -167,6 +181,7 @@ fn entry(c: roxmltree::Node) -> Result<CatalogEntry, (String, String)> {
                 .collect()
         })
         .unwrap_or_default();
+    let rpms = collect_rpms(art);
     Ok(CatalogEntry {
         name,
         kind,
@@ -175,6 +190,32 @@ fn entry(c: roxmltree::Node) -> Result<CatalogEntry, (String, String)> {
         location,
         sha256,
         signature_url,
+        rpms,
         facets,
     })
+}
+
+/// The rpm artifacts next to `art` in the same release that fit this machine and carry a signature address.
+fn collect_rpms(art: roxmltree::Node) -> Vec<RpmFile> {
+    art.parent()
+        .into_iter()
+        .flat_map(|artifacts| artifacts.children())
+        .filter(|n| {
+            n.has_tag_name("artifact")
+                && n.attribute("fs-format") == Some("rpm")
+                && n.attribute("platform").is_none_or(fits_this_machine)
+        })
+        .filter_map(|n| {
+            Some(RpmFile {
+                location: text(n, "location")?.to_owned(),
+                sha256: n
+                    .children()
+                    .find(|c| c.has_tag_name("checksum") && c.attribute("type") == Some("sha256"))?
+                    .text()?
+                    .trim()
+                    .to_owned(),
+                signature_url: n.attribute("fs-signature")?.to_owned(),
+            })
+        })
+        .collect()
 }

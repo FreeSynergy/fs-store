@@ -6,8 +6,8 @@ use std::path::PathBuf;
 
 use fs_store_catalog::{CatalogEntry, parse_catalog};
 use fs_store_core::{
-    Format, InstallState, InstallStrategy, Package, RunningCheck, SignaturePolicy,
-    SignatureVerifier, SourceId, Update, UpdateError, Version, run_update,
+    Format, InstallState, InstallStrategy, Package, RunningCheck, SignatureOutcome,
+    SignaturePolicy, SignatureVerifier, SourceId, Update, UpdateError, Version, run_update,
 };
 use sha2::{Digest, Sha256};
 
@@ -64,6 +64,8 @@ pub struct Installer<'a> {
     pub fetch: &'a dyn Fetch,
     /// Running check.
     pub running: &'a dyn RunningCheck,
+    /// Which format to prefer when a release has several (the store's own install mode, [`crate::preferred_format`]).
+    pub prefer: Format,
     /// Who may sign; `SignaturePolicy::default()` trusts only the FreeSynergy release key.
     pub policy: SignaturePolicy,
 }
@@ -115,23 +117,53 @@ impl Installer<'_> {
         if previous.is_some_and(|p| entry.version < p) {
             return Err(InstallFailure::Downgrade);
         }
-        let file = self
-            .fetch
-            .get(&entry.location)
-            .map_err(InstallFailure::Fetch)?;
-        let sig = self
-            .fetch
-            .get(&entry.signature_url)
-            .map_err(InstallFailure::Fetch)?;
-        if hex(&Sha256::digest(&file)) != entry.sha256.to_ascii_lowercase() {
-            return Err(InstallFailure::Checksum);
+        // rpm when the store itself came as rpm and the release has rpm files; else the `tar.gz`.
+        let use_rpm = self.prefer == Format::Rpm && !entry.rpms.is_empty();
+        let (format, wanted): (Format, Vec<(&str, &str, &str)>) = if use_rpm {
+            let all = entry.rpms.iter();
+            (
+                Format::Rpm,
+                all.map(|r| {
+                    (
+                        r.location.as_str(),
+                        r.signature_url.as_str(),
+                        r.sha256.as_str(),
+                    )
+                })
+                .collect(),
+            )
+        } else {
+            (
+                entry.format,
+                vec![(
+                    entry.location.as_str(),
+                    entry.signature_url.as_str(),
+                    entry.sha256.as_str(),
+                )],
+            )
+        };
+        let mut files = Vec::new();
+        let mut outcome = SignatureOutcome::Missing;
+        for (location, signature_url, sha256) in wanted {
+            let file = self.fetch.get(location).map_err(InstallFailure::Fetch)?;
+            let sig = self
+                .fetch
+                .get(signature_url)
+                .map_err(InstallFailure::Fetch)?;
+            if hex(&Sha256::digest(&file)) != sha256.to_ascii_lowercase() {
+                return Err(InstallFailure::Checksum);
+            }
+            outcome = self.verifier.verify(&file, Some(&sig));
+            if !policy.is_satisfied_by(&outcome) {
+                return Err(InstallFailure::ReleaseSignature);
+            }
+            files.push(file);
         }
-        let outcome = self.verifier.verify(&file, Some(&sig));
         let package = Package {
             name: entry.name.clone(),
             kind: entry.kind,
             version: entry.version,
-            format: entry.format,
+            format,
             source: SourceId("catalog".to_owned()),
         };
         let verified = policy
@@ -139,10 +171,10 @@ impl Installer<'_> {
             .map_err(|_| InstallFailure::ReleaseSignature)?;
         observe(InstallState::Verified);
         // The verified bytes go straight to the unpacker; no file others could swap in between.
-        let mut strategy: Box<dyn InstallStrategy> = if entry.format == Format::Rpm {
-            Box::new(Rpm::new(&self.root.join("rpm"), file, SystemCommander))
+        let mut strategy: Box<dyn InstallStrategy> = if format == Format::Rpm {
+            Box::new(Rpm::new(&self.root.join("rpm"), files, SystemCommander))
         } else {
-            Box::new(TarGz::from_bytes(&self.root, file))
+            Box::new(TarGz::from_bytes(&self.root, files.remove(0)))
         };
         observe(InstallState::Installing);
         let result = run_update(

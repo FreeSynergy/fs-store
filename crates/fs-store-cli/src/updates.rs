@@ -66,6 +66,9 @@ fn bin_dir() -> std::path::PathBuf {
 
 /// Puts the programs of `name` on the PATH; says what it did, never fails the install.
 pub(crate) fn link(root: &Path, name: &str) {
+    if !root.join("current").join(name).exists() {
+        return; // installed by rpm: dnf put the programs in /usr/bin
+    }
     match fs_store_engine::link_programs(root, name, &bin_dir()) {
         Ok((linked, skipped)) => {
             if !linked.is_empty() {

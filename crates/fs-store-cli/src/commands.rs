@@ -173,6 +173,7 @@ pub(crate) fn cmd_install(
         verifier: &verifier,
         fetch: &AnyFetch,
         running: &running,
+        prefer: fs_store_engine::preferred_format(),
         policy: policy.clone(),
     };
     let current = installed(root, name);

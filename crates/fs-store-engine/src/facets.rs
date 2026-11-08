@@ -7,16 +7,25 @@ use std::io;
 use std::os::unix::fs::symlink;
 use std::path::{Path, PathBuf};
 
-/// The executable a facet link points to: `<package>` if the package has it, else `<package>-app`.
+/// The executable a facet link points to: `<package>` or `<package>-app` in the unpacked package, else the same
+/// in `/usr/bin` (rpm installs).
 fn main_program(root: &Path, package: &str) -> Option<PathBuf> {
-    ["", "-app"]
-        .iter()
-        .map(|suffix| {
-            root.join("current")
-                .join(package)
-                .join(format!("{package}{suffix}"))
-        })
+    let dirs = [
+        root.join("current").join(package),
+        PathBuf::from("/usr/bin"),
+    ];
+    dirs.iter()
+        .flat_map(|d| ["", "-app"].map(|suffix| d.join(format!("{package}{suffix}"))))
         .find(|p| p.is_file())
+}
+
+fn ours(root: &Path, package: &str, target: &Path) -> bool {
+    target.starts_with(root.join("current").join(package))
+        || (target.starts_with("/usr/bin")
+            && target
+                .file_name()
+                .and_then(|n| n.to_str())
+                .is_some_and(|n| n.starts_with(package)))
 }
 
 fn plain(name: &str) -> bool {
@@ -58,13 +67,17 @@ pub fn link_facets(
     fs::create_dir_all(bin_dir)?;
     fs::create_dir_all(apps_dir)?;
     let mut made = Vec::new();
-    for facet in facets {
+    let commands = std::iter::once(&package.to_owned())
+        .chain(facets.iter())
+        .cloned()
+        .collect::<Vec<_>>();
+    for facet in &commands {
         if !plain(facet) {
             continue;
         }
         let link = bin_dir.join(facet);
         match fs::read_link(&link) {
-            Ok(old) if old.starts_with(root.join("current")) => fs::remove_file(&link)?,
+            Ok(old) if ours(root, package, &old) => fs::remove_file(&link)?,
             Ok(_) => continue,
             Err(_) if fs::symlink_metadata(&link).is_ok() => continue,
             Err(_) => {}
@@ -81,16 +94,7 @@ pub fn link_facets(
         let ours = !file.exists()
             || fs::read_to_string(&file).is_ok_and(|t| t.contains("X-FreeSynergy-Managed=true"));
         if ours {
-            // a facet runs as its own name (the program reads argv[0]); the program itself as its executable
-            let exec = if command == package {
-                target
-                    .file_name()
-                    .and_then(|n| n.to_str())
-                    .unwrap_or(package)
-            } else {
-                command
-            };
-            fs::write(&file, desktop(command, exec))?;
+            fs::write(&file, desktop(command, command))?;
         }
     }
     Ok(made)
@@ -109,7 +113,7 @@ pub fn unlink_facets(
 ) -> io::Result<()> {
     for facet in facets.iter().filter(|f| plain(f)) {
         let link = bin_dir.join(facet);
-        if fs::read_link(&link).is_ok_and(|t| t.starts_with(root.join("current").join(package))) {
+        if fs::read_link(&link).is_ok_and(|t| ours(root, package, &t)) {
             fs::remove_file(&link)?;
         }
     }
@@ -136,4 +140,26 @@ pub fn default_apps_dir() -> PathBuf {
         },
         PathBuf::from,
     )
+}
+
+/// Makes sure the store itself has a menu entry ("FreeSynergy.Store") for this person: written at the first start of the
+/// window, never over a file that is not ours. Returns whether a file was written.
+///
+/// # Errors
+/// `io::Error` when the directory or file cannot be written.
+pub fn ensure_own_menu_entry(apps_dir: &Path) -> io::Result<bool> {
+    let file = apps_dir.join("net.freesynergy.Store.desktop");
+    if file.exists() {
+        return Ok(false);
+    }
+    let exe = std::env::current_exe()?;
+    fs::create_dir_all(apps_dir)?;
+    fs::write(
+        &file,
+        format!(
+            "[Desktop Entry]\nType=Application\nName=FreeSynergy.Store\nGenericName=Software store\nComment=Install, update and extend FreeSynergy programs\nExec={}\nTerminal=false\nCategories=System;PackageManager;\nX-FreeSynergy-Managed=true\n",
+            exe.display()
+        ),
+    )?;
+    Ok(true)
 }

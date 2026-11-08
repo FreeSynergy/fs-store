@@ -171,6 +171,15 @@ serving an old copy); lower than the highest serial seen for that source (`seria
 without them is accepted. This covers rollback and freeze for the catalog but not mix-and-match or key compromise; those are what
 TUF adds (`tough`, roles above). The same check runs in the commands and in the window.
 
+## Install mode and commands (2026-11-08, user test)
+Rule (user): the store installs the way it was installed itself. `preferred_format()` is `Rpm` when the running executable belongs
+to an installed rpm (`rpm -qf`), else `TarGz`. With `Rpm` and rpm artifacts in the catalog (`fs-format="rpm"` + `fs-signature` on
+each artifact, all rpms of the release), every rpm is checked (sha256 + signature) and `pkexec dnf install -y <all>` runs once; with
+no rpm offered it falls back to the `tar.gz`. Commands (ADR 0063): only `fs-<name>` (and the facets) are put on the PATH, not
+`-app`/`-server`; `fs-<name>` links to `<name>` or `<name>-app` (in the package or in `/usr/bin`), and the menu entry "FreeSynergy.<Name>"
+runs it. The store makes its own menu entry at the first start of the window. Open (named): the shipped `fs-tasks-app` stores in memory by
+default (`--store`): a program from the store must never lose data by default (Thread G/R); the server is not started by anything yet; icons.
+
 ## Provisional decisions
 - Versions are `major.minor.patch` with an optional pre-release `-alpha|beta|rc[.N]` (`~` accepted as in `AppStream`/rpm); a pre-release is older than its release. Anything else is skipped with a reason.
 - Only one trusted fingerprint for now; sources may later bring their own keys, never replacing the built-in one.

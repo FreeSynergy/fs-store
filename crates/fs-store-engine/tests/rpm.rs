@@ -31,7 +31,11 @@ impl Commander for &mut Fake {
 fn dnf_gets_the_verified_bytes_through_pkexec_and_the_file_is_removed_afterwards() {
     let tmp = tempfile::tempdir().unwrap();
     let mut fake = Fake::default();
-    let mut s = Rpm::new(&tmp.path().join("rpm"), b"RPMBYTES".to_vec(), &mut fake);
+    let mut s = Rpm::new(
+        &tmp.path().join("rpm"),
+        vec![b"RPMBYTES".to_vec()],
+        &mut fake,
+    );
     run_update(
         &Update {
             package: &verified("tasks", Version::new(1, 0, 0)),
@@ -56,7 +60,7 @@ fn a_failing_dnf_is_reported_as_rolled_back_and_leaves_no_file() {
         fail: true,
         ..Fake::default()
     };
-    let mut s = Rpm::new(&tmp.path().join("rpm"), b"x".to_vec(), &mut fake);
+    let mut s = Rpm::new(&tmp.path().join("rpm"), vec![b"x".to_vec()], &mut fake);
     let r = run_update(
         &Update {
             package: &verified("tasks", Version::new(1, 0, 0)),
@@ -66,5 +70,31 @@ fn a_failing_dnf_is_reported_as_rolled_back_and_leaves_no_file() {
         &Idle,
     );
     assert_eq!(r, Err(UpdateError::RolledBack));
+    assert_eq!(fs::read_dir(tmp.path().join("rpm")).unwrap().count(), 0);
+}
+
+#[test]
+fn several_rpms_go_to_one_dnf_call() {
+    let tmp = tempfile::tempdir().unwrap();
+    let mut fake = Fake::default();
+    let mut s = Rpm::new(
+        &tmp.path().join("rpm"),
+        vec![b"A".to_vec(), b"B".to_vec()],
+        &mut fake,
+    );
+    run_update(
+        &Update {
+            package: &verified("tasks", Version::new(1, 0, 0)),
+            previous: None,
+        },
+        &mut s,
+        &Idle,
+    )
+    .unwrap();
+    drop(s);
+    assert_eq!(fake.calls.len(), 1);
+    let args = &fake.calls[0].1;
+    assert_eq!(&args[..3], ["dnf", "install", "-y"]);
+    assert_eq!(args.len(), 5); // two files
     assert_eq!(fs::read_dir(tmp.path().join("rpm")).unwrap().count(), 0);
 }

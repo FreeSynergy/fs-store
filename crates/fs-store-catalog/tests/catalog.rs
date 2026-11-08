@@ -119,8 +119,26 @@ fn bad_old_release_and_foreign_arch_do_not_hide_a_good_release_and_duplicates_ar
 
 #[test]
 fn serial_and_expiry_are_read_when_present() {
-    let c = parse_catalog(r#"<components version="1.0" fs-serial="42" fs-expires="1790000000"/>"#).unwrap();
+    let c = parse_catalog(r#"<components version="1.0" fs-serial="42" fs-expires="1790000000"/>"#)
+        .unwrap();
     assert_eq!((c.serial, c.expires), (Some(42), Some(1_790_000_000)));
     let c = parse_catalog(r#"<components version="1.0"/>"#).unwrap();
     assert_eq!((c.serial, c.expires), (None, None));
+}
+
+#[test]
+fn rpm_artifacts_are_collected_and_do_not_replace_the_primary_tar_gz() {
+    let xml = r#"<components version="1.0"><component><id>t</id><releases><release version="1.0.0"><artifacts>
+ <artifact type="binary" platform="x86_64-linux-gnu"><location>tgz</location><checksum type="sha256">1</checksum></artifact>
+ <artifact type="binary" platform="x86_64-linux-gnu" fs-format="rpm" fs-signature="app.asc"><location>app.rpm</location><checksum type="sha256">2</checksum></artifact>
+ <artifact type="binary" platform="x86_64-linux-gnu" fs-format="rpm" fs-signature="srv.asc"><location>srv.rpm</location><checksum type="sha256">3</checksum></artifact>
+ <artifact type="binary" platform="x86_64-linux-gnu" fs-format="rpm"><location>unsigned.rpm</location><checksum type="sha256">4</checksum></artifact>
+ </artifacts></release></releases><custom><value key="fs:signature">tgz.asc</value></custom></component></components>"#;
+    let c = parse_catalog(xml).unwrap();
+    let e = &c.entries[0];
+    assert_eq!(e.location, "tgz");
+    let names: Vec<_> = e.rpms.iter().map(|r| r.location.as_str()).collect();
+    if std::env::consts::ARCH == "x86_64" {
+        assert_eq!(names, ["app.rpm", "srv.rpm"]); // the unsigned rpm is never offered
+    }
 }
