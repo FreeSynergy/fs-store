@@ -129,6 +129,15 @@ behind; the copy from the larger layer into the smaller surface is a validation 
 `FreeSynergy/blinc-app-fix` (blinc_app 0.6.0 plus one line: take width and height from the target texture). Every app
 workspace needs this patch until Blinc has the fix; a patch in a library is ignored by the apps that use it.
 
+## Facets as commands (ADR 0063 addendum, 2026-11-08; format provisional, not built yet)
+A facet gets its own command as a symbolic link to the program (`fs-contacts` -> `fs-people`); the program reads `argv[0]`
+(like busybox) and opens that facet, `fs-contacts admin` is the facet's admin. For the store this means, on installing a
+program: for every facet in its catalog entry, create the link in `~/.local/bin` and a menu entry (`.desktop`) with the facet's
+icon ("FreeSynergy.People", "FreeSynergy.Contacts"); on removing: take both away again, and only links that point into the
+package. Catalog format: the program's `fs:facets` (comma separated command names) names the links; a facet's display name
+and icon come from its own component (`<name>`, `<icon type="remote">`), whose `fs:facet-of` names the program. Facet names are
+reserved project-wide: the store refuses a link whose name already exists and is not its own. Built after the installable store.
+
 ## Provisional decisions
 - Versions are `major.minor.patch` with an optional pre-release `-alpha|beta|rc[.N]` (`~` accepted as in `AppStream`/rpm); a pre-release is older than its release. Anything else is skipped with a reason.
 - Only one trusted fingerprint for now; sources may later bring their own keys, never replacing the built-in one.
