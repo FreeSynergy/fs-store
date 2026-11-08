@@ -6,12 +6,12 @@ use std::path::PathBuf;
 
 use fs_store_catalog::{CatalogEntry, parse_catalog};
 use fs_store_core::{
-    Format, InstallState, Package, RunningCheck, SignaturePolicy, SignatureVerifier, SourceId,
-    Update, UpdateError, Version, run_update,
+    Format, InstallState, InstallStrategy, Package, RunningCheck, SignaturePolicy,
+    SignatureVerifier, SourceId, Update, UpdateError, Version, run_update,
 };
 use sha2::{Digest, Sha256};
 
-use crate::TarGz;
+use crate::{Rpm, SystemCommander, TarGz};
 
 /// Gets the bytes behind an address.
 pub trait Fetch {
@@ -109,7 +109,7 @@ impl Installer<'_> {
             .iter()
             .find(|e| e.name.as_str() == name)
             .ok_or(InstallFailure::NotOffered)?;
-        if entry.format != Format::TarGz {
+        if !matches!(entry.format, Format::TarGz | Format::Rpm) {
             return Err(InstallFailure::Unsupported(entry.format));
         }
         if previous.is_some_and(|p| entry.version < p) {
@@ -139,14 +139,18 @@ impl Installer<'_> {
             .map_err(|_| InstallFailure::ReleaseSignature)?;
         observe(InstallState::Verified);
         // The verified bytes go straight to the unpacker; no file others could swap in between.
-        let mut strategy = TarGz::from_bytes(&self.root, file);
+        let mut strategy: Box<dyn InstallStrategy> = if entry.format == Format::Rpm {
+            Box::new(Rpm::new(&self.root.join("rpm"), file, SystemCommander))
+        } else {
+            Box::new(TarGz::from_bytes(&self.root, file))
+        };
         observe(InstallState::Installing);
         let result = run_update(
             &Update {
                 package: &verified,
                 previous,
             },
-            &mut strategy,
+            strategy.as_mut(),
             self.running,
         );
         result

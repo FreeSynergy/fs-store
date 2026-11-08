@@ -100,6 +100,7 @@ package archive is refused, which will need a rule (relative and inside the pack
 `.github/workflows/check.yml` (push gate of `fs-release`) and `release.yml` (binaries `fs-store` = CLI and `fs-store-app` = GUI, app id
 `net.freesynergy.Store`). Workspace version `0.1.0-rc.1`, so the first tag is `v0.1.0-rc.1`, a pre-release; the draft is signed only
 once the repo has the signing secrets. `check_rust_rules.py` is green locally (0 errors); `lib.rs` files hold only modules and re-exports.
+rpm (done in code, tested with a fake commander only): `Rpm` writes the verified bytes to a private file (0700 dir, 0600, `O_EXCL|O_NOFOLLOW`) and runs `pkexec dnf install -y <file>`; root is asked by pkexec, never by us. dnf is one transaction, so `restore` has nothing to undo; a downgrade is the person's decision. Limit: the running check does not see programs installed under `/usr`. Not yet run for real.
 Not yet tried: the remote run of both workflows, build dependencies of Blinc on the CI runner (`apt-packages` may be needed), rpm via dnf.
 
 ## Provisional decisions

@@ -4,8 +4,10 @@
 
 pub mod net;
 mod proc;
+mod rpm;
 pub mod service;
 mod targz;
 
 pub use proc::ProcRunningCheck;
+pub use rpm::{Commander, Rpm, SystemCommander};
 pub use targz::TarGz;
