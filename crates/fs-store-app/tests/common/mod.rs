@@ -4,8 +4,8 @@
 use std::sync::{Arc, Mutex};
 
 use fs_store_app::backend::{
-    BackendError, InstalledRow, JobError, JobKind, Listing, PackageRow, Phase, SourceRow,
-    StoreBackend,
+    BackendError, InstalledDetails, InstalledRow, JobError, JobKind, Listing, PackageRow, Phase,
+    SourceRow, StoreBackend,
 };
 use fs_store_app::model::{Action, StoreModel};
 use fs_store_core::{Kind, SourceError, Version};
@@ -21,6 +21,7 @@ pub struct State {
     pub fail: Option<JobError>,
     pub remove_calls: u32,
     pub runs: Vec<(JobKind, String)>,
+    pub details: Vec<(String, InstalledDetails)>,
 }
 
 pub fn v(a: u64, b: u64, c: u64) -> Version {
@@ -54,6 +55,7 @@ pub fn fake(installed: Vec<InstalledRow>, fail: Option<JobError>) -> Arc<Fake> {
             fail,
             remove_calls: 0,
             runs: Vec::new(),
+            details: Vec::new(),
         }),
     })
 }
@@ -102,6 +104,14 @@ impl StoreBackend for Fake {
     }
     fn installed(&self) -> Result<Vec<InstalledRow>, BackendError> {
         Ok(self.state.lock().unwrap().installed.clone())
+    }
+    fn details(&self, name: &str) -> InstalledDetails {
+        let s = self.state.lock().unwrap();
+        s.details
+            .iter()
+            .find(|(n, _)| n == name)
+            .map(|(_, d)| d.clone())
+            .unwrap_or_default()
     }
     fn run(
         &self,

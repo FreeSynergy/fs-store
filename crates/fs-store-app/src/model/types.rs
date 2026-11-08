@@ -2,9 +2,9 @@
 
 use fs_store_core::{SourceError, Version};
 
-use crate::backend::PackageRow;
+use crate::backend::{JobError, PackageRow};
 
-/// The three views of the window.
+/// The views of the window.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum View {
     /// The list of sources.
@@ -13,6 +13,10 @@ pub enum View {
     Available,
     /// Packages on this machine.
     Installed,
+    /// What can be set (nothing yet; says so).
+    Settings,
+    /// Name, version, licence and address of the program.
+    About,
 }
 
 /// What the button of an available package does.
@@ -60,4 +64,22 @@ pub enum Problem {
     },
     /// A job is running already.
     Busy(String),
+    /// A job failed: which package and why.
+    JobFailed {
+        /// Package name.
+        name: String,
+        /// The reason.
+        error: JobError,
+    },
+    /// The button of a package was pressed but there is nothing to do (up to date, or no longer offered).
+    NothingToDo(String),
+    /// A program could not be opened: which command and why.
+    LaunchFailed {
+        /// The command tried (empty when none was found).
+        command: String,
+        /// The reason, as a developer text.
+        detail: String,
+    },
+    /// "Add" was pressed with an empty field.
+    EmptyAddress,
 }

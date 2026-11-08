@@ -4,20 +4,19 @@
 
 use std::fs;
 use std::path::PathBuf;
+use std::sync::{Arc, Mutex, PoisonError};
 
 use fs_store_catalog::{CatalogEntry, parse_catalog};
-use fs_store_core::{
-    SignaturePolicy, SignatureVerifier, SourceId, SourceRepository, UpdateError, Version,
-};
+use fs_store_core::{SignaturePolicy, SignatureVerifier, SourceId, SourceRepository, Version};
 use fs_store_engine::ProcRunningCheck;
 use fs_store_engine::net::{HttpsFetch, clone_catalog};
-use fs_store_engine::service::{Fetch, FileFetch, InstallFailure, Installer};
+use fs_store_engine::service::{Fetch, FileFetch, Installer};
 use fs_store_pgp::PgpVerifier;
 use fs_store_sources::FileSources;
 
 use crate::backend::{
-    BackendError, InstalledRow, JobError, JobKind, Listing, PackageRow, Phase, SourceRow,
-    StoreBackend,
+    BackendError, InstalledDetails, InstalledRow, JobError, JobKind, Listing, PackageRow, Phase,
+    SourceRow, StoreBackend,
 };
 
 struct AnyFetch;
@@ -36,13 +35,18 @@ impl Fetch for AnyFetch {
 #[derive(Debug, Clone)]
 pub struct EngineBackend {
     root: PathBuf,
+    /// Names the sources offered last time: they are looked up in rpm too.
+    offered: Arc<Mutex<Vec<String>>>,
 }
 
 impl EngineBackend {
     /// Works below `root` (`sources.toml`, `packages/`, `current/`).
     #[must_use]
     pub fn new(root: PathBuf) -> Self {
-        Self { root }
+        Self {
+            root,
+            offered: Arc::default(),
+        }
     }
 
     /// `FS_STORE_ROOT`, or `~/.local/share/fs-store`, like the CLI.
@@ -67,8 +71,12 @@ impl EngineBackend {
         let _ = fs::remove_dir_all(&work);
         fs::create_dir_all(work.parent().unwrap_or(&self.root)).map_err(|e| e.to_string())?;
         clone_catalog(url, &work)?;
-        let catalog = fs::read(work.join("catalog.xml")).map_err(|e| e.to_string())?;
-        let sig = fs::read(work.join("catalog.xml.asc")).map_err(|e| e.to_string())?;
+        let read = |file: &str| {
+            let path = work.join(file);
+            fs::read(&path).map_err(|e| format!("{file}: {e}"))
+        };
+        let catalog = read("catalog.xml")?;
+        let sig = read("catalog.xml.asc")?;
         Ok((catalog, sig))
     }
 
@@ -114,8 +122,15 @@ impl EngineBackend {
     }
 
     fn installed_version(&self, name: &str) -> Option<Version> {
-        let target = fs::read_link(self.root.join("current").join(name)).ok()?;
-        Version::parse(target.file_name()?.to_str()?)
+        let known = crate::installed::detect(
+            &self.root,
+            &fs_store_engine::rpm_installed_version,
+            &[name.to_owned()],
+        );
+        known
+            .into_iter()
+            .find(|r| r.name == name)
+            .map(|r| r.version)
     }
 }
 
@@ -123,40 +138,7 @@ fn other(error: impl std::fmt::Debug) -> BackendError {
     BackendError::Other(format!("{error:?}"))
 }
 
-fn row(s: fs_store_core::Source) -> SourceRow {
-    SourceRow {
-        id: s.id.0,
-        url: s.url,
-        enabled: s.enabled,
-        reference: s.reference,
-    }
-}
-
-fn id_from_url(url: &str) -> String {
-    url.trim_end_matches(['/', '.'])
-        .rsplit(['/', ':'])
-        .next()
-        .unwrap_or("source")
-        .trim_end_matches(".git")
-        .to_owned()
-}
-
-fn job_error(failure: InstallFailure) -> JobError {
-    match failure {
-        InstallFailure::Fetch(text) | InstallFailure::Catalog(text) => JobError::Other(text),
-        InstallFailure::CatalogSignature => JobError::CatalogSignature,
-        InstallFailure::NotOffered => JobError::NotOffered,
-        InstallFailure::Downgrade => JobError::Downgrade,
-        InstallFailure::Unsupported(_) => JobError::Unsupported,
-        InstallFailure::Checksum => JobError::Checksum,
-        InstallFailure::ReleaseSignature => JobError::ReleaseSignature,
-        InstallFailure::Update(UpdateError::Running) => JobError::Running,
-        InstallFailure::Update(UpdateError::RolledBack) => {
-            JobError::Other("the installer failed".to_owned())
-        }
-        InstallFailure::Update(UpdateError::RollbackFailed) => JobError::RollbackFailed,
-    }
-}
+use crate::engine_map::{id_from_url, job_error, row};
 
 impl StoreBackend for EngineBackend {
     fn sources(&self) -> Result<Vec<SourceRow>, BackendError> {
@@ -212,22 +194,31 @@ impl StoreBackend for EngineBackend {
                 Err(detail) => listing.unreadable.push((source.id.0, detail)),
             }
         }
+        *self.offered.lock().unwrap_or_else(PoisonError::into_inner) =
+            listing.packages.iter().map(|p| p.name.clone()).collect();
         Ok(listing)
     }
 
     fn installed(&self) -> Result<Vec<InstalledRow>, BackendError> {
-        let mut rows = Vec::new();
-        let Ok(dir) = fs::read_dir(self.root.join("current")) else {
-            return Ok(rows);
-        };
-        for entry in dir.flatten() {
-            let name = entry.file_name().to_string_lossy().into_owned();
-            if let (false, Some(version)) = (name.starts_with('.'), self.installed_version(&name)) {
-                rows.push(InstalledRow { name, version });
-            }
-        }
-        rows.sort_by(|a, b| a.name.cmp(&b.name));
-        Ok(rows)
+        let candidates = self
+            .offered
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone();
+        Ok(crate::installed::detect(
+            &self.root,
+            &fs_store_engine::rpm_installed_version,
+            &candidates,
+        ))
+    }
+
+    fn details(&self, name: &str) -> InstalledDetails {
+        crate::installed::details(
+            &self.root,
+            &fs_store_engine::default_bin_dir(),
+            &fs_store_engine::rpm_installed_version,
+            name,
+        )
     }
 
     fn run(

@@ -1,8 +1,11 @@
 //! Pattern: Aggregate root (the state of the window; `sources`, `jobs` and `text` add commands and sentences).
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
-use crate::backend::{BackendError, InstalledRow, SourceRow, StoreBackend};
+use crate::backend::{
+    BackendError, InstalledDetails, InstalledRow, PackageRow, SourceRow, StoreBackend,
+};
 
 use super::jobs::JobView;
 use super::types::{Action, AvailableRow, Problem, View};
@@ -14,6 +17,8 @@ pub struct StoreModel {
     pub(super) sources: Vec<SourceRow>,
     pub(super) available: Vec<AvailableRow>,
     pub(super) installed: Vec<InstalledRow>,
+    pub(super) offers: Vec<PackageRow>,
+    pub(super) details: HashMap<String, InstalledDetails>,
     pub(super) job: Option<JobView>,
     pub(super) problems: Vec<Problem>,
     pub(super) new_source: String,
@@ -29,6 +34,8 @@ impl StoreModel {
             sources: Vec::new(),
             available: Vec::new(),
             installed: Vec::new(),
+            offers: Vec::new(),
+            details: HashMap::new(),
             job: None,
             problems: Vec::new(),
             new_source: String::new(),
@@ -70,6 +77,12 @@ impl StoreModel {
         &self.installed
     }
 
+    /// Where the installed package `name` is (empty if nothing was found).
+    #[must_use]
+    pub fn details(&self, name: &str) -> InstalledDetails {
+        self.details.get(name).cloned().unwrap_or_default()
+    }
+
     /// The running or last job.
     #[must_use]
     pub fn job(&self) -> Option<&JobView> {
@@ -97,8 +110,9 @@ impl StoreModel {
     pub fn refresh(&mut self) {
         self.problems.clear();
         self.read_sources();
-        self.read_installed();
         self.read_available();
+        self.read_installed();
+        self.merge();
     }
 
     fn read_sources(&mut self) {
@@ -108,24 +122,59 @@ impl StoreModel {
         }
     }
 
+    /// Reads what is installed; one row per name (the newest version if a backend names it twice).
     pub(super) fn read_installed(&mut self) {
         match self.backend.installed() {
-            Ok(list) => self.installed = list,
+            Ok(list) => {
+                let mut rows: Vec<InstalledRow> = Vec::new();
+                for row in list {
+                    match rows.iter_mut().find(|r| r.name == row.name) {
+                        Some(known) if known.version < row.version => known.version = row.version,
+                        Some(_) => {}
+                        None => rows.push(row),
+                    }
+                }
+                self.details = rows
+                    .iter()
+                    .map(|r| (r.name.clone(), self.backend.details(&r.name)))
+                    .collect();
+                self.installed = rows;
+            }
             Err(e) => self.report(&e),
         }
     }
 
+    /// Reads the offers of the enabled sources; what could not be read or is not offered becomes problems.
     pub(super) fn read_available(&mut self) {
         let listing = match self.backend.available() {
             Ok(listing) => listing,
             Err(e) => {
-                self.available.clear();
+                self.offers.clear();
                 self.report(&e);
                 return;
             }
         };
-        self.available = listing
-            .packages
+        self.offers = listing.packages;
+        for (source, detail) in listing.unreadable {
+            self.problems.push(Problem::Unreadable { source, detail });
+        }
+        for (id, reason) in listing.skipped {
+            self.problems.push(Problem::Skipped { id, reason });
+        }
+    }
+
+    /// Joins offers and installed: one row per name (the newest offer), with the action it allows. A program
+    /// that is installed is never offered as installable.
+    pub(super) fn merge(&mut self) {
+        let mut best: Vec<&PackageRow> = Vec::new();
+        for offer in &self.offers {
+            match best.iter_mut().find(|p| p.name == offer.name) {
+                Some(known) if known.version < offer.version => *known = offer,
+                Some(_) => {}
+                None => best.push(offer),
+            }
+        }
+        self.available = best
             .into_iter()
             .map(|package| {
                 let installed = self
@@ -139,18 +188,12 @@ impl StoreModel {
                     Some(_) => Action::UpToDate,
                 };
                 AvailableRow {
-                    package,
+                    package: package.clone(),
                     installed,
                     action,
                 }
             })
             .collect();
-        for (source, detail) in listing.unreadable {
-            self.problems.push(Problem::Unreadable { source, detail });
-        }
-        for (id, reason) in listing.skipped {
-            self.problems.push(Problem::Skipped { id, reason });
-        }
     }
 
     pub(super) fn report(&mut self, error: &BackendError) {

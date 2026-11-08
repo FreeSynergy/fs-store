@@ -80,9 +80,10 @@ fn failed_job_is_shown_as_failed_then_rolled_back() {
     );
     assert_eq!(job.phase, Phase::RolledBack);
     assert!(m.installed().is_empty());
+    assert_eq!(m.job_line(), "fs-theme: the previous state is back.");
     assert_eq!(
-        m.job_line(),
-        "fs-theme: the previous state is back. fs-theme was not installed: its signature could not be verified."
+        m.problem_lines(),
+        ["fs-theme was not installed: its signature could not be verified."]
     );
     assert!(!m.is_busy());
 }

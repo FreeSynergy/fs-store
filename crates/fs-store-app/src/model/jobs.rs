@@ -61,17 +61,20 @@ impl StoreModel {
             self.problems = vec![busy];
             return None;
         }
-        let kind = match self
+        self.problems.clear();
+        let action = self
             .available
             .iter()
-            .find(|r| r.package.name == name)?
-            .action
-        {
-            Action::Install => JobKind::Install,
-            Action::Update => JobKind::Update,
-            Action::UpToDate => return None,
+            .find(|r| r.package.name == name)
+            .map(|r| r.action);
+        let kind = match action {
+            Some(Action::Install) => JobKind::Install,
+            Some(Action::Update) => JobKind::Update,
+            Some(Action::UpToDate) | None => {
+                self.problems.push(Problem::NothingToDo(name.to_owned()));
+                return None;
+            }
         };
-        self.problems.clear();
         self.job = Some(JobView {
             kind,
             name: name.to_owned(),
@@ -95,7 +98,7 @@ impl StoreModel {
         }
     }
 
-    /// The backend is done: `Installed`, or `Failed` and then `RolledBack`. Reads the lists again.
+    /// The backend is done: `Installed`, or `Failed` and then `RolledBack`. Reads the installed list again; a failure is told as a problem.
     pub fn finish(&mut self, result: Result<Version, JobError>) {
         if let Some(job) = self.job.as_mut() {
             match result {
@@ -111,12 +114,16 @@ impl StoreModel {
                         job.history.push(Phase::RolledBack);
                         job.phase = Phase::RolledBack;
                     }
+                    self.problems.push(Problem::JobFailed {
+                        name: job.name.clone(),
+                        error: error.clone(),
+                    });
                     job.error = Some(error);
                 }
             }
         }
         self.read_installed();
-        self.read_available();
+        self.merge();
     }
 
     /// Runs the job of `name` to its end on this thread (tests, and programs without a window).

@@ -9,13 +9,41 @@ use crate::backend::{JobError, Phase};
 pub use fs_store_core::words::fill;
 
 /// Title of the window.
-pub const TITLE: &str = "FreeSynergy Store";
+pub const TITLE: &str = "FreeSynergy.Store";
 /// Name of the sources view.
 pub const VIEW_SOURCES: &str = "Sources";
 /// Name of the available view.
 pub const VIEW_AVAILABLE: &str = "Available";
 /// Name of the installed view.
 pub const VIEW_INSTALLED: &str = "Installed";
+
+/// Name of the settings page.
+pub const VIEW_SETTINGS: &str = "Settings";
+/// Name of the About page.
+pub const VIEW_ABOUT: &str = "About";
+/// Title of the menu with the store's own entries.
+pub const MENU_STORE: &str = "Store";
+/// Title of the help menu.
+pub const MENU_HELP: &str = "Help";
+/// Menu entry: quit (with its shortcut).
+pub const MENU_QUIT: &str = "Quit (Ctrl+Q)";
+/// Menu entry: sources.
+pub const MENU_SOURCES: &str = "Sources";
+/// Menu entry: settings.
+pub const MENU_SETTINGS: &str = "Settings";
+/// Menu entry: about.
+pub const MENU_ABOUT: &str = "About";
+
+/// The Settings page says what is true: nothing can be set here yet.
+pub const SETTINGS_TEXT: &str = "There is nothing to set in this window yet. Settings will come with the admin frontend (ADR 0061).";
+/// About: name and version. Placeholder: `{version}`.
+pub const ABOUT_NAME: &str = "FreeSynergy.Store {version}";
+/// About: licence.
+pub const ABOUT_LICENCE: &str = "Licence: MIT OR Apache-2.0";
+/// About: project address. Placeholder: `{url}`.
+pub const ABOUT_URL: &str = "Project: {url}";
+/// The project address.
+pub const PROJECT_URL: &str = "https://github.com/FreeSynergy/fs-store";
 
 /// Button: install a package.
 pub const BUTTON_INSTALL: &str = "Install";
@@ -65,8 +93,43 @@ pub const STORE_PROBLEM: &str = "The store could not do this: {detail}";
 pub const SOURCE_UNREADABLE: &str = "The source {source} could not be read: {detail}";
 /// An entry of a catalog is not offered. Placeholders: `{id}`, `{reason}`.
 pub const ENTRY_SKIPPED: &str = "{id} is not offered: {reason}";
+/// The button of a package did nothing. Placeholder: `{name}`.
+pub const NOTHING_TO_DO: &str =
+    "{name} needs nothing: it is up to date, or no source offers it any more.";
+/// "Add" with an empty field.
+pub const EMPTY_ADDRESS: &str = "Type the Git address of a source first.";
+/// A program could not be started. Placeholders: `{command}`, `{detail}`.
+pub const OPEN_FAILED: &str = "{command} could not be opened: {detail}";
+/// No command was found to open a program. Placeholder: `{detail}`.
+pub const OPEN_NO_COMMAND: &str =
+    "Nothing to open was found for {detail}: no command of it exists on this machine.";
+/// Button: open a program or facet.
+pub const BUTTON_OPEN: &str = "Open";
+/// Button: settings of one program (not usable yet).
+pub const BUTTON_PROGRAM_SETTINGS: &str = "Settings";
+/// Hint beside the disabled settings button.
+pub const SETTINGS_LATER: &str = "comes with the admin frontend";
+/// Detail: how it was installed. Placeholder: `{kind}`.
+pub const DETAIL_KIND: &str = "Installed as: {kind}";
+/// Detail: a command. Placeholders: `{command}`, `{path}`.
+pub const DETAIL_COMMAND: &str = "Command {command}: {path}";
+/// Detail: the folder. Placeholder: `{folder}`.
+pub const DETAIL_FOLDER: &str = "Folder: {folder}";
+/// Detail: the source. Placeholder: `{source}`.
+pub const DETAIL_SOURCE: &str = "Source: {source}";
+/// The worker of a job broke down.
+pub const JOB_PANICKED: &str = "the installer broke down unexpectedly";
 /// Another job is running. Placeholder: `{name}`.
 pub const JOB_BUSY: &str = "{name} is being installed. Wait until it is done.";
+
+/// Name of a way of installing.
+#[must_use]
+pub fn install_kind(kind: crate::backend::InstallKind) -> &'static str {
+    match kind {
+        crate::backend::InstallKind::Rpm => "rpm",
+        crate::backend::InstallKind::Archive => "tar.gz",
+    }
+}
 
 /// Name of a kind of package.
 #[must_use]
@@ -123,7 +186,9 @@ pub fn job_problem(error: &JobError) -> &'static str {
             "{name} was not installed: the source offers an older version than the one you have."
         }
         JobError::NotOffered => "No switched-on source offers {name}.",
-        JobError::Unsupported => "{name} comes in a form that this store cannot install yet.",
+        JobError::Unsupported(_) => {
+            "{name} comes in a form that this store cannot install yet ({detail})."
+        }
         JobError::RollbackFailed => {
             "The update of {name} failed and the previous version could not be restored."
         }

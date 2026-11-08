@@ -7,7 +7,10 @@
 
 pub mod backend;
 pub mod engine;
+mod engine_map;
 pub mod gui;
+pub mod installed;
+pub mod launcher;
 pub mod model;
 pub mod view;
 pub mod words;

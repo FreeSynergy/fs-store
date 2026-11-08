@@ -6,6 +6,8 @@
 mod available;
 mod installed;
 mod job;
+mod menu;
+mod pages;
 mod shell;
 mod sources;
 
