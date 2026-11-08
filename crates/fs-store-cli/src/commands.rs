@@ -14,7 +14,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use fs_store_catalog::{Catalog, CatalogEntry, parse_catalog};
-use fs_store_core::{SignaturePolicy, SignatureVerifier, SourceId, SourceRepository, Version};
+use fs_store_core::{SignaturePolicy, SignatureVerifier, SourceRepository, Version};
 use fs_store_engine::ProcRunningCheck;
 use fs_store_engine::net::{HttpsFetch, clone_catalog};
 use fs_store_engine::service::{Fetch, FileFetch, Installer};
@@ -45,6 +45,19 @@ pub(crate) fn root() -> PathBuf {
 pub(crate) fn installed(root: &Path, name: &str) -> Option<Version> {
     let target = fs::read_link(root.join("current").join(name)).ok()?;
     Version::parse(target.file_name()?.to_str()?)
+}
+
+pub(crate) fn trust(extra: Option<&String>) -> Result<(PgpVerifier, SignaturePolicy), String> {
+    match extra {
+        None => Ok((PgpVerifier::builtin(), SignaturePolicy::default())),
+        Some(file) => {
+            let armored = fs::read_to_string(file).map_err(|e| format!("{file}: {e}"))?;
+            let v = PgpVerifier::builtin_and(&armored).map_err(|e| format!("{file}: {e:?}"))?;
+            let fp = v.fingerprints().pop().ok_or("no key")?;
+            eprintln!("fs-store: also trusting test key {fp} for this run");
+            Ok((v, SignaturePolicy::default().also_trusting(&fp)))
+        }
+    }
 }
 
 pub(crate) fn sources(root: &Path) -> Result<FileSources, String> {
@@ -87,66 +100,18 @@ pub(crate) fn fetch_source(
             "{url}: the catalog signature is not valid for a trusted key"
         ));
     }
+    let parsed = read_catalog(&catalog)?;
+    fs_store_sources::ensure_fresh(
+        &root.join("serials.toml"),
+        url,
+        parsed.serial,
+        parsed.expires,
+    )?;
     Ok((catalog, sig))
 }
 
 pub(crate) fn read_catalog(bytes: &[u8]) -> Result<Catalog, String> {
     parse_catalog(&String::from_utf8_lossy(bytes)).map_err(|e| e.0)
-}
-
-fn id_from_url(url: &str) -> String {
-    url.trim_end_matches(['/', '.'])
-        .rsplit(['/', ':'])
-        .next()
-        .unwrap_or("source")
-        .trim_end_matches(".git")
-        .to_owned()
-}
-
-pub(crate) fn trust(extra: Option<&String>) -> Result<(PgpVerifier, SignaturePolicy), String> {
-    match extra {
-        None => Ok((PgpVerifier::builtin(), SignaturePolicy::default())),
-        Some(file) => {
-            let armored = fs::read_to_string(file).map_err(|e| format!("{file}: {e}"))?;
-            let v = PgpVerifier::builtin_and(&armored).map_err(|e| format!("{file}: {e:?}"))?;
-            let fp = v.fingerprints().pop().ok_or("no key")?;
-            eprintln!("fs-store: also trusting test key {fp} for this run");
-            Ok((v, SignaturePolicy::default().also_trusting(&fp)))
-        }
-    }
-}
-
-fn cmd_sources(root: &Path, rest: &[String]) -> Result<(), String> {
-    let mut list = sources(root)?;
-    fs::create_dir_all(root).map_err(|e| e.to_string())?;
-    let err = |e| format!("{e:?}");
-    match rest {
-        [] => {
-            for s in list.list() {
-                println!(
-                    "{} {} {}{}",
-                    s.id.0,
-                    if s.enabled { "on " } else { "off" },
-                    s.url,
-                    if s.reference { "  (reference)" } else { "" }
-                );
-            }
-            return Ok(());
-        }
-        [c, url] if c == "add" => list.add(url, SourceId(id_from_url(url))).map_err(err)?,
-        [c, id] if c == "enable" => list.set_enabled(&SourceId(id.clone()), true).map_err(err)?,
-        [c, id] if c == "disable" => list
-            .set_enabled(&SourceId(id.clone()), false)
-            .map_err(err)?,
-        [c, id] if c == "remove" => list.remove(&SourceId(id.clone())).map_err(err)?,
-        _ => {
-            return Err(
-                "usage: fs-store sources [add <url> | enable <id> | disable <id> | remove <id>]"
-                    .into(),
-            );
-        }
-    }
-    list.save().map_err(|e| format!("{e:?}"))
 }
 
 fn cmd_installed(root: &Path) {
@@ -275,7 +240,7 @@ pub fn run(all: &[String]) -> Result<(), String> {
     }
     let root = root();
     match args.as_slice() {
-        [c, rest @ ..] if c == "sources" => cmd_sources(&root, rest),
+        [c, rest @ ..] if c == "sources" => crate::source_list::run(&root, rest),
         [c] if c == "installed" => {
             cmd_installed(&root);
             Ok(())

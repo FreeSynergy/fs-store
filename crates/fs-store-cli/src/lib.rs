@@ -3,6 +3,7 @@
 #![deny(missing_docs)]
 
 mod commands;
+mod source_list;
 mod updates;
 
 pub use commands::run;

@@ -41,6 +41,10 @@ pub struct Catalog {
     pub entries: Vec<CatalogEntry>,
     /// Components left out, with the reason.
     pub skipped: Vec<Skipped>,
+    /// Counts up with every published catalog (`fs-serial`); an older one than seen before is a rollback.
+    pub serial: Option<u64>,
+    /// Unix seconds after which the catalog is stale (`fs-expires`); a mirror cannot keep an old one alive.
+    pub expires: Option<u64>,
 }
 
 /// The catalog text is not usable.
@@ -57,7 +61,11 @@ pub fn parse_catalog(xml: &str) -> Result<Catalog, CatalogError> {
     if root.tag_name().name() != "components" {
         return Err(CatalogError("root element is not <components>".into()));
     }
-    let mut out = Catalog::default();
+    let mut out = Catalog {
+        serial: root.attribute("fs-serial").and_then(|v| v.parse().ok()),
+        expires: root.attribute("fs-expires").and_then(|v| v.parse().ok()),
+        ..Catalog::default()
+    };
     for c in root.children().filter(|n| n.has_tag_name("component")) {
         match entry(c) {
             Ok(e) if out.entries.iter().any(|o| o.name == e.name) => out.skipped.push(Skipped {

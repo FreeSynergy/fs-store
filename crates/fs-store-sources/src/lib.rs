@@ -3,6 +3,8 @@
 
 mod file;
 mod registry;
+mod serials;
 
 pub use file::{FileSources, StoreError};
 pub use registry::{Installed, Registry};
+pub use serials::{Serials, Stale, ensure_fresh};

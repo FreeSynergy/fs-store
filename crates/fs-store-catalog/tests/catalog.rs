@@ -116,3 +116,11 @@ fn bad_old_release_and_foreign_arch_do_not_hide_a_good_release_and_duplicates_ar
     assert!(c.skipped.iter().any(|s| s.reason.contains("duplicate")));
     assert!(c.skipped.iter().any(|s| s.id == "../evil"));
 }
+
+#[test]
+fn serial_and_expiry_are_read_when_present() {
+    let c = parse_catalog(r#"<components version="1.0" fs-serial="42" fs-expires="1790000000"/>"#).unwrap();
+    assert_eq!((c.serial, c.expires), (Some(42), Some(1_790_000_000)));
+    let c = parse_catalog(r#"<components version="1.0"/>"#).unwrap();
+    assert_eq!((c.serial, c.expires), (None, None));
+}

@@ -83,6 +83,12 @@ impl EngineBackend {
             return Err("the signature of the catalog is not valid".to_owned());
         }
         let parsed = parse_catalog(&String::from_utf8_lossy(&catalog)).map_err(|e| e.0)?;
+        fs_store_sources::ensure_fresh(
+            &self.root.join("serials.toml"),
+            url,
+            parsed.serial,
+            parsed.expires,
+        )?;
         Ok((parsed, catalog, sig))
     }
 
