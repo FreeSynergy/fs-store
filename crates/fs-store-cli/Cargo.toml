@@ -1,0 +1,17 @@
+[package]
+name = "fs-store-cli"
+description = "FreeSynergy.Store command line: thin first user of the engine"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "fs-store"
+path = "src/main.rs"
+
+[dependencies]
+fs-store-core = { path = "../fs-store-core" }
+fs-store-catalog = { path = "../fs-store-catalog" }
+fs-store-engine = { path = "../fs-store-engine" }
+fs-store-pgp = { path = "../fs-store-pgp" }

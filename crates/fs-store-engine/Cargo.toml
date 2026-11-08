@@ -11,6 +11,8 @@ fs-store-core = { path = "../fs-store-core" }
 flate2 = "1"
 fs-store-catalog = { path = "../fs-store-catalog" }
 sha2 = "0.10"
+ureq = { version = "2", default-features = false, features = ["tls"] }
+gix = { version = "0.73", default-features = false, features = ["worktree-mutation", "blocking-network-client", "blocking-http-transport-reqwest-rust-tls"] }
 tar = "0.4"
 
 [dev-dependencies]
