@@ -23,6 +23,14 @@ fn main() -> ExitCode {
 fn dispatch(args: &[String]) -> Result<(), String> {
     match args.first().map(String::as_str) {
         None => window(&[]),
+        Some("version" | "--version" | "-V") => {
+            let mode = match fs_store_engine::preferred_format() {
+                fs_store_core::Format::Rpm => "installed by rpm: programs come as rpm",
+                _ => "not an rpm: programs come as tar.gz",
+            };
+            println!("fs-store {} ({mode})", env!("CARGO_PKG_VERSION"));
+            Ok(())
+        }
         Some("gui") => window(&args[1..]),
         Some(flag) if flag.starts_with("--") && flag != "--trust-key" => window(args),
         Some("serve") => Err("the server (`fs-store serve`) is not built yet; contract: store.capnp in fs-interfaces".into()),
