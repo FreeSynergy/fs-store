@@ -2151,6 +2151,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "fs-store-client"
+version = "0.0.4"
+dependencies = [
+ "fs-store-sources",
+ "tempfile",
+]
+
+[[package]]
 name = "fs-store-core"
 version = "0.0.4"
 

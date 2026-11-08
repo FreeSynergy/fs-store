@@ -222,6 +222,14 @@ must be the exact file the metadata signs; else the source is refused. **Not don
 `root.json` with `16A4…4342` as described above), a TUF layout in `fs-catalog` (CI keys for targets/snapshot/timestamp, weekly re-signing of timestamp),
 TUF for the release files themselves (today: OpenPGP signature plus the sha256 in the signed catalog), the built-in root.
 
+## Update hint in the programs (decision, provisional, 2026-11-08)
+Crate `fs-store-client`: `update_hint("fs-tasks") -> Option<UpdateHint{program, from, to}>` (and `.sentence()`). It reads what the store's
+background check wrote (`updates.toml`) and the person's `notify` setting (`settings.toml`); it never downloads and never fails a
+program (a missing or unreadable file means no hint). A program calls it once at start (a plain notice with the sentence; the
+store opens with the program's `fs-store` command). Why a file and not `store.capnp`: no process has to run, and the server cannot know its
+callers yet (ADR 0054); the same question can later go through the contract. Depend on it by Git tag:
+`fs-store-client = { git = "https://github.com/FreeSynergy/fs-store", tag = "v0.0.N" }`.
+
 ## Provisional decisions
 - Versions are `major.minor.patch` with an optional pre-release `-alpha|beta|rc[.N]` (`~` accepted as in `AppStream`/rpm); a pre-release is older than its release. Anything else is skipped with a reason.
 - Only one trusted fingerprint for now; sources may later bring their own keys, never replacing the built-in one.
