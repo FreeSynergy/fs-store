@@ -15,7 +15,7 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use fs_store_catalog::{Catalog, CatalogEntry, parse_catalog};
-use fs_store_core::{SignaturePolicy, SourceId, SourceRepository, Version};
+use fs_store_core::{SignaturePolicy, SignatureVerifier, SourceId, SourceRepository, Version};
 use fs_store_engine::ProcRunningCheck;
 use fs_store_engine::net::{HttpsFetch, clone_catalog};
 use fs_store_engine::service::{Fetch, FileFetch, Installer};
@@ -70,13 +70,24 @@ fn addresses(root: &Path, arg: Option<&String>) -> Result<Vec<String>, String> {
 }
 
 /// Clones one source and returns its catalog text and signature.
-fn fetch_source(root: &Path, url: &str) -> Result<(Vec<u8>, Vec<u8>), String> {
+fn fetch_source(
+    root: &Path,
+    url: &str,
+    verifier: &PgpVerifier,
+    policy: &SignaturePolicy,
+) -> Result<(Vec<u8>, Vec<u8>), String> {
     let work = root.join("sources").join("work");
     let _ = fs::remove_dir_all(&work);
     fs::create_dir_all(work.parent().unwrap_or(root)).map_err(|e| e.to_string())?;
     clone_catalog(url, &work).map_err(|e| format!("{url}: {e}"))?;
     let catalog = fs::read(work.join("catalog.xml")).map_err(|e| format!("{url}: {e}"))?;
     let sig = fs::read(work.join("catalog.xml.asc")).map_err(|e| format!("{url}: {e}"))?;
+    // Nothing of an unsigned or wrongly signed catalog is shown or believed.
+    if !policy.is_satisfied_by(&verifier.verify(&catalog, Some(&sig))) {
+        return Err(format!(
+            "{url}: the catalog signature is not valid for a trusted key"
+        ));
+    }
     Ok((catalog, sig))
 }
 
@@ -91,6 +102,19 @@ fn id_from_url(url: &str) -> String {
         .unwrap_or("source")
         .trim_end_matches(".git")
         .to_owned()
+}
+
+fn trust(extra: Option<&String>) -> Result<(PgpVerifier, SignaturePolicy), String> {
+    match extra {
+        None => Ok((PgpVerifier::builtin(), SignaturePolicy::default())),
+        Some(file) => {
+            let armored = fs::read_to_string(file).map_err(|e| format!("{file}: {e}"))?;
+            let v = PgpVerifier::builtin_and(&armored).map_err(|e| format!("{file}: {e:?}"))?;
+            let fp = v.fingerprints().pop().ok_or("no key")?;
+            eprintln!("fs-store: also trusting test key {fp} for this run");
+            Ok((v, SignaturePolicy::default().also_trusting(&fp)))
+        }
+    }
 }
 
 fn cmd_sources(root: &Path, rest: &[String]) -> Result<(), String> {
@@ -142,10 +166,12 @@ fn cmd_installed(root: &Path) {
     }
 }
 
-fn cmd_available(root: &Path, arg: Option<&String>) -> Result<(), String> {
+fn cmd_available(root: &Path, arg: Option<&String>, extra: Option<&String>) -> Result<(), String> {
+    let (verifier, policy) = trust(extra)?;
     let mut failed = false;
     for url in addresses(root, arg)? {
-        let result = fetch_source(root, &url).and_then(|(c, _)| read_catalog(&c));
+        let result =
+            fetch_source(root, &url, &verifier, &policy).and_then(|(c, _)| read_catalog(&c));
         match result {
             Ok(cat) => {
                 for e in cat.entries {
@@ -176,24 +202,14 @@ fn cmd_install(
     extra: Option<&String>,
     only_newer: bool,
 ) -> Result<(), String> {
-    let (verifier, policy) = match extra {
-        None => (PgpVerifier::builtin(), SignaturePolicy::default()),
-        Some(file) => {
-            let armored = fs::read_to_string(file).map_err(|e| format!("{file}: {e}"))?;
-            let v = PgpVerifier::builtin_and(&armored).map_err(|e| format!("{file}: {e:?}"))?;
-            let fp = v.fingerprints().pop().ok_or("no key")?;
-            eprintln!("fs-store: also trusting test key {fp} for this run");
-            (v, SignaturePolicy::default().also_trusting(&fp))
-        }
-    };
+    let (verifier, policy) = trust(extra)?;
     let running = ProcRunningCheck::new(root);
     let installer = Installer {
         root: root.to_owned(),
-        staging: root.join("staging"),
         verifier: &verifier,
         fetch: &AnyFetch,
         running: &running,
-        policy,
+        policy: policy.clone(),
     };
     let current = installed(root, name);
     if only_newer && current.is_none() {
@@ -201,7 +217,7 @@ fn cmd_install(
     }
     let mut last = format!("{name} is not offered by any source");
     for url in addresses(root, arg)? {
-        let (catalog, sig) = match fetch_source(root, &url) {
+        let (catalog, sig) = match fetch_source(root, &url, &verifier, &policy) {
             Ok(x) => x,
             Err(e) => {
                 last = e;
@@ -252,8 +268,8 @@ fn run(all: &[String]) -> Result<(), String> {
             cmd_installed(&root);
             Ok(())
         }
-        [c] if c == "available" => cmd_available(&root, None),
-        [c, s] if c == "available" => cmd_available(&root, Some(s)),
+        [c] if c == "available" => cmd_available(&root, None, extra),
+        [c, s] if c == "available" => cmd_available(&root, Some(s), extra),
         [c, n] if c == "install" => cmd_install(&root, n, None, extra, false),
         [c, n, s] if c == "install" => cmd_install(&root, n, Some(s), extra, false),
         [c, n] if c == "update" => cmd_install(&root, n, None, extra, true),

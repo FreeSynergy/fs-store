@@ -6,8 +6,8 @@ use std::path::PathBuf;
 
 use fs_store_catalog::{CatalogEntry, parse_catalog};
 use fs_store_core::{
-    Format, Package, RunningCheck, SignaturePolicy, SignatureVerifier, SourceId, Update,
-    UpdateError, Version, run_update,
+    Format, InstallState, Package, RunningCheck, SignaturePolicy, SignatureVerifier, SourceId,
+    Update, UpdateError, Version, run_update,
 };
 use sha2::{Digest, Sha256};
 
@@ -40,6 +40,8 @@ pub enum InstallFailure {
     CatalogSignature,
     /// The catalog text is unusable.
     Catalog(String),
+    /// The catalog offers an older version than the installed one (replayed catalog).
+    Downgrade,
     /// No such package offered.
     NotOffered,
     /// The format has no installer yet.
@@ -56,8 +58,6 @@ pub enum InstallFailure {
 pub struct Installer<'a> {
     /// Where packages live.
     pub root: PathBuf,
-    /// Staging directory for downloads.
-    pub staging: PathBuf,
     /// Signature check.
     pub verifier: &'a dyn SignatureVerifier,
     /// Downloads.
@@ -72,13 +72,30 @@ impl Installer<'_> {
     /// Verifies the catalog, then installs or updates `name`.
     ///
     /// # Errors
-    /// `InstallFailure`; on every error before the update step nothing on disk was changed besides staging.
+    /// `InstallFailure`; on every error before the update step nothing on disk was changed.
     pub fn install(
         &self,
         catalog: &[u8],
         catalog_sig: &[u8],
         name: &str,
         previous: Option<Version>,
+    ) -> Result<Version, InstallFailure> {
+        self.install_observed(catalog, catalog_sig, name, previous, &mut |_| {})
+    }
+
+    /// Like [`Installer::install`], and tells `observe` the stages passed: `Verified` once the catalog,
+    /// checksum and release signature are good, `Installing` just before the update step. The end
+    /// (`Installed`, or `Failed`) is the return value.
+    ///
+    /// # Errors
+    /// `InstallFailure`, as for `install`.
+    pub fn install_observed(
+        &self,
+        catalog: &[u8],
+        catalog_sig: &[u8],
+        name: &str,
+        previous: Option<Version>,
+        observe: &mut dyn FnMut(InstallState),
     ) -> Result<Version, InstallFailure> {
         let policy = &self.policy;
         if !policy.is_satisfied_by(&self.verifier.verify(catalog, Some(catalog_sig))) {
@@ -94,6 +111,9 @@ impl Installer<'_> {
             .ok_or(InstallFailure::NotOffered)?;
         if entry.format != Format::TarGz {
             return Err(InstallFailure::Unsupported(entry.format));
+        }
+        if previous.is_some_and(|p| entry.version < p) {
+            return Err(InstallFailure::Downgrade);
         }
         let file = self
             .fetch
@@ -117,12 +137,10 @@ impl Installer<'_> {
         let verified = policy
             .admit(package, outcome)
             .map_err(|_| InstallFailure::ReleaseSignature)?;
-        fs::create_dir_all(&self.staging).map_err(|e| InstallFailure::Fetch(e.to_string()))?;
-        let staged = self
-            .staging
-            .join(format!("{name}-{}.tar.gz", entry.version));
-        fs::write(&staged, &file).map_err(|e| InstallFailure::Fetch(e.to_string()))?;
-        let mut strategy = TarGz::new(&self.root, &staged);
+        observe(InstallState::Verified);
+        // The verified bytes go straight to the unpacker; no file others could swap in between.
+        let mut strategy = TarGz::from_bytes(&self.root, file);
+        observe(InstallState::Installing);
         let result = run_update(
             &Update {
                 package: &verified,
@@ -131,7 +149,6 @@ impl Installer<'_> {
             &mut strategy,
             self.running,
         );
-        let _ = fs::remove_file(&staged);
         result
             .map(|_| entry.version)
             .map_err(InstallFailure::Update)

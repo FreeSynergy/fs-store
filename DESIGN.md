@@ -80,6 +80,22 @@ or a test-only trusted key for local sources.
 
 A single top directory named after the package (`fs-tasks-server-0.6.1-rc.2-linux-x86_64/`) is stripped on install, so the program sits directly in `current/<name>/`; other single directories such as `bin/` are content and stay.
 
+## Review of 2026-11-08 (second agent) and what was done
+Fixed: symlink/hard-link tar entries refused (could write outside the root); `./` prefixed archives accepted; unpacking
+goes to a sibling directory and is renamed, an installed version is never touched again (reinstall cannot destroy the
+working install); the verified bytes go to the unpacker directly (no predictable staging file to swap); package names
+must be plain file names (`PackageName`); a catalog offering an older version than the installed one is refused
+(`Downgrade`, replay); the CLI verifies the catalog signature before showing or believing anything and tries the next
+source when one fails; the root is made absolute; unpacked size and entry count are capped; catalog: a bad old release no longer hides
+a good one, artifacts are chosen by platform, duplicate ids are reported. Contract: source per call, `JobFailure`,
+`rollbackFailed`, `uninstall`, `refresh`, signer and version on `Job`.
+**Not fixed yet (named limits):** the catalog has no serial/timestamp, so a replayed catalog is only caught when an
+older version than the installed one is offered (a freeze, i.e. the same old catalog forever, is not detected); trust is
+one flat list, not per source or per name space (a test key given with `--trust-key` is valid for every name in that run);
+the OpenPGP check does not look at key or signature expiry, subkey flags or subkey revocation; `ProcRunningCheck` does
+not see programs started through an interpreter; the real error behind `RolledBack` is not carried up; a symlink in a
+package archive is refused, which will need a rule (relative and inside the package) when a package needs one.
+
 ## Provisional decisions
 - Versions are `major.minor.patch` with an optional pre-release `-alpha|beta|rc[.N]` (`~` accepted as in `AppStream`/rpm); a pre-release is older than its release. Anything else is skipped with a reason.
 - Only one trusted fingerprint for now; sources may later bring their own keys, never replacing the built-in one.

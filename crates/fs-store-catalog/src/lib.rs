@@ -61,6 +61,10 @@ pub fn parse_catalog(xml: &str) -> Result<Catalog, CatalogError> {
     let mut out = Catalog::default();
     for c in root.children().filter(|n| n.has_tag_name("component")) {
         match entry(c) {
+            Ok(e) if out.entries.iter().any(|o| o.name == e.name) => out.skipped.push(Skipped {
+                id: e.name.as_str().to_owned(),
+                reason: "duplicate id in the catalog".to_owned(),
+            }),
             Ok(e) => out.entries.push(e),
             Err((id, reason)) => out.skipped.push(Skipped { id, reason }),
         }
@@ -73,6 +77,11 @@ fn text<'a>(n: roxmltree::Node<'a, 'a>, tag: &str) -> Option<&'a str> {
         .find(|c| c.has_tag_name(tag))
         .and_then(|c| c.text())
         .map(str::trim)
+}
+
+/// `platform` like `x86_64-linux-gnu`: the architecture must be ours and the system Linux.
+fn fits_this_machine(platform: &str) -> bool {
+    platform.starts_with(std::env::consts::ARCH) && platform.contains("linux")
 }
 
 fn entry(c: roxmltree::Node) -> Result<CatalogEntry, (String, String)> {
@@ -91,25 +100,32 @@ fn entry(c: roxmltree::Node) -> Result<CatalogEntry, (String, String)> {
     };
     // Newest release that has an artifact; unparsable versions are reported, not guessed.
     let mut best: Option<(Version, roxmltree::Node)> = None;
+    let mut bad_version: Option<String> = None;
     for r in c.descendants().filter(|n| n.has_tag_name("release")) {
-        let Some(art) = r
-            .descendants()
-            .find(|n| n.has_tag_name("artifact") && n.attribute("type") != Some("source"))
-        else {
+        // The first binary artifact for this machine (no `platform` means any).
+        let Some(art) = r.descendants().find(|n| {
+            n.has_tag_name("artifact")
+                && n.attribute("type") != Some("source")
+                && n.attribute("platform").is_none_or(fits_this_machine)
+        }) else {
             continue;
         };
         let raw = r.attribute("version").unwrap_or_default();
-        let v = Version::parse(raw).ok_or_else(|| {
-            (
-                id.clone(),
-                format!("version `{raw}` is not major.minor.patch"),
-            )
-        })?;
+        // A bad old release does not hide the others; it is only reported when nothing else is usable.
+        let Some(v) = Version::parse(raw) else {
+            bad_version.get_or_insert_with(|| format!("version `{raw}` is not major.minor.patch"));
+            continue;
+        };
         if best.is_none_or(|(b, _)| v > b) {
             best = Some((v, art));
         }
     }
-    let (version, art) = best.ok_or_else(|| fail("no release with an artifact"))?;
+    let (version, art) = best.ok_or_else(|| {
+        fail(
+            &bad_version
+                .unwrap_or_else(|| "no release with an artifact for this machine".to_owned()),
+        )
+    })?;
     let location = text(art, "location")
         .ok_or_else(|| fail("artifact has no location"))?
         .to_owned();

@@ -95,7 +95,6 @@ fn local_source_with_an_explicitly_trusted_test_key_installs_a_pre_release() {
     let tmp = tempfile::tempdir().unwrap();
     let make = |policy| Installer {
         root: tmp.path().join("root"),
-        staging: tmp.path().join("stage"),
         verifier: &verifier,
         fetch: &fetch,
         running: &Idle,

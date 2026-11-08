@@ -68,7 +68,6 @@ fn run(
     ]));
     let i = Installer {
         root: tmp.path().join("root"),
-        staging: tmp.path().join("stage"),
         verifier: &Fake,
         fetch: &f,
         running: &Idle,
@@ -106,5 +105,32 @@ fn bad_release_signature_installs_nothing() {
 fn checksum_mismatch_installs_nothing() {
     let (r, tmp) = run(b"good", b"good", Some("00"));
     assert_eq!(r, Err(InstallFailure::Checksum));
+    assert!(!tmp.path().join("root").exists());
+}
+
+#[test]
+fn an_older_catalog_than_the_installed_version_is_refused() {
+    let tmp = tempfile::tempdir().unwrap();
+    let tgz = tarball("hello");
+    let sha = format!("{:x}", Sha256::digest(&tgz));
+    let f = Map(HashMap::from([
+        ("https://x/t.tar.gz".into(), tgz),
+        ("https://x/t.asc".into(), b"good".to_vec()),
+    ]));
+    let i = Installer {
+        root: tmp.path().join("root"),
+        verifier: &Fake,
+        fetch: &f,
+        running: &Idle,
+        policy: SignaturePolicy::default(),
+    };
+    // the catalog offers 1.2.3; 2.0.0 is installed
+    let r = i.install(
+        catalog(&sha).as_bytes(),
+        b"good",
+        "tasks",
+        Some(Version::new(2, 0, 0)),
+    );
+    assert_eq!(r, Err(InstallFailure::Downgrade));
     assert!(!tmp.path().join("root").exists());
 }

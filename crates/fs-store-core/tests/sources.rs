@@ -47,3 +47,24 @@ fn pre_releases_parse_order_and_print() {
     assert_eq!(Version::parse("0.6.1-nightly"), None);
     assert_eq!(Version::parse("0.6"), None);
 }
+
+#[test]
+fn package_names_must_be_plain_file_names() {
+    use fs_store_core::PackageName;
+    for good in ["tasks", "net.freesynergy.tasks", "fs-tasks_server"] {
+        assert!(PackageName::new(good).is_some(), "{good}");
+    }
+    for bad in [
+        "",
+        "  ",
+        "../x",
+        "a/b",
+        ".hidden",
+        "-x",
+        "a b",
+        "a\0b",
+        &"x".repeat(129),
+    ] {
+        assert!(PackageName::new(bad).is_none(), "{bad:?}");
+    }
+}

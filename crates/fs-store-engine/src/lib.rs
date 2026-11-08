@@ -11,27 +11,72 @@ use std::path::{Component, Path, PathBuf};
 
 use flate2::read::GzDecoder;
 use fs_store_core::{
-    Format, InstallError, InstallStrategy, RunningCheck, VerifiedPackage, Version,
+    Format, InstallError, InstallStrategy, PackageName, RunningCheck, VerifiedPackage, Version,
 };
+
+/// Largest unpacked size and entry count we accept from one archive (decompression-bomb limit).
+const MAX_UNPACKED: u64 = 4 * 1024 * 1024 * 1024;
+const MAX_ENTRIES: usize = 100_000;
+
+enum Archive {
+    Path(PathBuf),
+    Bytes(Vec<u8>),
+}
 
 /// Installs a downloaded `tar.gz` under `root`.
 ///
 /// Layout: `root/packages/<name>/<version>/` holds the files, `root/current/<name>` is a symlink to the active
-/// version. Switching is one atomic rename of a new symlink; old versions stay for the rollback.
-#[derive(Debug)]
+/// version. Switching is one atomic rename of a new symlink; old versions stay for the rollback. An archive is
+/// unpacked into a fresh sibling directory and renamed into place, so a version that is installed is never
+/// touched again. Only plain files and directories are accepted: symlink and hard-link entries are refused.
 pub struct TarGz {
     root: PathBuf,
-    archive: PathBuf,
+    archive: Archive,
+}
+
+impl std::fmt::Debug for TarGz {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TarGz")
+            .field("root", &self.root)
+            .finish_non_exhaustive()
+    }
+}
+
+/// An entry path without `.` parts; `None` when it is empty (the archive root) or leaves its directory.
+fn clean(path: &Path) -> Result<Option<PathBuf>, io::Error> {
+    let mut out = PathBuf::new();
+    for c in path.components() {
+        match c {
+            Component::CurDir => {}
+            Component::Normal(n) => out.push(n),
+            _ => {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    "archive entry leaves its directory",
+                ));
+            }
+        }
+    }
+    Ok((!out.as_os_str().is_empty()).then_some(out))
 }
 
 impl TarGz {
-    /// `archive` is the already downloaded and signature-checked file.
+    fn make(root: &Path, archive: Archive) -> Self {
+        // Absolute, so the `current` links do not depend on the working directory.
+        let root = std::path::absolute(root).unwrap_or_else(|_| root.to_owned());
+        Self { root, archive }
+    }
+
+    /// `archive` is a downloaded and signature-checked file.
     #[must_use]
     pub fn new(root: &Path, archive: &Path) -> Self {
-        Self {
-            root: root.to_owned(),
-            archive: archive.to_owned(),
-        }
+        Self::make(root, Archive::Path(archive.to_owned()))
+    }
+
+    /// The signature-checked bytes themselves: nothing is written to a place others could swap.
+    #[must_use]
+    pub fn from_bytes(root: &Path, bytes: Vec<u8>) -> Self {
+        Self::make(root, Archive::Bytes(bytes))
     }
 
     fn dir(&self, name: &str, v: Version) -> PathBuf {
@@ -41,16 +86,18 @@ impl TarGz {
     fn point_current(&self, name: &str, target: &Path) -> io::Result<()> {
         let cur = self.root.join("current");
         fs::create_dir_all(&cur)?;
-        let tmp = cur.join(format!(".{name}.new"));
+        let tmp = cur.join(format!(".{name}.new.{}", std::process::id()));
         let _ = fs::remove_file(&tmp);
         std::os::unix::fs::symlink(target, &tmp)?;
         fs::rename(&tmp, cur.join(name))
     }
 
-    fn open(&self) -> io::Result<tar::Archive<GzDecoder<fs::File>>> {
-        Ok(tar::Archive::new(GzDecoder::new(fs::File::open(
-            &self.archive,
-        )?)))
+    fn open(&self) -> io::Result<tar::Archive<GzDecoder<Box<dyn io::Read + '_>>>> {
+        let src: Box<dyn io::Read + '_> = match &self.archive {
+            Archive::Path(p) => Box::new(fs::File::open(p)?),
+            Archive::Bytes(b) => Box::new(b.as_slice()),
+        };
+        Ok(tar::Archive::new(GzDecoder::new(src)))
     }
 
     /// The one directory every entry sits in, when there is exactly one and it is named after the package.
@@ -58,7 +105,9 @@ impl TarGz {
         let mut top: Option<std::ffi::OsString> = None;
         for entry in self.open()?.entries()? {
             let entry = entry?;
-            let path = entry.path()?;
+            let Some(path) = clean(&entry.path()?)? else {
+                continue;
+            };
             let mut comps = path.components();
             let Some(Component::Normal(first)) = comps.next() else {
                 return Ok(None);
@@ -76,21 +125,33 @@ impl TarGz {
     fn unpack(&self, name: &str, dest: &Path) -> io::Result<()> {
         fs::create_dir_all(dest)?;
         let top = self.common_top(name)?;
+        let (mut total, mut count) = (0u64, 0usize);
         for entry in self.open()?.entries()? {
             let mut entry = entry?;
-            let path = entry.path()?.into_owned();
-            let rel: PathBuf = match &top {
-                Some(t) => path.strip_prefix(t).map_err(io::Error::other)?.to_owned(),
-                None => path,
-            };
-            if rel.as_os_str().is_empty() {
-                continue;
-            }
-            // Only plain names: no `..`, no absolute paths. That is an error for us, not a silent skip.
-            if !rel.components().all(|c| matches!(c, Component::Normal(_))) {
+            count += 1;
+            total = total.saturating_add(entry.header().size()?);
+            if count > MAX_ENTRIES || total > MAX_UNPACKED {
                 return Err(io::Error::new(
                     io::ErrorKind::InvalidData,
-                    "archive entry leaves its directory",
+                    "archive is larger than allowed",
+                ));
+            }
+            let kind = entry.header().entry_type();
+            let Some(path) = clean(&entry.path()?)? else {
+                continue;
+            };
+            let rel = match &top {
+                Some(t) => match path.strip_prefix(t) {
+                    Ok(r) if r.as_os_str().is_empty() => continue,
+                    Ok(r) => r.to_owned(),
+                    Err(e) => return Err(io::Error::other(e)),
+                },
+                None => path,
+            };
+            if !(kind.is_file() || kind.is_dir()) {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    "archive has a link or special entry",
                 ));
             }
             if let Some(parent) = dest.join(&rel).parent() {
@@ -107,10 +168,11 @@ fn err(e: &io::Error) -> InstallError {
 }
 
 fn safe_name(name: &str) -> Result<(), InstallError> {
-    if name.is_empty() || name.contains(['/', '\\']) || name.starts_with('.') {
-        return Err(InstallError(format!("unsafe package name `{name}`")));
+    if PackageName::new(name).is_some_and(|n| n.as_str() == name) {
+        Ok(())
+    } else {
+        Err(InstallError(format!("unsafe package name `{name}`")))
     }
-    Ok(())
 }
 
 impl InstallStrategy for TarGz {
@@ -122,10 +184,17 @@ impl InstallStrategy for TarGz {
         let p = package.package();
         safe_name(p.name.as_str())?;
         let dest = self.dir(p.name.as_str(), p.version);
-        let _ = fs::remove_dir_all(&dest);
-        if let Err(e) = self.unpack(p.name.as_str(), &dest) {
-            let _ = fs::remove_dir_all(&dest);
-            return Err(err(&e));
+        if !dest.is_dir() {
+            // Unpack beside the target and rename: a half-unpacked version never exists under its name.
+            let tmp = dest.with_extension(format!("tmp{}", std::process::id()));
+            let _ = fs::remove_dir_all(&tmp);
+            let done = self
+                .unpack(p.name.as_str(), &tmp)
+                .and_then(|()| fs::rename(&tmp, &dest));
+            if let Err(e) = done {
+                let _ = fs::remove_dir_all(&tmp);
+                return Err(err(&e));
+            }
         }
         self.point_current(p.name.as_str(), &dest)
             .map_err(|e| err(&e))

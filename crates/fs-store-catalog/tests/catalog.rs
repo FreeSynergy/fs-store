@@ -92,3 +92,27 @@ fn broken_xml_is_an_error() {
     assert!(parse_catalog("<components>").is_err());
     assert!(parse_catalog("<other/>").is_err());
 }
+
+#[test]
+fn bad_old_release_and_foreign_arch_do_not_hide_a_good_release_and_duplicates_are_reported() {
+    let xml = r#"<components version="1.0">
+<component><id>a</id><releases>
+ <release version="2024.1"><artifacts><artifact type="binary"><location>l0</location><checksum type="sha256">0</checksum></artifact></artifacts></release>
+ <release version="1.0.0"><artifacts>
+   <artifact type="binary" platform="aarch64-linux-gnu"><location>arm</location><checksum type="sha256">1</checksum></artifact>
+   <artifact type="binary" platform="x86_64-linux-gnu"><location>x86</location><checksum type="sha256">2</checksum></artifact>
+ </artifacts></release></releases>
+ <custom><value key="fs:signature">s</value></custom></component>
+<component><id>a</id><releases><release version="1.0.0"><artifacts><artifact type="binary"><location>l</location><checksum type="sha256">3</checksum></artifact></artifacts></release></releases>
+ <custom><value key="fs:signature">s</value></custom></component>
+<component><id>../evil</id><releases><release version="1.0.0"><artifacts><artifact type="binary"><location>l</location><checksum type="sha256">3</checksum></artifact></artifacts></release></releases>
+ <custom><value key="fs:signature">s</value></custom></component>
+</components>"#;
+    let c = parse_catalog(xml).unwrap();
+    assert_eq!(c.entries.len(), 1);
+    if std::env::consts::ARCH == "x86_64" {
+        assert_eq!(c.entries[0].location, "x86");
+    }
+    assert!(c.skipped.iter().any(|s| s.reason.contains("duplicate")));
+    assert!(c.skipped.iter().any(|s| s.id == "../evil"));
+}

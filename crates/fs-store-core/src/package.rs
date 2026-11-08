@@ -27,16 +27,22 @@ pub enum Format {
     TarGz,
 }
 
-/// Name of a package; never empty.
+/// Name of a package (an `AppStream` id): 1 to 128 of `A-Z a-z 0-9 . _ -`, not starting with `.` or `-`, so it is
+/// safe as a file name.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PackageName(String);
 
 impl PackageName {
-    /// Creates a name; `None` when empty or blank.
+    /// Creates a name; `None` when it is not a plain name.
     #[must_use]
     pub fn new(name: &str) -> Option<Self> {
         let name = name.trim();
-        (!name.is_empty()).then(|| Self(name.to_owned()))
+        let plain = |c: char| c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '-');
+        let ok = !name.is_empty()
+            && name.len() <= 128
+            && name.chars().all(plain)
+            && !name.starts_with(['.', '-']);
+        ok.then(|| Self(name.to_owned()))
     }
 
     /// The name as text.
