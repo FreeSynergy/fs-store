@@ -4,6 +4,7 @@
 
 mod facets;
 mod links;
+mod mode;
 pub mod net;
 mod proc;
 mod remove;
@@ -13,6 +14,7 @@ mod targz;
 
 pub use facets::{default_apps_dir, link_facets, unlink_facets};
 pub use links::{default_bin_dir, link_programs, unlink_programs};
+pub use mode::{preferred_format, rpm_installed_version};
 pub use proc::ProcRunningCheck;
 pub use remove::{RemoveError, remove};
 pub use rpm::{Commander, Rpm, SystemCommander};
