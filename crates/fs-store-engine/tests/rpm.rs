@@ -100,6 +100,7 @@ fn several_rpms_go_to_one_dnf_call() {
 }
 
 #[test]
+#[allow(clippy::mut_mut)] // the fake lives on in the test as `&mut Fake`, which is what implements `Commander`
 fn removing_an_rpm_asks_dnf_through_pkexec_and_refuses_odd_names() {
     let mut fake = Fake::default();
     let mut runner = &mut fake;
