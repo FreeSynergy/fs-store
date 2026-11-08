@@ -9,7 +9,11 @@ use fs_store_core::{
 
 use crate::prepare::Plan;
 use crate::service::{InstallFailure, Installer, timing};
-use crate::{Commander, Prepared, Rpm, SystemCommander, TarGz};
+use crate::{
+    Commander, Prepared, Rpm, SystemCommander, TarGz, find_servers, program_of, start_server,
+    stop_servers,
+};
+use std::time::Duration;
 
 /// Something to tell while a batch runs: which package reached which phase.
 pub type Observer<'a> = &'a (dyn Fn(&str, InstallState) + Sync);
@@ -68,6 +72,39 @@ impl Installer<'_> {
     /// Like [`Installer::commit_all`], and tells `observe` `Installing` for each package just before.
     #[must_use]
     pub fn commit_observed(
+        &self,
+        prepared: Vec<Prepared>,
+        observe: CommitObserver<'_>,
+    ) -> Vec<(String, Result<Version, InstallFailure>)> {
+        // A background server (`fs-<name> serve`) never blocks an update: it is stopped in order first and
+        // started again afterwards, also when the install failed (then the old version starts again).
+        let mut results = Vec::new();
+        let mut stopped = Vec::new();
+        let mut go = Vec::new();
+        for p in prepared {
+            let servers = find_servers(p.name(), std::process::id());
+            if servers.is_empty() {
+                go.push(p);
+            } else if stop_servers(&servers, Duration::from_secs(15)).is_ok() {
+                stopped.push((p.name().to_owned(), servers));
+                go.push(p);
+            } else {
+                results.push((
+                    p.name().to_owned(),
+                    Err(InstallFailure::Update(UpdateError::Running)),
+                ));
+            }
+        }
+        results.extend(self.commit_stopped(go, observe));
+        for (name, servers) in stopped {
+            for s in &servers {
+                let _ = start_server(&program_of(&self.root, &name, s), s);
+            }
+        }
+        results
+    }
+
+    fn commit_stopped(
         &self,
         prepared: Vec<Prepared>,
         observe: CommitObserver<'_>,

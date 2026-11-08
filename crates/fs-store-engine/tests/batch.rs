@@ -1,4 +1,5 @@
 #![allow(
+    clippy::assert_is_empty,
     clippy::many_single_char_names,
     clippy::format_push_string,
     clippy::case_sensitive_file_extension_comparisons
@@ -209,4 +210,48 @@ fn all_rpm_of_a_batch_go_to_one_pkexec_call() {
     assert_eq!(seen.len(), 1, "one password for the whole batch");
     assert_eq!(seen[0][0], "pkexec");
     assert_eq!(seen[0].iter().filter(|a| a.ends_with(".rpm")).count(), 3);
+}
+
+#[test]
+fn a_background_server_does_not_block_the_update() {
+    use std::os::unix::process::CommandExt;
+    let tmp = tempfile::tempdir().unwrap();
+    fs::write(tmp.path().join("serve"), "sleep 30\n").unwrap();
+    let mut server = std::process::Command::new("sh")
+        .arg0("fs-blockedname")
+        .arg("serve")
+        .current_dir(tmp.path())
+        .spawn()
+        .unwrap();
+    std::thread::sleep(std::time::Duration::from_millis(200));
+    let tgz = tarball("a");
+    let catalog = format!(
+        r#"<components version="1.0">{}</components>"#,
+        component("fs-blockedname", &format!("{:x}", Sha256::digest(&tgz)))
+    );
+    let fetch = Map(HashMap::from([
+        ("https://x/fs-blockedname.tar.gz".into(), tgz),
+        ("https://x/fs-blockedname.asc".into(), b"good".to_vec()),
+    ]));
+    let i = Installer {
+        root: tmp.path().join("root"),
+        verifier: &Fake,
+        fetch: &fetch,
+        running: &Idle,
+        prefer: Format::TarGz,
+        policy: SignaturePolicy::default(),
+    };
+    let plan = i
+        .plan(catalog.as_bytes(), b"good", "fs-blockedname", None)
+        .unwrap();
+    let ready: Vec<_> = i
+        .prepare_all(vec![plan], &|_, _| {})
+        .into_iter()
+        .map(|(_, r)| r.unwrap())
+        .collect();
+    let reaper = std::thread::spawn(move || server.wait().unwrap());
+    let done = i.commit_all(ready);
+    assert_eq!(done[0].1, Ok(Version::new(1, 0, 0)));
+    reaper.join().unwrap(); // the server was ended by the store
+    assert!(fs_store_engine::find_servers("fs-blockedname", 0).is_empty());
 }

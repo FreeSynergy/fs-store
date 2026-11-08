@@ -12,6 +12,7 @@ mod prepare;
 mod proc;
 mod remove;
 mod rpm;
+mod servers;
 pub mod service;
 mod targz;
 
@@ -24,4 +25,5 @@ pub use prepare::{Downloaded, Plan, Prepared};
 pub use proc::ProcRunningCheck;
 pub use remove::{RemoveError, remove};
 pub use rpm::{Commander, Rpm, SystemCommander, remove_rpm};
+pub use servers::{Server, find_servers, is_server_of, program_of, start_server, stop_servers};
 pub use targz::TarGz;
