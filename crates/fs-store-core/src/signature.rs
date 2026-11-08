@@ -23,7 +23,7 @@ pub enum SignatureOutcome {
 }
 
 /// Checks bytes against a detached signature; the OpenPGP library sits behind it.
-pub trait SignatureVerifier {
+pub trait SignatureVerifier: Sync {
     /// Verifies `data` against `signature`; `None` means no signature was delivered.
     fn verify(&self, data: &[u8], signature: Option<&[u8]>) -> SignatureOutcome;
 }

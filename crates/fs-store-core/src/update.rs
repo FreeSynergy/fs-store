@@ -8,7 +8,7 @@ use crate::state::{Event, InstallState};
 use crate::strategy::{InstallError, InstallStrategy};
 
 /// Asks the system whether a program is running.
-pub trait RunningCheck {
+pub trait RunningCheck: Sync {
     /// True while the named program runs.
     fn is_running(&self, name: &str) -> bool;
 }

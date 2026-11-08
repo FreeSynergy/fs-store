@@ -3,6 +3,7 @@
 #![deny(missing_docs)]
 
 mod background;
+mod batch;
 mod commands;
 mod source_list;
 mod tuf;

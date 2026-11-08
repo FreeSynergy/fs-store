@@ -4,7 +4,8 @@ use std::path::Path;
 
 use fs_store_sources::Registry;
 
-use crate::commands::{cmd_install, fetch_source, read_catalog, root, trust};
+use crate::batch::{Want, install_batch};
+use crate::commands::{fetch_source, read_catalog, root, trust};
 
 fn registry(root: &Path) -> Result<Registry, String> {
     Registry::load(&root.join("installed.toml")).map_err(|e| format!("{e:?}"))
@@ -15,26 +16,21 @@ pub(crate) fn registered_source(root: &Path, name: &str) -> Option<String> {
     registry(root).ok()?.get(name).map(|e| e.source.clone())
 }
 
-/// Updates every installed package that has automatic updates on, each from its own source.
-/// One failing package does not stop the others; the result says how many failed.
+/// Updates every installed package that has automatic updates on, each from its own source, as ONE batch:
+/// downloads at the same time, one install step (one password for all rpm). A failing package does not stop the others.
 pub(crate) fn update_all(root: &Path, extra: Option<&String>) -> Result<(), String> {
-    let entries: Vec<_> = registry(root)?.list().to_vec();
-    let mut failed = 0;
-    for e in entries {
-        if !e.auto_update {
+    let mut wants = Vec::new();
+    for e in registry(root)?.list() {
+        if e.auto_update {
+            wants.push(Want {
+                name: e.name.clone(),
+                source: Some(e.source.clone()),
+            });
+        } else {
             println!("{}: automatic updates are off", e.name);
-            continue;
-        }
-        if let Err(message) = cmd_install(root, &e.name, Some(&e.source), extra, true) {
-            eprintln!("{}: {message}", e.name);
-            failed += 1;
         }
     }
-    if failed == 0 {
-        Ok(())
-    } else {
-        Err(format!("{failed} package(s) could not be updated"))
-    }
+    install_batch(root, &wants, extra, true)
 }
 
 /// `fs-store uninstall <name>` (also `remove`): takes the package away and forgets it in the register.

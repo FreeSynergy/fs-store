@@ -13,15 +13,14 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use fs_store_catalog::{Catalog, CatalogEntry, parse_catalog};
+use fs_store_catalog::{Catalog, parse_catalog};
 use fs_store_core::{SignaturePolicy, SignatureVerifier, SourceRepository, Version};
-use fs_store_engine::ProcRunningCheck;
 use fs_store_engine::net::{HttpsFetch, clone_catalog};
-use fs_store_engine::service::{Fetch, FileFetch, Installer};
+use fs_store_engine::service::{Fetch, FileFetch};
 use fs_store_pgp::PgpVerifier;
 use fs_store_sources::FileSources;
 
-struct AnyFetch;
+pub(crate) struct AnyFetch;
 impl Fetch for AnyFetch {
     fn get(&self, url: &str) -> Result<Vec<u8>, String> {
         if url.starts_with("file://") {
@@ -159,7 +158,7 @@ fn cmd_available(root: &Path, arg: Option<&String>, extra: Option<&String>) -> R
     }
 }
 
-/// Installs or updates; `only_newer` makes it an update.
+/// Installs or updates one package; `only_newer` makes it an update. A batch of one.
 pub(crate) fn cmd_install(
     root: &Path,
     name: &str,
@@ -167,61 +166,11 @@ pub(crate) fn cmd_install(
     extra: Option<&String>,
     only_newer: bool,
 ) -> Result<(), String> {
-    let (verifier, policy) = trust(extra)?;
-    let running = ProcRunningCheck::new(root);
-    let installer = Installer {
-        root: root.to_owned(),
-        verifier: &verifier,
-        fetch: &AnyFetch,
-        running: &running,
-        prefer: fs_store_engine::preferred_format(),
-        policy: policy.clone(),
+    let want = crate::batch::Want {
+        name: name.to_owned(),
+        source: arg.cloned(),
     };
-    let current = installed(root, name);
-    if only_newer && current.is_none() {
-        return Err(format!("{name} is not installed; use install"));
-    }
-    let mut last = format!("{name} is not offered by any source");
-    for url in addresses(root, arg)? {
-        let (catalog, sig) = match fetch_source(root, &url, &verifier, &policy) {
-            Ok(x) => x,
-            Err(e) => {
-                last = e;
-                continue;
-            }
-        };
-        let offered: Option<CatalogEntry> = read_catalog(&catalog)?
-            .entries
-            .into_iter()
-            .find(|e| e.name.as_str() == name);
-        let Some(offered) = offered else { continue };
-        if only_newer && current.is_some_and(|c| offered.version <= c) {
-            println!(
-                "{name} is up to date ({})",
-                current.map_or_else(String::new, |c| c.to_string())
-            );
-            return Ok(());
-        }
-        let v = installer
-            .install(&catalog, &sig, name, current)
-            .map_err(|e| format!("{url}: {e:?}"))?;
-        // The icon comes with a hash in the signed catalog; one that does not match is not stored.
-        if let Some((icon, Ok(bytes))) = offered.icon.as_ref().map(|i| (i, AnyFetch.get(&i.url))) {
-            let _ = fs_store_engine::store_icon(root, name, &bytes, &icon.sha256);
-        }
-        let mut registry = fs_store_sources::Registry::load(&root.join("installed.toml"))
-            .map_err(|e| format!("{e:?}"))?;
-        registry.record(name, &v.to_string(), &url);
-        registry.set_facets(
-            name,
-            crate::updates::link_facets(root, name, &offered.facets),
-        );
-        registry.save().map_err(|e| format!("{e:?}"))?;
-        println!("installed {name} {v}");
-        crate::updates::link(root, name);
-        return Ok(());
-    }
-    Err(last)
+    crate::batch::install_batch(root, &[want], extra, only_newer)
 }
 
 /// Runs one command (`sources`, `available`, `install`, `update`, `installed`) with its arguments.
