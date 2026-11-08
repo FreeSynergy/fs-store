@@ -186,6 +186,8 @@ impl StoreBackend for EngineBackend {
                             kind: e.kind,
                             version: e.version,
                             source: source.id.0.clone(),
+                            description: e.description,
+                            homepage: e.homepage,
                         }));
                     listing
                         .skipped
@@ -219,6 +221,10 @@ impl StoreBackend for EngineBackend {
             &fs_store_engine::rpm_installed_version,
             name,
         )
+    }
+
+    fn uninstall(&self, name: &str) -> Result<(), String> {
+        crate::engine_remove::uninstall(&self.root, name)
     }
 
     fn run(

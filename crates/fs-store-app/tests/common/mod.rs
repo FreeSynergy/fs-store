@@ -20,6 +20,8 @@ pub struct State {
     pub installed: Vec<InstalledRow>,
     pub fail: Option<JobError>,
     pub remove_calls: u32,
+    pub uninstalls: Vec<String>,
+    pub uninstall_fails: Option<String>,
     pub runs: Vec<(JobKind, String)>,
     pub details: Vec<(String, InstalledDetails)>,
 }
@@ -34,6 +36,8 @@ pub fn package(name: &str, version: Version) -> PackageRow {
         kind: Kind::Program,
         version,
         source: "freesynergy".to_owned(),
+        description: String::new(),
+        homepage: String::new(),
     }
 }
 
@@ -54,6 +58,8 @@ pub fn fake(installed: Vec<InstalledRow>, fail: Option<JobError>) -> Arc<Fake> {
             installed,
             fail,
             remove_calls: 0,
+            uninstalls: Vec::new(),
+            uninstall_fails: None,
             runs: Vec::new(),
             details: Vec::new(),
         }),
@@ -112,6 +118,15 @@ impl StoreBackend for Fake {
             .find(|(n, _)| n == name)
             .map(|(_, d)| d.clone())
             .unwrap_or_default()
+    }
+    fn uninstall(&self, name: &str) -> Result<(), String> {
+        let mut s = self.state.lock().unwrap();
+        if let Some(e) = s.uninstall_fails.clone() {
+            return Err(e);
+        }
+        s.uninstalls.push(name.to_owned());
+        s.installed.retain(|i| i.name != name);
+        Ok(())
     }
     fn run(
         &self,

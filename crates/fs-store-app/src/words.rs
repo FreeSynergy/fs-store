@@ -12,15 +12,6 @@ pub use fs_store_core::words::fill;
 pub const TITLE: &str = "FreeSynergy.Store";
 /// Name of the sources view.
 pub const VIEW_SOURCES: &str = "Sources";
-/// Name of the available view.
-pub const VIEW_AVAILABLE: &str = "Available";
-/// Name of the installed view.
-pub const VIEW_INSTALLED: &str = "Installed";
-
-/// Name of the updates view.
-pub const VIEW_UPDATES: &str = "Updates";
-/// Name of the updates view with a count. Placeholder: `{n}`.
-pub const VIEW_UPDATES_COUNT: &str = "Updates ({n})";
 /// Title of the window with a count. Placeholder: `{n}`.
 pub const TITLE_COUNT: &str = "FreeSynergy.Store ({n})";
 /// Name of the settings page.
@@ -33,6 +24,10 @@ pub const MENU_STORE: &str = "Store";
 pub const MENU_HELP: &str = "Help";
 /// Menu entry: quit (with its shortcut).
 pub const MENU_QUIT: &str = "Quit (Ctrl+Q)";
+/// Menu entry: back to the cards.
+pub const MENU_CARDS: &str = "Programs";
+/// Button: back to the cards.
+pub const BUTTON_BACK: &str = "Back to the programs";
 /// Menu entry: sources.
 pub const MENU_SOURCES: &str = "Sources";
 /// Menu entry: settings.
@@ -71,17 +66,10 @@ pub const ADD_PLACEHOLDER: &str =
 pub const MARK_BUILT_IN: &str = "built in";
 /// Mark on a source that is switched off.
 pub const MARK_OFF: &str = "off";
-/// Shown instead of a button when the installed version is the newest. Placeholder: `{version}`.
-pub const UP_TO_DATE: &str = "Up to date ({version})";
-/// Shown with a package that has a newer version. Placeholders: `{offered}`, `{installed}`.
-pub const NEWER_OFFERED: &str = "{offered} (installed: {installed})";
-
 /// Nothing in the list of sources.
 pub const EMPTY_SOURCES: &str = "There are no sources.";
 /// Nothing offered.
 pub const EMPTY_AVAILABLE: &str = "No source offers a package. Switch on or add a source.";
-/// Nothing installed.
-pub const EMPTY_INSTALLED: &str = "Nothing is installed yet.";
 /// No job has run.
 pub const NO_JOB: &str = "Nothing is being installed.";
 
@@ -109,10 +97,6 @@ pub const OPEN_NO_COMMAND: &str =
     "Nothing to open was found for {detail}: no command of it exists on this machine.";
 /// Button: open a program or facet.
 pub const BUTTON_OPEN: &str = "Open";
-/// Button: settings of one program (not usable yet).
-pub const BUTTON_PROGRAM_SETTINGS: &str = "Settings";
-/// Hint beside the disabled settings button.
-pub const SETTINGS_LATER: &str = "comes with the admin frontend";
 /// Detail: how it was installed. Placeholder: `{kind}`.
 pub const DETAIL_KIND: &str = "Installed as: {kind}";
 /// Detail: a command. Placeholders: `{command}`, `{path}`.
@@ -237,18 +221,42 @@ pub const CHECK_RUNNING: &str = "Looking for updates now. This can take a moment
 pub const CHECK_DONE: &str = "Done looking for updates.";
 /// The check did not work. Placeholder: `{detail}`.
 pub const CHECK_FAILED: &str = "Looking for updates did not work: {detail}";
-/// Updates page: heading of the updates.
-pub const UPDATES_HEADING: &str = "Updates found";
-/// Updates page: no update known.
-pub const UPDATES_NONE: &str =
-    "No update is known. Press \"Look now\" on the Settings page to look.";
-/// Updates page: heading of the new programs.
-pub const NEW_HEADING: &str = "New programs";
 /// Updates page: line of an update. Placeholders: `{name}`, `{from}`, `{to}`.
 pub const UPDATE_LINE: &str = "{name}: {from} -> {to}";
-/// Updates page: line of a new program. Placeholders: `{name}`, `{version}`.
-pub const NEW_LINE: &str = "{name} {version}";
-/// Line above every page when updates are known. Placeholder: `{n}`.
-pub const UPDATES_BANNER: &str = "{n} update(s) found. See Updates.";
+/// Line above the cards when updates are known. Placeholder: `{n}`.
+pub const UPDATES_BANNER: &str = "{n} update(s) found. Press Update on the cards.";
 /// Mark on a program that is new in the available list.
 pub const MARK_NEW: &str = "New";
+
+/// Nothing offered and nothing installed.
+pub const EMPTY_CARDS: &str = "No programs yet. Switch on or add a source in the Store menu.";
+/// Shown when a program has no description.
+pub const NO_DESCRIPTION: &str = "There is no description of this program yet.";
+/// Entry of the three-dot menu: show the description.
+pub const MORE_DESCRIPTION: &str = "Show description";
+/// Entry of the three-dot menu: the Git repository.
+pub const MORE_REPOSITORY: &str = "Go to the Git repository";
+/// Entry of the three-dot menu: uninstall.
+pub const MORE_UNINSTALL: &str = "Uninstall";
+/// Button: close the description.
+pub const BUTTON_CLOSE: &str = "Close";
+/// Question before an uninstall. Placeholder: `{name}`.
+pub const UNINSTALL_ASK: &str = "Uninstall {name}? Your data stays.";
+/// Button: yes, uninstall.
+pub const BUTTON_UNINSTALL_YES: &str = "Uninstall";
+/// Button: no, keep it.
+pub const BUTTON_CANCEL: &str = "Cancel";
+/// The program is being taken away.
+pub const REMOVING: &str = "Uninstalling...";
+/// Uninstall failed. Placeholders: `{name}`, `{detail}`.
+pub const UNINSTALL_FAILED: &str = "{name} was not uninstalled: {detail}";
+/// The card has no usable project page. Placeholder: `{name}`.
+pub const NO_HOMEPAGE: &str = "{name} has no project page (web address) in its catalog entry.";
+/// The project page could not be opened. Placeholders: `{url}`, `{detail}`.
+pub const REPOSITORY_FAILED: &str = "{url} could not be opened: {detail}";
+/// Heading of the installed details in the description panel.
+pub const DETAILS_HEADING: &str = "On this machine";
+/// Version line of a card that is installed. Placeholder: `{version}`.
+pub const VERSION_LINE: &str = "Version {version}";
+/// The three dots one above the other (the "more" menu of a card).
+pub const MORE_DOTS: &str = "\u{22EE}";

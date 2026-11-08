@@ -1,17 +1,18 @@
 //! Pattern: Adapter (view-model to Blinc elements) on `fs-components-app`.
 //!
 //! Split by topic: `shell` (the window, its surface and the shared model), `job` (the job bar and starting a
-//! job), `sources`, `available` and `installed` (the three screens).
+//! job), `cards` and `card` (the one page), `more` (the three-dot menu), `sources`, `settings`.
 
-mod available;
-mod installed;
+mod card;
+mod cards;
+mod check;
 mod job;
 mod menu;
+mod more;
 mod pages;
 mod settings;
 mod shell;
 mod sources;
-mod updates;
 
+pub use check::start_check;
 pub use shell::{Shared, store_app};
-pub use updates::start_check;

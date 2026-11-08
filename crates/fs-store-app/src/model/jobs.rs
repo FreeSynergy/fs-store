@@ -47,18 +47,17 @@ pub struct Ticket<'a> {
 }
 
 impl StoreModel {
-    /// True while a job runs: only one at a time.
+    /// True while a job or an uninstall runs: only one at a time.
     #[must_use]
     pub fn is_busy(&self) -> bool {
-        self.job.as_ref().is_some_and(|j| !j.is_finished())
+        self.busy_name().is_some()
     }
 
     /// Starts the job the button of `name` stands for: `Pending`. `None` (and a problem when busy) if there is
     /// nothing to start. Run the job with the backend, tell [`StoreModel::observe`], then [`StoreModel::finish`].
     pub fn begin_job(&mut self, name: &str) -> Option<Ticket<'_>> {
-        if let Some(job) = self.job.as_ref().filter(|j| !j.is_finished()) {
-            let busy = Problem::Busy(job.name.clone());
-            self.problems = vec![busy];
+        if let Some(busy) = self.busy_name() {
+            self.problems = vec![Problem::Busy(busy)];
             return None;
         }
         self.problems.clear();

@@ -102,7 +102,6 @@ fn model_with(svc: &Arc<FakeUpdates>) -> StoreModel {
 fn label_and_title_carry_the_count() {
     let svc = service(findings(), 2_000);
     let m = model_with(&svc);
-    assert_eq!(m.updates_label(), "Updates (1)");
     assert_eq!(m.window_title(), "FreeSynergy.Store (1)");
     assert_eq!(m.update_list().len(), 1);
 }
@@ -111,7 +110,6 @@ fn label_and_title_carry_the_count() {
 fn no_updates_means_plain_label_and_title() {
     let svc = service(Findings::default(), 2_000);
     let m = model_with(&svc);
-    assert_eq!(m.updates_label(), "Updates");
     assert_eq!(m.window_title(), "FreeSynergy.Store");
 }
 
@@ -120,7 +118,6 @@ fn notify_off_hides_the_badge_but_not_the_list() {
     let svc = service(findings(), 2_000);
     let mut m = model_with(&svc);
     m.set_notify(false);
-    assert_eq!(m.updates_label(), "Updates");
     assert_eq!(m.window_title(), "FreeSynergy.Store");
     assert_eq!(m.update_list().len(), 1);
     assert!(!svc.settings.lock().unwrap().notify);
@@ -131,13 +128,17 @@ fn new_marks_show_on_first_look_and_are_gone_after() {
     let svc = service(findings(), 2_000);
     let mut m = model_with(&svc);
     assert!(!m.is_fresh("fs-theme"), "not looked at yet");
-    m.show(View::Available);
+    m.show(View::Cards);
     assert!(m.is_fresh("fs-theme"));
+    assert!(
+        m.cards().iter().any(|c| c.name == "fs-theme" && c.is_new),
+        "badge on the card"
+    );
     assert!(svc.findings.lock().unwrap().new.is_empty(), "saved as seen");
-    m.show(View::Available); // drawn again: still marked
+    m.show(View::Cards); // drawn again: still marked
     assert!(m.is_fresh("fs-theme"));
-    m.show(View::Installed);
-    m.show(View::Available);
+    m.show(View::Sources);
+    m.show(View::Cards);
     assert!(!m.is_fresh("fs-theme"), "new only until first looked at");
 }
 
@@ -145,7 +146,7 @@ fn new_marks_show_on_first_look_and_are_gone_after() {
 fn nothing_is_marked_before_the_list_is_opened() {
     let svc = service(findings(), 2_000);
     let mut m = model_with(&svc);
-    m.show(View::Updates);
+    m.show(View::Settings);
     assert_eq!(m.new_programs().len(), 1);
     assert_eq!(*svc.saved_findings.lock().unwrap(), 0);
 }
@@ -203,7 +204,6 @@ fn check_runs_once_and_rereads_findings() {
     m.finish_check(result);
     assert_eq!(*m.check_state(), CheckState::Done);
     assert_eq!(m.update_list().len(), 0);
-    assert_eq!(m.updates_label(), "Updates");
     assert_eq!(m.last_checked(), 5_000);
     assert_eq!(*svc.checks.lock().unwrap(), 1);
 }

@@ -15,14 +15,12 @@ use crate::launcher::Launcher;
 use crate::model::{StoreModel, View, is_quit_key};
 use crate::words;
 
-use super::available::available;
-use super::installed::installed;
+use super::cards::cards;
 use super::job::job_bar;
 use super::menu::{install_menus, quit};
 use super::pages::about;
 use super::settings::settings;
 use super::sources::sources;
-use super::updates::updates;
 
 /// The model, shared between the window and the worker of a job.
 pub type Shared = Arc<Mutex<StoreModel>>;
@@ -38,49 +36,25 @@ pub(super) fn rebuild() {
     }
 }
 
-/// The id of the screen of a view.
-pub(super) fn screen_id(view: View) -> &'static str {
-    match view {
-        View::Available => "available",
-        View::Installed => "installed",
-        View::Updates => "updates",
-        View::Sources => "sources",
-        View::Settings => "settings",
-        View::About => "about",
-    }
-}
+/// Id of the one screen.
+const SCREEN: &str = "store";
 
-/// The window: the screens and the menu over `model`; programs are opened with `launcher`.
+/// The window: one screen (so no navigation to search in) and the menu over `model`; programs are opened
+/// with `launcher`. The page shown (cards, sources, settings, about) is the model's view.
 ///
 /// # Errors
 /// [`AppError`] if the shell cannot be made.
 pub fn store_app(model: &Shared, launcher: &Arc<dyn Launcher>) -> Result<AppWidget, AppError> {
-    let screen = |label: &str, view| {
-        Screen::new(
-            screen_id(view),
-            label,
-            Arc::new(StoreSurface {
-                model: Arc::clone(model),
-                launcher: Arc::clone(launcher),
-                view,
-            }),
-        )
-    };
-    let (title, updates_label) = {
-        let model = locked(model);
-        (model.window_title(), model.updates_label())
-    };
-    let app = AppWidget::new(
-        title,
-        vec![
-            screen(words::VIEW_AVAILABLE, View::Available),
-            screen(words::VIEW_INSTALLED, View::Installed),
-            screen(&updates_label, View::Updates),
-            screen(words::VIEW_SOURCES, View::Sources),
-            screen(words::VIEW_SETTINGS, View::Settings),
-            screen(words::VIEW_ABOUT, View::About),
-        ],
-    )?;
+    let title = locked(model).window_title();
+    let screen = Screen::new(
+        SCREEN,
+        words::TITLE,
+        Arc::new(StoreSurface {
+            model: Arc::clone(model),
+            launcher: Arc::clone(launcher),
+        }),
+    );
+    let app = AppWidget::new(title, vec![screen])?;
     install_menus(&app, model)?;
     Ok(app)
 }
@@ -89,13 +63,13 @@ pub fn store_app(model: &Shared, launcher: &Arc<dyn Launcher>) -> Result<AppWidg
 struct StoreSurface {
     model: Shared,
     launcher: Arc<dyn Launcher>,
-    view: View,
 }
 
 impl Surface for StoreSurface {
     fn build(&self, width: f32, height: f32) -> Box<dyn Element> {
         let mut model = locked(&self.model);
-        model.show(self.view);
+        let view = model.view();
+        model.show(view);
         let mut page = div()
             .class("fs-store-page")
             .flex_col()
@@ -108,9 +82,22 @@ impl Surface for StoreSurface {
                         quit(&shared);
                     }
                 }
-            })
-            .child(job_bar(&model));
-        if model.badge() > 0 && self.view != View::Updates {
+            });
+        if model.job().is_some() {
+            page = page.child(job_bar(&model));
+        }
+        if view != View::Cards {
+            let back = Arc::clone(&self.model);
+            page = page.child(div().child(
+                button("back", words::BUTTON_BACK, ButtonVariant::Ghost, true).on_click(
+                    move |_| {
+                        locked(&back).show(View::Cards);
+                        rebuild();
+                    },
+                ),
+            ));
+        }
+        if view == View::Cards && model.badge() > 0 {
             page = page.child(div().class("fs-store-job").child(text(words::fill(
                 words::UPDATES_BANNER,
                 &[("n", &model.badge().to_string())],
@@ -119,11 +106,9 @@ impl Surface for StoreSurface {
         for line in model.problem_lines() {
             page = page.child(div().class("fs-store-problem").child(text(line)));
         }
-        let body = match self.view {
+        let body = match view {
+            View::Cards => cards(&model, &self.model, &self.launcher, width),
             View::Sources => sources(&model, &self.model),
-            View::Available => available(&model, &self.model),
-            View::Installed => installed(&model, &self.model, &self.launcher),
-            View::Updates => updates(&model, &self.model),
             View::Settings => settings(&model, &self.model),
             View::About => about(),
         };
@@ -146,6 +131,17 @@ const STYLES: &str = r"
 .fs-store-cell { flex-grow: 1; min-width: 0; }
 .fs-store-sub { color: var(--text-secondary); font-size: var(--text-sm); }
 .fs-store-empty { padding: var(--space-4); color: var(--text-secondary); }
+.fs-card { display: flex; flex-direction: column; padding: 12px; border-width: 1px; border-color: var(--border); border-radius: 8px; background: var(--surface); }
+.fs-card-rest { }
+.fs-card-hover { background: var(--surface-hover); border-color: var(--text-secondary); }
+.fs-card-selected { border-color: var(--primary); border-width: 2px; }
+.fs-card-head { display: flex; flex-direction: row; align-items: center; gap: 12px; }
+.fs-card-badge { color: var(--primary); font-size: var(--text-sm); font-weight: 600; }
+.fs-card-working { padding: 8px; color: var(--text-secondary); }
+.fs-wide { width: 100%; }
+.fs-more { border-width: 1px; border-color: var(--border); border-radius: 6px; }
+.fs-more-open { background: var(--surface-hover); }
+.fs-panel { padding: 16px; border-width: 1px; border-color: var(--border); border-radius: 8px; background: var(--surface); }
 .fs-store-add { display: flex; flex-direction: row; align-items: center; gap: var(--space-2); }
 ";
 

@@ -8,6 +8,7 @@
 pub mod backend;
 pub mod engine;
 mod engine_map;
+mod engine_remove;
 pub mod gui;
 pub mod installed;
 pub mod launcher;

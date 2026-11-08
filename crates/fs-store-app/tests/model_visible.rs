@@ -115,6 +115,7 @@ fn newest_offer_wins_and_offers_update() {
 fn menu_commands() {
     let f = fake(Vec::new(), None);
     let mut m = model(&f);
+    assert_eq!(m.command(Command::Cards), Effect::Show(View::Cards));
     assert_eq!(m.command(Command::Sources), Effect::Show(View::Sources));
     assert_eq!(m.command(Command::Settings), Effect::Show(View::Settings));
     assert_eq!(m.command(Command::About), Effect::Show(View::About));
@@ -168,6 +169,9 @@ impl Launcher for FakeLauncher {
             return Err("permission denied".into());
         }
         self.started.lock().unwrap().push(command.to_owned());
+        Ok(())
+    }
+    fn open_url(&self, _: &str) -> Result<(), String> {
         Ok(())
     }
 }

@@ -8,7 +8,7 @@ use fs_store_app::model::{Action, View};
 use common::{action_of, fake, model, v};
 
 #[test]
-fn starts_on_available_and_lists_actions() {
+fn starts_on_cards_and_lists_actions() {
     let f = fake(
         vec![
             InstalledRow {
@@ -23,7 +23,7 @@ fn starts_on_available_and_lists_actions() {
         None,
     );
     let m = model(&f);
-    assert_eq!(m.view(), View::Available);
+    assert_eq!(m.view(), View::Cards);
     assert_eq!(action_of(&m, "fs-tasks"), Some(Action::Update));
     assert_eq!(action_of(&m, "fs-store"), Some(Action::UpToDate));
     assert_eq!(action_of(&m, "fs-theme"), Some(Action::Install));

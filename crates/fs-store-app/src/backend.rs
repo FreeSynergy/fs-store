@@ -31,6 +31,10 @@ pub struct PackageRow {
     pub version: Version,
     /// Id of the source.
     pub source: String,
+    /// The longer description of the catalog entry (empty when it has none).
+    pub description: String,
+    /// The project page, e.g. the Git repository (empty when it has none).
+    pub homepage: String,
 }
 
 /// A package on this machine.
@@ -154,6 +158,12 @@ pub trait StoreBackend: Send + Sync {
     fn details(&self, _name: &str) -> InstalledDetails {
         InstalledDetails::default()
     }
+    /// Takes the program `name` away (rpm: `pkexec dnf remove`; unpacked: deleted) and forgets it in the
+    /// register. The data of the person stays.
+    ///
+    /// # Errors
+    /// A developer text when it could not be removed (for example when the program runs).
+    fn uninstall(&self, name: &str) -> Result<(), String>;
     /// Runs one job and tells `observe` each phase passed (`Verified`, `Installing`). The ending is the
     /// return value: the new version (`Installed`), or the reason (`Failed`, then `RolledBack`).
     ///

@@ -10,6 +10,7 @@ use crate::backend::{
 use crate::updates::{NoUpdates, UpdateService};
 use fs_store_sources::{Findings, Settings};
 
+use super::cards_ui::CardsUi;
 use super::jobs::JobView;
 use super::types::{Action, AvailableRow, Problem, View};
 use super::updates::CheckState;
@@ -32,15 +33,16 @@ pub struct StoreModel {
     pub(super) check: CheckState,
     pub(super) shown: Option<View>,
     pub(super) fresh: Vec<String>,
+    pub(super) ui: CardsUi,
 }
 
 impl StoreModel {
-    /// A model over `backend`, showing the available view; nothing is read yet (see [`StoreModel::refresh`]).
+    /// A model over `backend`, showing the page of cards; nothing is read yet (see [`StoreModel::refresh`]).
     #[must_use]
     pub fn new(backend: Arc<dyn StoreBackend>) -> Self {
         Self {
             backend,
-            view: View::Available,
+            view: View::Cards,
             sources: Vec::new(),
             available: Vec::new(),
             installed: Vec::new(),
@@ -58,6 +60,7 @@ impl StoreModel {
             check: CheckState::Idle,
             shown: None,
             fresh: Vec::new(),
+            ui: CardsUi::default(),
         }
     }
 
@@ -73,15 +76,15 @@ impl StoreModel {
         self.view
     }
 
-    /// Show a view. Entering the available view (not before) marks the new programs as seen; they stay
-    /// marked in that list until it is left.
+    /// Show a view. Entering the page of cards (not before) marks the new programs as seen; they stay
+    /// marked on their cards until the page is left.
     pub fn show(&mut self, view: View) {
         self.view = view;
         if self.shown == Some(view) {
             return;
         }
         self.shown = Some(view);
-        if view == View::Available {
+        if view == View::Cards {
             self.enter_available();
         } else {
             self.fresh.clear();
@@ -94,13 +97,13 @@ impl StoreModel {
         &self.sources
     }
 
-    /// Rows of the available view.
+    /// What the sources offer, one row per name, with the action it allows.
     #[must_use]
     pub fn available(&self) -> &[AvailableRow] {
         &self.available
     }
 
-    /// Rows of the installed view.
+    /// What is installed, one row per name.
     #[must_use]
     pub fn installed(&self) -> &[InstalledRow] {
         &self.installed

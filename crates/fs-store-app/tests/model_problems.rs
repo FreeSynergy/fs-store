@@ -36,6 +36,9 @@ fn unreadable_and_skipped_are_told() {
         fn installed(&self) -> Result<Vec<InstalledRow>, BackendError> {
             Err(BackendError::Other("disk".into()))
         }
+        fn uninstall(&self, _: &str) -> Result<(), String> {
+            Ok(())
+        }
         fn run(&self, _: JobKind, _: &str, _: &mut dyn FnMut(Phase)) -> Result<Version, JobError> {
             Err(JobError::NotOffered)
         }

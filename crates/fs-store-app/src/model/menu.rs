@@ -6,6 +6,8 @@ use super::types::{Problem, View};
 /// An entry of the menu.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Command {
+    /// Show the cards.
+    Cards,
     /// Close the window.
     Quit,
     /// Show the sources.
@@ -18,7 +20,8 @@ pub enum Command {
 
 impl Command {
     /// All entries.
-    pub const ALL: [Command; 4] = [
+    pub const ALL: [Command; 5] = [
+        Command::Cards,
         Command::Sources,
         Command::Settings,
         Command::Quit,
@@ -29,6 +32,7 @@ impl Command {
     #[must_use]
     pub fn id(self) -> &'static str {
         match self {
+            Command::Cards => "cards",
             Command::Quit => "quit",
             Command::Sources => "sources",
             Command::Settings => "settings",
@@ -67,12 +71,13 @@ impl StoreModel {
     /// Carries out a menu entry. Quitting while a job runs is refused, and told.
     pub fn command(&mut self, command: Command) -> Effect {
         match command {
+            Command::Cards => Effect::Show(View::Cards),
             Command::Sources => Effect::Show(View::Sources),
             Command::Settings => Effect::Show(View::Settings),
             Command::About => Effect::Show(View::About),
-            Command::Quit => match self.job.as_ref().filter(|j| !j.is_finished()) {
-                Some(job) => {
-                    self.problems = vec![Problem::Busy(job.name.clone())];
+            Command::Quit => match self.busy_name() {
+                Some(name) => {
+                    self.problems = vec![Problem::Busy(name)];
                     Effect::Nothing
                 }
                 None => Effect::Quit,

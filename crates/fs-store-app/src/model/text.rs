@@ -83,6 +83,15 @@ impl StoreModel {
                     words::OPEN_FAILED,
                     &[("command", command), ("detail", detail)],
                 ),
+                Problem::UninstallFailed { name, detail } => words::fill(
+                    words::UNINSTALL_FAILED,
+                    &[("name", name), ("detail", detail)],
+                ),
+                Problem::NoHomepage(name) => words::fill(words::NO_HOMEPAGE, &[("name", name)]),
+                Problem::RepositoryFailed { url, detail } => words::fill(
+                    words::REPOSITORY_FAILED,
+                    &[("url", url), ("detail", detail)],
+                ),
                 Problem::EmptyAddress => words::EMPTY_ADDRESS.to_owned(),
             })
             .collect()

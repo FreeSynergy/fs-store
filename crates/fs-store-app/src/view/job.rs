@@ -74,3 +74,26 @@ pub(super) fn start_job(shared: &Shared, name: &str) {
         rebuild();
     });
 }
+
+/// Takes the confirmed program away on a worker thread (`pkexec` may wait for a password); the window is asked
+/// to draw again when it starts and when it ends.
+pub(super) fn start_uninstall(shared: &Shared) {
+    let (backend, name) = {
+        let mut model = locked(shared);
+        let Some(name) = model.begin_uninstall() else {
+            drop(model);
+            rebuild();
+            return;
+        };
+        (model.backend(), name)
+    };
+    rebuild();
+    let shared = Arc::clone(shared);
+    std::thread::spawn(move || {
+        let result =
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| backend.uninstall(&name)))
+                .unwrap_or_else(|_| Err(words::JOB_PANICKED.to_owned()));
+        locked(&shared).finish_uninstall(result);
+        rebuild();
+    });
+}

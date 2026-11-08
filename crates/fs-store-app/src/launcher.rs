@@ -12,6 +12,11 @@ pub trait Launcher: Send + Sync {
     /// # Errors
     /// A developer text when it could not be started.
     fn start(&self, command: &str) -> Result<(), String>;
+    /// Opens a web address with the system's opener (`xdg-open`) as a process of its own.
+    ///
+    /// # Errors
+    /// A developer text when it could not be started.
+    fn open_url(&self, url: &str) -> Result<(), String>;
 }
 
 /// The real launcher: `setsid -f` when available (own session, survives the store and its terminal), else a
@@ -49,6 +54,24 @@ fn detached(mut command: Command) -> Command {
     command
 }
 
+/// Runs `program arg` detached and says how it started; the child is reaped in the background.
+fn run_detached(program: &Path, arg: Option<&str>) -> Result<(), String> {
+    let mut setsid = Command::new("setsid");
+    setsid.arg("-f").arg(program).args(arg);
+    match detached(setsid).status() {
+        Ok(status) if status.success() => Ok(()),
+        Ok(status) => Err(format!("setsid ended with {status}")),
+        Err(_) => {
+            let mut plain = Command::new(program);
+            plain.args(arg);
+            let mut child = detached(plain).spawn().map_err(|e| e.to_string())?;
+            // Reap the child when it ends, without holding anything up.
+            std::thread::spawn(move || child.wait().map(|_| ()));
+            Ok(())
+        }
+    }
+}
+
 impl Launcher for ProcessLauncher {
     fn exists(&self, command: &str) -> bool {
         !command.contains('/') && self.find(command).is_some()
@@ -56,19 +79,13 @@ impl Launcher for ProcessLauncher {
 
     fn start(&self, command: &str) -> Result<(), String> {
         let path = self.find(command).ok_or_else(|| "not found".to_owned())?;
-        let mut setsid = Command::new("setsid");
-        setsid.arg("-f").arg(&path);
-        match detached(setsid).status() {
-            Ok(status) if status.success() => Ok(()),
-            Ok(status) => Err(format!("setsid ended with {status}")),
-            Err(_) => {
-                let mut child = detached(Command::new(&path))
-                    .spawn()
-                    .map_err(|e| e.to_string())?;
-                // Reap the child when it ends, without holding anything up.
-                std::thread::spawn(move || child.wait().map(|_| ()));
-                Ok(())
-            }
-        }
+        run_detached(&path, None)
+    }
+
+    fn open_url(&self, url: &str) -> Result<(), String> {
+        let opener = self
+            .find("xdg-open")
+            .ok_or_else(|| "xdg-open not found".to_owned())?;
+        run_detached(&opener, Some(url))
     }
 }

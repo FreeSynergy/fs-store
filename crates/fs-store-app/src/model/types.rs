@@ -4,17 +4,13 @@ use fs_store_core::{SourceError, Version};
 
 use crate::backend::{JobError, PackageRow};
 
-/// The views of the window.
+/// The views of the window. The cards are the one page; the others come from the menu at the top.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum View {
+    /// The one page: a card for every program.
+    Cards,
     /// The list of sources.
     Sources,
-    /// Packages of the enabled sources.
-    Available,
-    /// Packages on this machine.
-    Installed,
-    /// Updates found by the last check, and programs that are new.
-    Updates,
     /// What can be set: the check for updates.
     Settings,
     /// Name, version, licence and address of the program.
@@ -79,6 +75,22 @@ pub enum Problem {
     LaunchFailed {
         /// The command tried (empty when none was found).
         command: String,
+        /// The reason, as a developer text.
+        detail: String,
+    },
+    /// "Uninstall" failed: which program and why.
+    UninstallFailed {
+        /// Package name.
+        name: String,
+        /// The reason, as a developer text.
+        detail: String,
+    },
+    /// The card has no usable project page.
+    NoHomepage(String),
+    /// The project page could not be opened.
+    RepositoryFailed {
+        /// The address.
+        url: String,
         /// The reason, as a developer text.
         detail: String,
     },

@@ -11,8 +11,8 @@ use fs_store_sources::{CheckEvery, InstallMode};
 use crate::model::{CheckState, StoreModel, check_label, install_label};
 use crate::words;
 
+use super::check::start_check;
 use super::shell::{Shared, button, locked, rebuild};
-use super::updates::start_check;
 
 /// One choice: a button, highlighted when it is the chosen one.
 fn choice(key: &str, label: &str, chosen: bool, on: impl Fn() + Send + Sync + 'static) -> Div {

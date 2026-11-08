@@ -63,15 +63,6 @@ pub fn update_line(update: &Update) -> String {
 }
 
 impl StoreModel {
-    /// Label of the navigation entry: "Updates (n)", plain "Updates" when there is nothing to show.
-    #[must_use]
-    pub fn updates_label(&self) -> String {
-        match self.badge() {
-            0 => words::VIEW_UPDATES.to_owned(),
-            n => words::fill(words::VIEW_UPDATES_COUNT, &[("n", &n.to_string())]),
-        }
-    }
-
     /// Title of the window: "FreeSynergy.Store (n)" when there is a badge.
     #[must_use]
     pub fn window_title(&self) -> String {
