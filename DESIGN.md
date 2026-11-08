@@ -68,6 +68,15 @@ enum Phase  { pending @0; verified @1; installing @2; installed @3; failed @4; r
 ```
 Risk marks (ADR 0021): `install`, `update`, `removeSource` are write operations set by the engine.
 
+## Probe against a real release (step 5, partly done 2026-11-08)
+Draft `v0.6.1-rc.2` of `fs-tasks` (made by `fs-release`, fetched with `gh release download`, because drafts are not
+public): the built-in `PgpVerifier` accepts `fs-tasks-server-0.6.1-rc.2-linux-x86_64.tar.gz` with its `.asc` as `Valid`
+for `16A4…4342`, and rejects it after one flipped byte (`crates/fs-store-pgp/tests/real_release.rs`, runs when
+`FS_PROBE_FILE`/`FS_PROBE_SIG` are set). **Not yet done:** installing it through a catalog. Two blockers: (1) `Version`
+has no pre-release part, so `0.6.1-rc.2` cannot be offered (needed for pre-releases, decided to allow); (2) a local
+catalog needs a signature by the release key, which only the user holds. Options for (2): the user signs a test catalog,
+or a test-only trusted key for local sources.
+
 ## Provisional decisions
 - Versions are `major.minor.patch` numbers only (SemVer subset); pre-release tags later.
 - Only one trusted fingerprint for now; sources may later bring their own keys, never replacing the built-in one.
