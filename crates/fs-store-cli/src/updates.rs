@@ -4,7 +4,7 @@ use std::path::Path;
 
 use fs_store_sources::Registry;
 
-use crate::commands::{cmd_install, fetch_source, read_catalog, trust};
+use crate::commands::{cmd_install, fetch_source, read_catalog, root, trust};
 
 fn registry(root: &Path) -> Result<Registry, String> {
     Registry::load(&root.join("installed.toml")).map_err(|e| format!("{e:?}"))
@@ -149,11 +149,13 @@ pub(crate) fn auto(root: &Path, name: &str, mode: &str) -> Result<(), String> {
 
 /// The two systemd user unit files that run `fs-store update --all` every day and a little after login.
 #[must_use]
-pub(crate) fn unit_files(exe: &str) -> (String, String) {
+pub(crate) fn unit_files(exe: &str, every: &str) -> (String, String) {
     let service = format!(
-        "[Unit]\nDescription=FreeSynergy.Store: update installed programs\n\n[Service]\nType=oneshot\nExecStart={exe} update --all\n"
+        "[Unit]\nDescription=FreeSynergy.Store: update installed programs\n\n[Service]\nType=oneshot\nExecStart={exe} background\n"
     );
-    let timer = "[Unit]\nDescription=FreeSynergy.Store: look for updates\n\n[Timer]\nOnBootSec=5min\nOnUnitActiveSec=1d\nRandomizedDelaySec=30min\nPersistent=true\n\n[Install]\nWantedBy=timers.target\n".to_owned();
+    let timer = format!(
+        "[Unit]\nDescription=FreeSynergy.Store: look for updates\n\n[Timer]\nOnBootSec=5min\nOnUnitActiveSec={every}\nRandomizedDelaySec=30min\nPersistent=true\n\n[Install]\nWantedBy=timers.target\n"
+    );
     (service, timer)
 }
 
@@ -177,7 +179,12 @@ pub(crate) fn timer(rest: &[String]) -> Result<(), String> {
     match rest.first().map(String::as_str) {
         Some("enable") => {
             let exe = std::env::current_exe().map_err(|e| e.to_string())?;
-            let (service, timer) = unit_files(&exe.to_string_lossy());
+            let every = match fs_store_sources::Settings::load(&root().join("settings.toml")).map(|s| s.check) {
+                Ok(fs_store_sources::CheckEvery::Hourly) => "1h",
+                Ok(fs_store_sources::CheckEvery::Daily) => "1d",
+                _ => return Err("settings say: check only at start or never; the timer is not needed (fs-store settings check daily|hourly)".into()),
+            };
+            let (service, timer) = unit_files(&exe.to_string_lossy(), every);
             std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
             std::fs::write(dir.join("fs-store-update.service"), service)
                 .map_err(|e| e.to_string())?;
@@ -203,8 +210,8 @@ mod tests {
 
     #[test]
     fn units_run_the_update_command_of_this_binary() {
-        let (service, timer) = unit_files("/home/u/.local/bin/fs-store");
-        assert!(service.contains("ExecStart=/home/u/.local/bin/fs-store update --all"));
+        let (service, timer) = unit_files("/home/u/.local/bin/fs-store", "1d");
+        assert!(service.contains("ExecStart=/home/u/.local/bin/fs-store background"));
         assert!(timer.contains("OnUnitActiveSec=1d") && timer.contains("WantedBy=timers.target"));
     }
 }

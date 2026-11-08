@@ -2,6 +2,7 @@
 //! Pattern: Command; see `commands`.
 #![deny(missing_docs)]
 
+mod background;
 mod commands;
 mod source_list;
 mod updates;

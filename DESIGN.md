@@ -180,6 +180,17 @@ no rpm offered it falls back to the `tar.gz`. Commands (ADR 0063): only `fs-<nam
 runs it. The store makes its own menu entry at the first start of the window. Open (named): the shipped `fs-tasks-app` stores in memory by
 default (`--store`): a program from the store must never lose data by default (Thread G/R); the server is not started by anything yet; icons.
 
+## Look for updates, tell the person (2026-11-08, user wish after the rc.9 test)
+`settings.toml`: `check` = off | start | daily (default) | hourly, `install` = ask (default) | auto, `notify` = on (default).
+`fs-store settings [check .. | install .. | notify ..]` shows and sets them; `fs-store background` is the check the timer runs
+(`timer enable` follows `check`: hourly -> 1h, daily -> 1d): it fetches the sources (signature and freshness checked),
+compares with the register, writes `updates.toml` (updates, programs new since the last check, the names offered; no "new" flood on the
+very first check), tells the person (`notify-send`, and the launcher badge as Unity `LauncherEntry` count over `gdbus`; both best effort, switched off by
+`notify off`) and installs by itself only with `install auto`. The window reads `updates.toml` for "Updates (n)" and the "New" marks.
+**Measured (release build, 13 MB package, 2026-11-08):** catalog 0.65 s, download 2.8 s, sha256 0.01 s, signature 0.02 s, unpack 0.16 s
+(`FS_STORE_TIMING=1` prints the steps). So a slow rpm update is `pkexec`/`dnf`; dnf now gets `--setopt=metadata_expire=never`
+(a local rpm needs no repository refresh; dry run 1.5 s -> 0.65 s with cache). The time spent typing the password in the pkexec dialog is not ours.
+
 ## Provisional decisions
 - Versions are `major.minor.patch` with an optional pre-release `-alpha|beta|rc[.N]` (`~` accepted as in `AppStream`/rpm); a pre-release is older than its release. Anything else is skipped with a reason.
 - Only one trusted fingerprint for now; sources may later bring their own keys, never replacing the built-in one.
