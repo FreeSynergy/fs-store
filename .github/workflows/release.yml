@@ -15,6 +15,7 @@ jobs:
       name: fs-store
       kind: app
       app-id: net.freesynergy.Store
+      macos: false
       windows-targets: ""   # the engine uses Unix symlinks and /proc; Windows comes with its own strategy
       app-name: FreeSynergy.Store
       description: "Install, update and extend FreeSynergy programs"
