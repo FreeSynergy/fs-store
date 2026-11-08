@@ -230,6 +230,50 @@ store opens with the program's `fs-store` command). Why a file and not `store.ca
 callers yet (ADR 0054); the same question can later go through the contract. Depend on it by Git tag:
 `fs-store-client = { git = "https://github.com/FreeSynergy/fs-store", tag = "v0.0.N" }`.
 
+## TUF publishing (2026-11-08)
+Crate `fs-store-tuf-publish` (library plus binary `fs-store-tuf-publish`, on `tough` 0.24's editor). Directory layout it works on:
+`catalog.xml`, `root.json` (trusted), `targets.pk8`, `snapshot.pk8`, `timestamp.pk8` (Ed25519, PKCS#8 DER); it writes `tuf/metadata/*.json` and
+`tuf/targets/catalog.xml` (consistent snapshots off). Expiries: targets 90 days, snapshot 7, timestamp 1 (`--targets-days`, `--snapshot-days`,
+`--timestamp-days`). Versions only go up: each run reads `tuf/metadata/{targets,snapshot,timestamp}.json` and writes version + 1. So every run
+re-signs all three roles, which is also the renewal. `fs-store-tuf-publish generate <dir> [--root-keys 3 --threshold 2 --root-days 365]`
+makes `root-N.pk8`, the three role keys and a signed `root.json` (tests use the same function with throw-away keys in a temp dir; no key is ever committed).
+6 tests: publish then `read_target` reads `catalog.xml`; an expired timestamp, a changed catalog and a foreign root are refused; a republish bumps versions.
+
+Who holds which key:
+- `root-*.pk8`: the user, offline (2 of 3), never on a server. `root.json` is also signed with OpenPGP `16A4...4342` (detached `root.json.asc`) and
+  published; the store accepts a new root only when both agree (rotation check still to be built).
+- `targets.pk8`, `snapshot.pk8`, `timestamp.pk8`: CI secrets of `fs-catalog` (`TUF_TARGETS_KEY`, `TUF_SNAPSHOT_KEY`, `TUF_TIMESTAMP_KEY`, base64 of the file).
+- Re-signing: timestamp lives 1 day, so a daily scheduled run of `sign.yml` is needed (weekly is the limit for snapshot only). A mirror cannot keep an old state alive.
+
+What the user must do once: `fs-store-tuf-publish generate /safe/place` on an offline machine; move `root-*.pk8` to offline storage; put the three
+role keys into the `fs-catalog` secrets and delete them locally; `gpg --detach-sign --armor root.json`; copy `root.json` (and `root.json.asc`) to
+`fs-catalog/tuf/root.json` and `root.json` to `crates/fs-store-cli/keys/tuf-root.json` (this switches the check on, see below).
+
+Ready-to-use step for `fs-catalog`'s `sign.yml` (not committed there):
+```yaml
+on:
+  schedule: [{cron: "17 3 * * *"}]   # daily: the timestamp expires after 1 day
+  push: {branches: [main]}
+jobs:
+  tuf:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cargo install --git https://github.com/FreeSynergy/fs-store --tag <tag> fs-store-tuf-publish
+      - run: |
+          cp tuf/root.json root.json
+          printf %s "${{ secrets.TUF_TARGETS_KEY }}"   | base64 -d > targets.pk8
+          printf %s "${{ secrets.TUF_SNAPSHOT_KEY }}"  | base64 -d > snapshot.pk8
+          printf %s "${{ secrets.TUF_TIMESTAMP_KEY }}" | base64 -d > timestamp.pk8
+          fs-store-tuf-publish publish .
+          rm -f targets.pk8 snapshot.pk8 timestamp.pk8 root.json
+      - run: git add tuf && git commit -m "tuf: re-sign" && git push   # with the bot identity of sign.yml
+```
+Store side: `crates/fs-store-cli/src/tuf.rs` uses `FS_STORE_TUF_ROOT` if set, else the built-in root `crates/fs-store-cli/keys/tuf-root.json`
+(embedded by `build.rs` when the file exists at build time). **Not active until the project root exists:** the file is absent now, so a plain build
+checks nothing. Once it exists every source must carry valid TUF metadata that signs its exact `catalog.xml` (a source without `tuf/metadata` is
+refused, so metadata cannot be stripped).
+
 ## Provisional decisions
 - Versions are `major.minor.patch` with an optional pre-release `-alpha|beta|rc[.N]` (`~` accepted as in `AppStream`/rpm); a pre-release is older than its release. Anything else is skipped with a reason.
 - Only one trusted fingerprint for now; sources may later bring their own keys, never replacing the built-in one.
