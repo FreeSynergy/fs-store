@@ -4,7 +4,7 @@ use std::path::Path;
 
 use fs_store_sources::Registry;
 
-use crate::commands::cmd_install;
+use crate::commands::{cmd_install, fetch_source, read_catalog, trust};
 
 fn registry(root: &Path) -> Result<Registry, String> {
     Registry::load(&root.join("installed.toml")).map_err(|e| format!("{e:?}"))
@@ -73,6 +73,33 @@ pub(crate) fn link(root: &Path, name: &str) {
         }
         Err(e) => eprintln!("{name}: commands not linked: {e}"),
     }
+}
+
+/// `fs-store check`: says which installed programs have a newer version, installs nothing.
+/// The catalog signature is verified before anything is read from it.
+pub(crate) fn check(root: &Path, extra: Option<&String>) -> Result<(), String> {
+    let (verifier, policy) = trust(extra)?;
+    let mut newer = 0;
+    for e in registry(root)?.list() {
+        let Some(have) = fs_store_core::Version::parse(&e.version) else {
+            continue;
+        };
+        let offered = fetch_source(root, &e.source, &verifier, &policy)
+            .and_then(|(c, _)| read_catalog(&c))
+            .map(|cat| cat.entries.into_iter().find(|o| o.name.as_str() == e.name));
+        match offered {
+            Ok(Some(o)) if o.version > have => {
+                println!("{} {} -> {}", e.name, have, o.version);
+                newer += 1;
+            }
+            Ok(_) => {}
+            Err(message) => eprintln!("{}: {message}", e.name),
+        }
+    }
+    if newer == 0 {
+        println!("everything is up to date");
+    }
+    Ok(())
 }
 
 /// `fs-store auto <name> on|off`.

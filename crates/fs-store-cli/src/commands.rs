@@ -69,7 +69,7 @@ pub(crate) fn addresses(root: &Path, arg: Option<&String>) -> Result<Vec<String>
 }
 
 /// Clones one source and returns its catalog text and signature.
-fn fetch_source(
+pub(crate) fn fetch_source(
     root: &Path,
     url: &str,
     verifier: &PgpVerifier,
@@ -90,7 +90,7 @@ fn fetch_source(
     Ok((catalog, sig))
 }
 
-fn read_catalog(bytes: &[u8]) -> Result<Catalog, String> {
+pub(crate) fn read_catalog(bytes: &[u8]) -> Result<Catalog, String> {
     parse_catalog(&String::from_utf8_lossy(bytes)).map_err(|e| e.0)
 }
 
@@ -287,9 +287,10 @@ pub fn run(all: &[String]) -> Result<(), String> {
             let source = crate::updates::registered_source(&root, n);
             cmd_install(&root, n, source.as_ref(), extra, true)
         }
+        [c] if c == "check" => crate::updates::check(&root, extra),
         [c, n, m] if c == "auto" => crate::updates::auto(&root, n, m),
         [c, rest @ ..] if c == "timer" => crate::updates::timer(rest),
         [c, n, s] if c == "update" => cmd_install(&root, n, Some(s), extra, true),
-        _ => Err("usage: fs-store sources | available [source] | install <name> [source] | update <name> [source] | update --all | auto <name> on|off | timer enable|disable|status | remove <name> | installed".into()),
+        _ => Err("usage: fs-store sources | available [source] | install <name> [source] | update <name> [source] | check | update --all | auto <name> on|off | timer enable|disable|status | remove <name> | installed".into()),
     }
 }

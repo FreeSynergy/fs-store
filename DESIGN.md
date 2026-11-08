@@ -161,7 +161,7 @@ itself the same way (package `fs-store` in the catalog). After an install the ex
 into `~/.local/bin` (or `FS_STORE_BIN`) through `current/<name>/`; foreign files of the same name are never replaced; `remove`
 takes the links away. Rollback is the one of `run_update`. **Not yet:** TUF checks in the update path (catalog signature and
 the no-downgrade rule apply), programs asking the store for updates through `store.capnp` (needs the server), a per-program
-reminder in the programs. The reference source is now `https://github.com/FreeSynergy/fs-catalog`.
+reminder in the programs. `fs-store check` lists newer versions without installing (for a start-up hint). Known gap: `fs-catalog` is signed by CI in a second commit, so for a few seconds after a push `catalog.xml` and `catalog.xml.asc` do not match and clients refuse the catalog (safe, but noisy); fix: sign before pushing, or publish the pair in one commit. The reference source is now `https://github.com/FreeSynergy/fs-catalog`.
 
 ## Provisional decisions
 - Versions are `major.minor.patch` with an optional pre-release `-alpha|beta|rc[.N]` (`~` accepted as in `AppStream`/rpm); a pre-release is older than its release. Anything else is skipped with a reason.
