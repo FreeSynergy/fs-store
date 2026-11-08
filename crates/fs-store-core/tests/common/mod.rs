@@ -1,7 +1,7 @@
 //! Simple test doubles for the launcher traits.
 #![allow(dead_code)]
 
-use fs_launcher_core::*;
+use fs_store_core::*;
 
 pub fn pkg(version: (u64, u64, u64)) -> Package {
     Package {

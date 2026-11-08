@@ -1,8 +1,8 @@
 //! Tests of the OpenPGP check with test keys made here; no real private key is used or stored.
 use std::fmt::Write;
 
-use fs_launcher_core::{SignatureOutcome, SignaturePolicy, SignatureVerifier, TRUSTED_FINGERPRINT};
-use fs_launcher_pgp::{KeyError, PgpVerifier};
+use fs_store_core::{SignatureOutcome, SignaturePolicy, SignatureVerifier, TRUSTED_FINGERPRINT};
+use fs_store_pgp::{KeyError, PgpVerifier};
 use pgp::composed::{
     ArmorOptions, DetachedSignature, KeyType, SecretKeyParamsBuilder, SignedSecretKey,
 };

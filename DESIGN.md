@@ -1,7 +1,7 @@
-# fs-launcher – design
+# fs-store (FreeSynergy.Store) – design
 
 ## Purpose
-The launcher installs and updates FreeSynergy packages and itself. A package is a program, a frontend, a component or a
+The store installs and updates FreeSynergy packages and itself. A package is a program, a frontend, a component or a
 theme (ADR 0036, 0021). Packages come from a list of Git sources. Every download is checked against an OpenPGP
 signature (ADR 0051), a failed update is rolled back, and a running program is never replaced. The launcher updates
 itself automatically, by the same path as any other package.
@@ -16,8 +16,8 @@ Ideas from the function analysis `temp/research/craft-launcher.md` are used as i
 | `signature` – may this package be installed | Specification (`SignaturePolicy`) | A pure predicate over the verification outcome, combinable later (e.g. with a trust level). |
 | `signature` – checking bytes against a signature | Strategy (`SignatureVerifier`) | The OpenPGP implementation is swappable; tests use a fake. |
 | `signature` – `VerifiedPackage` | Capability object | Only the policy can hand it out; holding it is the right to install. An unsigned package cannot even be passed to an installer. |
-| `fs-launcher-pgp` – rPGP behind `SignatureVerifier` | Adapter | Wraps the foreign `pgp` crate in our trait, so the core stays free of dependencies. rPGP (MIT OR Apache-2.0), not sequoia (LGPL). |
-| `fs-launcher-sources` – TOML file | Repository (file-backed) | The file holds only the user's sources and a `disabled` list; the reference source is never an entry, so deleting it from the file cannot remove it. |
+| `fs-store-pgp` – rPGP behind `SignatureVerifier` | Adapter | Wraps the foreign `pgp` crate in our trait, so the core stays free of dependencies. rPGP (MIT OR Apache-2.0), not sequoia (LGPL). |
+| `fs-store-sources` – TOML file | Repository (file-backed) | The file holds only the user's sources and a `disabled` list; the reference source is never an entry, so deleting it from the file cannot remove it. |
 | `words` – texts for people | none | Sentences as constants with named placeholders (coding rules 2a); no behaviour besides one pure fill function. |
 | `strategy` – how a package is installed | Strategy (`InstallStrategy`) | rpm via dnf, Flatpak, AppImage, tar.gz: one trait, one implementation per way. |
 | `state` – course of one installation | State (enum plus one transition fn) | `Failed` has exactly one way out: `RolledBack`. |
@@ -25,7 +25,7 @@ Ideas from the function analysis `temp/research/craft-launcher.md` are used as i
 | `update` – running check | Strategy (`RunningCheck`) | The OS check is outside the core. |
 
 ## Engine and frontend (ADR 0021)
-`fs-launcher-core` has no input or output: no network, no files, no GUI. An engine crate will implement the traits
+`fs-store-core` has no input or output: no network, no files, no GUI. An engine crate will implement the traits
 (`gix`, a real OpenPGP library, dnf/Flatpak calls). Frontends (Blinc GUI, CLI, web page) are packages of their own and
 talk to the engine through the contract below. They are interchangeable.
 
@@ -45,7 +45,7 @@ interface Launcher {
   available      @4 () -> (list :List(Package));
   installed      @5 () -> (list :List(Package));
   install        @6 (name :Text) -> (job :Job);
-  update         @7 (name :Text) -> (job :Job);   # self-update is update("fs-launcher")
+  update         @7 (name :Text) -> (job :Job);   # self-update is update("fs-store")
   watch          @8 (job :Job, sink :Sink) -> ();
 }
 struct Source  { id @0 :Text; url @1 :Text; enabled @2 :Bool; reference @3 :Bool; }
@@ -63,8 +63,8 @@ Risk marks (ADR 0021): `install`, `update`, `removeSource` are write operations 
 - Name of the program "Launcher" and crate names are provisional.
 
 ## State
-Core traits and value types; rPGP adapter (`fs-launcher-pgp`, built-in release key and the revoked key as files, tested with
-generated test keys); TOML source list (`fs-launcher-sources`); `words.rs`. 27 tests. Not built: network, `gix`, real
+Core traits and value types; rPGP adapter (`fs-store-pgp`, built-in release key and the revoked key as files, tested with
+generated test keys); TOML source list (`fs-store-sources`); `words.rs`. 27 tests. Not built: network, `gix`, real
 installers, self-replacement of the executable, GUI/CLI, the capnp file, a `Command` trait (comes with remove),
-key expiry checks and subkey rules in `fs-launcher-pgp` (provisional: a valid signature by the primary key or a public
+key expiry checks and subkey rules in `fs-store-pgp` (provisional: a valid signature by the primary key or a public
 subkey of a non-revoked trusted key counts), translation of `words.rs`, atomic write of the source file.

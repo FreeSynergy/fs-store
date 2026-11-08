@@ -1,7 +1,7 @@
 //! Tests of the state machine and of update with rollback.
 mod common;
 use common::*;
-use fs_launcher_core::*;
+use fs_store_core::*;
 
 #[test]
 fn happy_path() {

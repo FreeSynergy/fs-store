@@ -1,5 +1,5 @@
 [package]
-name = "fs-launcher-sources"
+name = "fs-store-sources"
 description = "File-backed list of launcher sources (TOML) behind SourceRepository"
 version.workspace = true
 edition.workspace = true
@@ -7,7 +7,7 @@ license.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-fs-launcher-core = { path = "../fs-launcher-core" }
+fs-store-core = { path = "../fs-store-core" }
 toml = { version = "0.9", default-features = false, features = ["parse", "display", "serde", "std"] }
 serde = { version = "1", features = ["derive"] }
 

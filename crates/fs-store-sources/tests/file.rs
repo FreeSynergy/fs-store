@@ -1,6 +1,6 @@
 //! Tests of the file-backed source list.
-use fs_launcher_core::{REFERENCE_ID, SourceError, SourceId, SourceRepository};
-use fs_launcher_sources::FileSources;
+use fs_store_core::{REFERENCE_ID, SourceError, SourceId, SourceRepository};
+use fs_store_sources::FileSources;
 
 fn reference() -> SourceId {
     SourceId(REFERENCE_ID.into())

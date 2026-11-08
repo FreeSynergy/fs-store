@@ -3,7 +3,7 @@
 use std::fmt::Write;
 use std::io::Cursor;
 
-use fs_launcher_core::{SignatureOutcome, SignatureVerifier};
+use fs_store_core::{SignatureOutcome, SignatureVerifier};
 use pgp::composed::{Deserializable, DetachedSignature, SignedPublicKey};
 use pgp::packet::Signature;
 use pgp::types::KeyDetails;

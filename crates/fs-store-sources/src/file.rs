@@ -2,7 +2,7 @@
 
 use std::path::{Path, PathBuf};
 
-use fs_launcher_core::{REFERENCE_ID, Source, SourceError, SourceId, SourceRepository};
+use fs_store_core::{REFERENCE_ID, Source, SourceError, SourceId, SourceRepository};
 use serde::{Deserialize, Serialize};
 
 /// Why loading or saving failed.

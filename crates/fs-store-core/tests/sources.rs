@@ -1,7 +1,7 @@
 //! Tests of the source list: the reference source can be disabled, never removed.
 mod common;
 use common::MemSources;
-use fs_launcher_core::*;
+use fs_store_core::*;
 
 #[test]
 fn reference_can_be_disabled_but_not_removed() {

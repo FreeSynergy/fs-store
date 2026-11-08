@@ -1,5 +1,5 @@
 [package]
-name = "fs-launcher-pgp"
+name = "fs-store-pgp"
 description = "OpenPGP signature check for the FreeSynergy launcher (rPGP behind SignatureVerifier)"
 version.workspace = true
 edition.workspace = true
@@ -7,7 +7,7 @@ license.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-fs-launcher-core = { path = "../fs-launcher-core" }
+fs-store-core = { path = "../fs-store-core" }
 pgp = { version = "0.21", default-features = false }
 
 [dev-dependencies]

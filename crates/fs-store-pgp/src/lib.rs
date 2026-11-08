@@ -1,4 +1,4 @@
-//! Adapter: rPGP behind `fs_launcher_core::SignatureVerifier`.
+//! Adapter: rPGP behind `fs_store_core::SignatureVerifier`.
 //! Trusts only the keys it is given; the built-in release key is `PgpVerifier::builtin`.
 #![deny(missing_docs)]
 

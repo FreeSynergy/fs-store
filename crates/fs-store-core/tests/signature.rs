@@ -1,7 +1,7 @@
 //! Tests of the signature gate: no valid signature from the trusted key, no `VerifiedPackage`.
 mod common;
 use common::*;
-use fs_launcher_core::*;
+use fs_store_core::*;
 
 #[test]
 fn only_valid_signature_of_trusted_key_admits() {
