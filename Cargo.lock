@@ -663,8 +663,10 @@ name = "fs-store-engine"
 version = "0.1.0"
 dependencies = [
  "flate2",
+ "fs-store-catalog",
  "fs-store-core",
  "fs-store-pgp",
+ "sha2",
  "tar",
  "tempfile",
 ]

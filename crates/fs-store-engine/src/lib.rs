@@ -2,6 +2,8 @@
 //! (`TarGz` for `InstallStrategy`, `ProcRunningCheck` for `RunningCheck`). No root needed.
 #![deny(missing_docs)]
 
+pub mod service;
+
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};

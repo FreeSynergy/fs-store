@@ -9,6 +9,8 @@ rust-version.workspace = true
 [dependencies]
 fs-store-core = { path = "../fs-store-core" }
 flate2 = "1"
+fs-store-catalog = { path = "../fs-store-catalog" }
+sha2 = "0.10"
 tar = "0.4"
 
 [dev-dependencies]
