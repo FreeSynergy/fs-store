@@ -216,3 +216,27 @@ fn hex(bytes: &[u8]) -> String {
         s
     })
 }
+
+impl std::fmt::Display for InstallFailure {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Fetch(what) => write!(f, "could not download: {what}"),
+            Self::CatalogSignature => {
+                f.write_str("the catalog is not signed by a trusted key; nothing in it is believed")
+            }
+            Self::Catalog(what) => write!(f, "the catalog is not usable: {what}"),
+            Self::Downgrade => {
+                f.write_str("the catalog offers an older version than the installed one (refused)")
+            }
+            Self::NotOffered => f.write_str("not offered by this source"),
+            Self::Unsupported(format) => write!(f, "no installer for the format {format:?} yet"),
+            Self::Checksum => {
+                f.write_str("the downloaded file does not match the checksum in the catalog")
+            }
+            Self::ReleaseSignature => {
+                f.write_str("the downloaded file is not signed by a trusted key")
+            }
+            Self::Update(e) => write!(f, "installing failed and was rolled back: {e:?}"),
+        }
+    }
+}
