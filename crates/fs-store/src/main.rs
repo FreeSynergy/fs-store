@@ -4,9 +4,10 @@
 //! fs-store                         the window (feature `gui`, on by default)
 //! fs-store [--size WxH] [--snapshot file.png]
 //! fs-store sources | available | install <name> | update <name> | installed
-//! fs-store serve                   the server (not built yet)
+//! fs-store serve [--socket PATH]  the server: store.capnp on a Unix socket (reads only for now)
 //! ```
 
+use std::ffi::OsString;
 use std::process::ExitCode;
 
 fn main() -> ExitCode {
@@ -33,7 +34,11 @@ fn dispatch(args: &[String]) -> Result<(), String> {
         }
         Some("gui") => window(&args[1..]),
         Some(flag) if flag.starts_with("--") && flag != "--trust-key" => window(args),
-        Some("serve") => Err("the server (`fs-store serve`) is not built yet; contract: store.capnp in fs-interfaces".into()),
+        Some("serve") => match fs_store_server::serve_command(args[1..].iter().map(OsString::from))
+        {
+            0 => Ok(()),
+            code => Err(format!("serve ended with code {code}")),
+        },
         Some(_) => fs_store_cli::run(args),
     }
 }

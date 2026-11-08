@@ -191,6 +191,28 @@ very first check), tells the person (`notify-send`, and the launcher badge as Un
 (`FS_STORE_TIMING=1` prints the steps). So a slow rpm update is `pkexec`/`dnf`; dnf now gets `--setopt=metadata_expire=never`
 (a local rpm needs no repository refresh; dry run 1.5 s -> 0.65 s with cache). The time spent typing the password in the pkexec dialog is not ours.
 
+## `fs-store-server`: programs ask the store for updates (2026-11-08, first slice)
+Programs never download by themselves; they ask the store ("is there an update for me?") over `store.capnp` on a Unix
+socket (`$XDG_RUNTIME_DIR/freesynergy/store.sock`), started by `fs-store serve [--socket PATH]` (feature-independent). Crate
+`crates/fs-store-server` only translates; the shared server side (socket, peer check, problems) is `fs-interfaces` with feature `rpc`.
+
+| Pattern | Where |
+|---|---|
+| Facade | `lib.rs` declares modules and re-exports only |
+| Strategy | trait `StoreView` (sources, available, installed): the server asks it, never reads files itself |
+| Adapter | `LocalStore` puts `sources.toml`, `installed.toml`, the signed catalogs and `rpm -q` behind `StoreView`; `wire.rs` puts values onto the wire |
+| Template method | `catalogs.rs`: clone, verify signature, parse, check freshness; a failing source answers as a skipped entry |
+| Value object | `Capabilities` built once; `capabilities`, `supportReport` and every refusal answer from it |
+| Null object | the writes answer the provider-rule `Unsupported` |
+| Command | `serve_command` is the subcommand `fs-store serve` |
+
+Answers in this slice: `capabilities`, `supportReport`, `sources`, `available` (signed catalogs of enabled sources, as
+`fs-store available`), `installed` (register `installed.toml`; the version `rpm -q` reports wins, then the format is `rpm`; kind
+is `program` and format `tarGz` otherwise, as the register does not hold them). **Unsupported, with a sentence:** `addSource`,
+`setEnabled`, `removeSource`, `refresh`, `install`, `update`, `uninstall` (no write acts without a person; the transport does not
+know the caller yet, ADR 0054), and `job`, `subscribe` (the server starts no job). No change feed yet. Later: writes once the
+caller is known (acts-in-name), jobs and `subscribe` with them.
+
 ## Provisional decisions
 - Versions are `major.minor.patch` with an optional pre-release `-alpha|beta|rc[.N]` (`~` accepted as in `AppStream`/rpm); a pre-release is older than its release. Anything else is skipped with a reason.
 - Only one trusted fingerprint for now; sources may later bring their own keys, never replacing the built-in one.
