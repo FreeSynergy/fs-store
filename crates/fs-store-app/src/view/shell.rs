@@ -19,8 +19,10 @@ use super::available::available;
 use super::installed::installed;
 use super::job::job_bar;
 use super::menu::{install_menus, quit};
-use super::pages::{about, settings};
+use super::pages::about;
+use super::settings::settings;
 use super::sources::sources;
+use super::updates::updates;
 
 /// The model, shared between the window and the worker of a job.
 pub type Shared = Arc<Mutex<StoreModel>>;
@@ -41,6 +43,7 @@ pub(super) fn screen_id(view: View) -> &'static str {
     match view {
         View::Available => "available",
         View::Installed => "installed",
+        View::Updates => "updates",
         View::Sources => "sources",
         View::Settings => "settings",
         View::About => "about",
@@ -63,11 +66,16 @@ pub fn store_app(model: &Shared, launcher: &Arc<dyn Launcher>) -> Result<AppWidg
             }),
         )
     };
+    let (title, updates_label) = {
+        let model = locked(model);
+        (model.window_title(), model.updates_label())
+    };
     let app = AppWidget::new(
-        words::TITLE,
+        title,
         vec![
             screen(words::VIEW_AVAILABLE, View::Available),
             screen(words::VIEW_INSTALLED, View::Installed),
+            screen(&updates_label, View::Updates),
             screen(words::VIEW_SOURCES, View::Sources),
             screen(words::VIEW_SETTINGS, View::Settings),
             screen(words::VIEW_ABOUT, View::About),
@@ -102,6 +110,12 @@ impl Surface for StoreSurface {
                 }
             })
             .child(job_bar(&model));
+        if model.badge() > 0 && self.view != View::Updates {
+            page = page.child(div().class("fs-store-job").child(text(words::fill(
+                words::UPDATES_BANNER,
+                &[("n", &model.badge().to_string())],
+            ))));
+        }
         for line in model.problem_lines() {
             page = page.child(div().class("fs-store-problem").child(text(line)));
         }
@@ -109,7 +123,8 @@ impl Surface for StoreSurface {
             View::Sources => sources(&model, &self.model),
             View::Available => available(&model, &self.model),
             View::Installed => installed(&model, &self.model, &self.launcher),
-            View::Settings => settings(),
+            View::Updates => updates(&model, &self.model),
+            View::Settings => settings(&model, &self.model),
             View::About => about(),
         };
         Box::new(page.child(body))

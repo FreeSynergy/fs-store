@@ -34,12 +34,17 @@ pub(super) fn available(model: &StoreModel, shared: &Shared) -> Div {
         );
     }
     for row in model.available() {
-        page = page.child(available_row(row, model.is_busy(), shared));
+        page = page.child(available_row(
+            row,
+            model.is_busy(),
+            model.is_fresh(&row.package.name),
+            shared,
+        ));
     }
     page
 }
 
-fn available_row(row: &AvailableRow, busy: bool, shared: &Shared) -> Div {
+fn available_row(row: &AvailableRow, busy: bool, fresh: bool, shared: &Shared) -> Div {
     let package = &row.package;
     let version = package.version.to_string();
     let sub = match row.installed {
@@ -52,11 +57,16 @@ fn available_row(row: &AvailableRow, busy: bool, shared: &Shared) -> Div {
         ),
         None => version.clone(),
     };
+    let name_line = if fresh {
+        format!("{} ({})", package.name, words::MARK_NEW)
+    } else {
+        package.name.clone()
+    };
     let line = format!("{} - {}", words::kind(package.kind), sub);
     let cell = div()
         .class("fs-store-cell")
         .flex_col()
-        .child(text(package.name.clone()))
+        .child(text(name_line))
         .child(text(line).class("fs-store-sub"));
     let action: Div = match row.action {
         Action::UpToDate => div().child(

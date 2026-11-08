@@ -12,5 +12,6 @@ pub mod gui;
 pub mod installed;
 pub mod launcher;
 pub mod model;
+pub mod updates;
 pub mod view;
 pub mod words;

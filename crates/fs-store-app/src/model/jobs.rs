@@ -122,6 +122,14 @@ impl StoreModel {
                 }
             }
         }
+        let done = self
+            .job
+            .as_ref()
+            .filter(|j| j.phase == Phase::Installed)
+            .map(|j| j.name.clone());
+        if let Some(name) = done {
+            self.updated(&name);
+        }
         self.read_installed();
         self.merge();
     }

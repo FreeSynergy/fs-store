@@ -7,8 +7,12 @@ use crate::backend::{
     BackendError, InstalledDetails, InstalledRow, PackageRow, SourceRow, StoreBackend,
 };
 
+use crate::updates::{NoUpdates, UpdateService};
+use fs_store_sources::{Findings, Settings};
+
 use super::jobs::JobView;
 use super::types::{Action, AvailableRow, Problem, View};
+use super::updates::CheckState;
 
 /// State of the window.
 pub struct StoreModel {
@@ -22,6 +26,12 @@ pub struct StoreModel {
     pub(super) job: Option<JobView>,
     pub(super) problems: Vec<Problem>,
     pub(super) new_source: String,
+    pub(super) updates: Arc<dyn UpdateService>,
+    pub(super) settings: Settings,
+    pub(super) findings: Findings,
+    pub(super) check: CheckState,
+    pub(super) shown: Option<View>,
+    pub(super) fresh: Vec<String>,
 }
 
 impl StoreModel {
@@ -39,6 +49,15 @@ impl StoreModel {
             job: None,
             problems: Vec::new(),
             new_source: String::new(),
+            updates: Arc::new(NoUpdates),
+            settings: Settings {
+                notify: true,
+                ..Settings::default()
+            },
+            findings: Findings::default(),
+            check: CheckState::Idle,
+            shown: None,
+            fresh: Vec::new(),
         }
     }
 
@@ -54,9 +73,19 @@ impl StoreModel {
         self.view
     }
 
-    /// Show a view.
+    /// Show a view. Entering the available view (not before) marks the new programs as seen; they stay
+    /// marked in that list until it is left.
     pub fn show(&mut self, view: View) {
         self.view = view;
+        if self.shown == Some(view) {
+            return;
+        }
+        self.shown = Some(view);
+        if view == View::Available {
+            self.enter_available();
+        } else {
+            self.fresh.clear();
+        }
     }
 
     /// The sources, reference first.
@@ -113,6 +142,7 @@ impl StoreModel {
         self.read_available();
         self.read_installed();
         self.merge();
+        self.load_updates();
     }
 
     fn read_sources(&mut self) {

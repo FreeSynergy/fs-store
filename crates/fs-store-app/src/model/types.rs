@@ -13,7 +13,9 @@ pub enum View {
     Available,
     /// Packages on this machine.
     Installed,
-    /// What can be set (nothing yet; says so).
+    /// Updates found by the last check, and programs that are new.
+    Updates,
+    /// What can be set: the check for updates.
     Settings,
     /// Name, version, licence and address of the program.
     About,

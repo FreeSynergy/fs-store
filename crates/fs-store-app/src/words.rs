@@ -17,6 +17,12 @@ pub const VIEW_AVAILABLE: &str = "Available";
 /// Name of the installed view.
 pub const VIEW_INSTALLED: &str = "Installed";
 
+/// Name of the updates view.
+pub const VIEW_UPDATES: &str = "Updates";
+/// Name of the updates view with a count. Placeholder: `{n}`.
+pub const VIEW_UPDATES_COUNT: &str = "Updates ({n})";
+/// Title of the window with a count. Placeholder: `{n}`.
+pub const TITLE_COUNT: &str = "FreeSynergy.Store ({n})";
 /// Name of the settings page.
 pub const VIEW_SETTINGS: &str = "Settings";
 /// Name of the About page.
@@ -34,8 +40,6 @@ pub const MENU_SETTINGS: &str = "Settings";
 /// Menu entry: about.
 pub const MENU_ABOUT: &str = "About";
 
-/// The Settings page says what is true: nothing can be set here yet.
-pub const SETTINGS_TEXT: &str = "There is nothing to set in this window yet. Settings will come with the admin frontend (ADR 0061).";
 /// About: name and version. Placeholder: `{version}`.
 pub const ABOUT_NAME: &str = "FreeSynergy.Store {version}";
 /// About: licence.
@@ -195,3 +199,56 @@ pub fn job_problem(error: &JobError) -> &'static str {
         JobError::Other(_) => "{name} was not installed: {detail}",
     }
 }
+
+/// Settings: heading of the look-for-updates choice.
+pub const SETTINGS_CHECK: &str = "Look for updates";
+/// Choice: never by itself.
+pub const CHECK_OFF: &str = "Off";
+/// Choice: when the window opens.
+pub const CHECK_START: &str = "At start";
+/// Choice: once a day.
+pub const CHECK_DAILY: &str = "Daily";
+/// Choice: every hour.
+pub const CHECK_HOURLY: &str = "Hourly";
+/// Settings: heading of the install choice.
+pub const SETTINGS_INSTALL: &str = "Install updates";
+/// Choice: wait for the person.
+pub const INSTALL_ASK: &str = "Ask me";
+/// Choice: by itself.
+pub const INSTALL_AUTO: &str = "Automatically";
+/// Hint under the install choice.
+pub const INSTALL_AUTO_HINT: &str =
+    "Automatically only applies to programs that have automatic updates switched on.";
+/// Settings: heading of the notification choice.
+pub const SETTINGS_NOTIFY: &str = "Tell me (notification, badge)";
+/// Choice: on.
+pub const NOTIFY_ON: &str = "On";
+/// Choice: off.
+pub const NOTIFY_OFF: &str = "Off";
+/// The last check. Placeholder: `{time}`.
+pub const LAST_CHECK: &str = "Last look for updates: {time}";
+/// No check yet.
+pub const LAST_CHECK_NEVER: &str = "Last look for updates: never";
+/// Button: look for updates now.
+pub const BUTTON_LOOK_NOW: &str = "Look now";
+/// The check runs.
+pub const CHECK_RUNNING: &str = "Looking for updates now. This can take a moment.";
+/// The check ended well.
+pub const CHECK_DONE: &str = "Done looking for updates.";
+/// The check did not work. Placeholder: `{detail}`.
+pub const CHECK_FAILED: &str = "Looking for updates did not work: {detail}";
+/// Updates page: heading of the updates.
+pub const UPDATES_HEADING: &str = "Updates found";
+/// Updates page: no update known.
+pub const UPDATES_NONE: &str =
+    "No update is known. Press \"Look now\" on the Settings page to look.";
+/// Updates page: heading of the new programs.
+pub const NEW_HEADING: &str = "New programs";
+/// Updates page: line of an update. Placeholders: `{name}`, `{from}`, `{to}`.
+pub const UPDATE_LINE: &str = "{name}: {from} -> {to}";
+/// Updates page: line of a new program. Placeholders: `{name}`, `{version}`.
+pub const NEW_LINE: &str = "{name} {version}";
+/// Line above every page when updates are known. Placeholder: `{n}`.
+pub const UPDATES_BANNER: &str = "{n} update(s) found. See Updates.";
+/// Mark on a program that is new in the available list.
+pub const MARK_NEW: &str = "New";

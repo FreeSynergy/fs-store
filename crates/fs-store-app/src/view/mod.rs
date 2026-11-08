@@ -8,7 +8,10 @@ mod installed;
 mod job;
 mod menu;
 mod pages;
+mod settings;
 mod shell;
 mod sources;
+mod updates;
 
 pub use shell::{Shared, store_app};
+pub use updates::start_check;

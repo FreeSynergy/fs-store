@@ -6,7 +6,8 @@ use std::sync::{Arc, Mutex};
 use crate::engine::EngineBackend;
 use crate::launcher::{Launcher, ProcessLauncher};
 use crate::model::StoreModel;
-use crate::view::store_app;
+use crate::updates::FileUpdates;
+use crate::view::{start_check, store_app};
 use fs_components_app::{WindowOptions, launch, parse_size};
 
 /// Opens the window, or draws a picture with `--snapshot`.
@@ -24,15 +25,21 @@ pub fn run(argv: &[String]) -> Result<(), String> {
             other => return Err(format!("unknown argument {other}")),
         }
     }
-    let mut model = StoreModel::new(Arc::new(EngineBackend::from_environment()));
+    let mut model = StoreModel::new(Arc::new(EngineBackend::from_environment()))
+        .with_updates(Arc::new(FileUpdates::from_environment()));
     model.refresh();
     let launcher: Arc<dyn Launcher> =
         Arc::new(ProcessLauncher::new(fs_store_engine::default_bin_dir()));
-    let app = store_app(&Arc::new(Mutex::new(model)), &launcher).map_err(|e| e.to_string())?;
+    let wanted = model.check_wanted_at_start();
+    let shared = Arc::new(Mutex::new(model));
+    let app = store_app(&shared, &launcher).map_err(|e| e.to_string())?;
     if let Some(file) = snapshot {
         app.picture(size.0, size.1, std::path::Path::new(&file))
             .map_err(|e| e.to_string())?;
         return Ok(());
+    }
+    if wanted {
+        start_check(&shared);
     }
     let mut options = WindowOptions::default();
     options.width = size.0;

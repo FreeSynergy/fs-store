@@ -10,8 +10,12 @@ mod sources;
 mod store;
 mod text;
 mod types;
+mod update_text;
+mod updates;
 
 pub use jobs::{JobView, Ticket};
 pub use menu::{Command, Effect, is_quit_key};
 pub use store::StoreModel;
 pub use types::{Action, AvailableRow, Problem, View};
+pub use update_text::{check_label, format_time, install_label, update_line};
+pub use updates::{CheckState, check_due};
