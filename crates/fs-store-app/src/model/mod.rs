@@ -3,6 +3,7 @@
 //! Split by topic: `types` (plain data), `cards` and `cards_ui` (the one page of cards), `store` (the state and reading the backend), `sources` (commands on
 //! the source list), `jobs` (the job of one package), `text` (the sentences the window shows).
 
+mod admin;
 mod cards;
 mod cards_ui;
 mod jobs;

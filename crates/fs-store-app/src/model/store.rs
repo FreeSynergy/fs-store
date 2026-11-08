@@ -10,10 +10,12 @@ use crate::backend::{
 use crate::updates::{NoUpdates, UpdateService};
 use fs_store_sources::{Findings, Settings};
 
+use super::admin::AdminState;
 use super::cards_ui::CardsUi;
 use super::jobs::JobView;
 use super::types::{Action, AvailableRow, Problem, View};
 use super::updates::CheckState;
+use crate::backend::Phase;
 
 /// State of the window.
 pub struct StoreModel {
@@ -34,6 +36,7 @@ pub struct StoreModel {
     pub(super) shown: Option<View>,
     pub(super) fresh: Vec<String>,
     pub(super) ui: CardsUi,
+    pub(super) admin: AdminState,
 }
 
 impl StoreModel {
@@ -61,6 +64,7 @@ impl StoreModel {
             shown: None,
             fresh: Vec::new(),
             ui: CardsUi::default(),
+            admin: AdminState::default(),
         }
     }
 
@@ -78,12 +82,23 @@ impl StoreModel {
 
     /// Show a view. Entering the page of cards (not before) marks the new programs as seen; they stay
     /// marked on their cards until the page is left.
+    ///
+    /// A change of view also takes away what only told a success: the finished job that installed, and the
+    /// note of the timer. Errors stay until the next action.
     pub fn show(&mut self, view: View) {
         self.view = view;
         if self.shown == Some(view) {
             return;
         }
         self.shown = Some(view);
+        self.admin.note = None;
+        if self
+            .job
+            .as_ref()
+            .is_some_and(|j| j.phase == Phase::Installed)
+        {
+            self.job = None;
+        }
         if view == View::Cards {
             self.enter_available();
         } else {

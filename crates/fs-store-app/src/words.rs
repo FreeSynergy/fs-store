@@ -260,3 +260,26 @@ pub const DETAILS_HEADING: &str = "On this machine";
 pub const VERSION_LINE: &str = "Version {version}";
 /// The three dots one above the other (the "more" menu of a card).
 pub const MORE_DOTS: &str = "\u{22EE}";
+
+/// Admin page: heading of the daily timer.
+pub const TIMER_HEADING: &str = "Look for updates every day, even when the window is closed";
+/// The timer is on.
+pub const TIMER_IS_ON: &str = "The daily timer is on.";
+/// The timer is off.
+pub const TIMER_IS_OFF: &str = "The daily timer is off.";
+/// Button: switch the timer on.
+pub const BUTTON_TIMER_ON: &str = "Switch timer on";
+/// Button: switch the timer off.
+pub const BUTTON_TIMER_OFF: &str = "Switch timer off";
+/// Said when the timer command printed nothing and worked (on).
+pub const TIMER_DONE_ON: &str = "The daily timer is switched on.";
+/// Said when the timer command printed nothing and worked (off).
+pub const TIMER_DONE_OFF: &str = "The daily timer is switched off.";
+/// The timer could not be switched. Placeholder: `{detail}`.
+pub const TIMER_FAILED: &str = "The daily timer could not be switched: {detail}";
+/// Admin page: heading of the per-program switches.
+pub const PROGRAMS_HEADING: &str = "Update these programs by themselves";
+/// No program is installed yet.
+pub const PROGRAMS_NONE: &str = "No program is installed yet.";
+/// Admin page: heading of the source list.
+pub const SOURCES_HEADING: &str = "Sources";

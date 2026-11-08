@@ -5,7 +5,19 @@ use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use fs_store_sources::{Findings, Settings};
+use fs_store_sources::{Findings, Registry, Settings};
+
+/// A program of the register and its switch for automatic updates.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Program {
+    /// Name.
+    pub name: String,
+    /// Whether it is updated by itself when the install mode is "Automatically".
+    pub auto_update: bool,
+}
+
+/// The user timer that looks for updates by itself (systemd, `fs-store-update.timer`).
+const TIMER_UNIT: &str = "fs-store-update.timer";
 
 /// What the window needs for updates: the person's settings, what the last check found, and a way to check.
 pub trait UpdateService: Send + Sync {
@@ -36,6 +48,31 @@ pub trait UpdateService: Send + Sync {
     fn check(&self) -> Result<(), String>;
     /// Now, in Unix seconds.
     fn now(&self) -> u64;
+    /// True if the daily update timer is switched on. Default: no timer.
+    fn timer_enabled(&self) -> bool {
+        false
+    }
+    /// Switches the daily update timer on or off (as its own process); returns what it printed.
+    ///
+    /// # Errors
+    /// What the process said, or why it could not start.
+    fn timer_set(&self, _on: bool) -> Result<String, String> {
+        Err("no timer".to_owned())
+    }
+    /// The programs of the register, with their switch for automatic updates. Default: none.
+    ///
+    /// # Errors
+    /// A developer text when the register cannot be read.
+    fn programs(&self) -> Result<Vec<Program>, String> {
+        Ok(Vec::new())
+    }
+    /// Switches automatic updates of `name` on or off and saves the register.
+    ///
+    /// # Errors
+    /// A developer text when `name` is unknown or the register cannot be written.
+    fn set_auto_update(&self, _name: &str, _on: bool) -> Result<(), String> {
+        Err("no register".to_owned())
+    }
 }
 
 /// The real service: files below the root, and the check is `fs-store background` as a child process.
@@ -105,6 +142,58 @@ impl UpdateService for FileUpdates {
         SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map_or(0, |d| d.as_secs())
+    }
+
+    fn timer_enabled(&self) -> bool {
+        Command::new("systemctl")
+            .args(["--user", "is-enabled", TIMER_UNIT])
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .is_ok_and(|s| s.success())
+    }
+
+    fn timer_set(&self, on: bool) -> Result<String, String> {
+        let exe = fs_store_engine::own_exe().map_err(|e| e.to_string())?;
+        let out = Command::new(exe)
+            .args(["timer", if on { "enable" } else { "disable" }])
+            .stdin(Stdio::null())
+            .output()
+            .map_err(|e| e.to_string())?;
+        let said = |bytes: &[u8]| String::from_utf8_lossy(bytes).trim().to_owned();
+        if out.status.success() {
+            Ok(said(&out.stdout))
+        } else {
+            let err = said(&out.stderr);
+            Err(if err.is_empty() {
+                said(&out.stdout)
+            } else {
+                err
+            })
+        }
+    }
+
+    fn programs(&self) -> Result<Vec<Program>, String> {
+        let registry =
+            Registry::load(&self.root.join("installed.toml")).map_err(|e| format!("{e:?}"))?;
+        Ok(registry
+            .list()
+            .iter()
+            .map(|e| Program {
+                name: e.name.clone(),
+                auto_update: e.auto_update,
+            })
+            .collect())
+    }
+
+    fn set_auto_update(&self, name: &str, on: bool) -> Result<(), String> {
+        let path = self.root.join("installed.toml");
+        let mut registry = Registry::load(&path).map_err(|e| format!("{e:?}"))?;
+        if !registry.set_auto_update(name, on) {
+            return Err(format!("{name} is not in the register"));
+        }
+        registry.save().map_err(|e| format!("{e:?}"))
     }
 }
 

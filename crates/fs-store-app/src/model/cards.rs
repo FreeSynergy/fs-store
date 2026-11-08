@@ -56,8 +56,10 @@ pub enum Working {
 pub struct Placeholder {
     /// The first letter of the name, upper case; a leading `fs-` is skipped, for it is on every name.
     pub letter: char,
-    /// The colour, derived from the name only, so it is the same every time.
+    /// The colour at the top left, derived from the name only, so it is the same every time.
     pub rgb: (u8, u8, u8),
+    /// The colour at the bottom right: the same hue, a little darker, for a soft gradient.
+    pub rgb_end: (u8, u8, u8),
 }
 
 /// One program on the page.
@@ -89,6 +91,8 @@ pub struct Card {
     pub buttons: Buttons,
     /// Its stand-in logo.
     pub placeholder: Placeholder,
+    /// The stored icon (a PNG file), when the catalog entry has one and the engine kept it; it replaces the stand-in.
+    pub icon: Option<std::path::PathBuf>,
 }
 
 impl Card {
@@ -160,7 +164,8 @@ pub fn placeholder(name: &str) -> Placeholder {
     let hue = (hash % 360) as f32;
     Placeholder {
         letter,
-        rgb: hsl(hue, 0.45, 0.42),
+        rgb: hsl(hue, 0.52, 0.52),
+        rgb_end: hsl((hue + 16.0) % 360.0, 0.58, 0.36),
     }
 }
 
@@ -251,6 +256,7 @@ impl StoreModel {
             working,
             buttons: buttons_for(state),
             placeholder: placeholder(name),
+            icon: self.backend.icon_path(name),
         }
     }
 }

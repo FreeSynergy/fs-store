@@ -1,4 +1,4 @@
-//! Pattern: Adapter (the settings page: choices as rows of buttons, the chosen one stands out; each click
+//! Pattern: Adapter (the update choices of the admin page: choices as rows of buttons, the chosen one stands out; each click
 //! calls a model command that saves).
 
 use std::sync::Arc;
@@ -15,7 +15,12 @@ use super::check::start_check;
 use super::shell::{Shared, button, locked, rebuild};
 
 /// One choice: a button, highlighted when it is the chosen one.
-fn choice(key: &str, label: &str, chosen: bool, on: impl Fn() + Send + Sync + 'static) -> Div {
+pub(super) fn choice(
+    key: &str,
+    label: &str,
+    chosen: bool,
+    on: impl Fn() + Send + Sync + 'static,
+) -> Div {
     let variant = if chosen {
         ButtonVariant::Secondary
     } else {
@@ -27,15 +32,15 @@ fn choice(key: &str, label: &str, chosen: bool, on: impl Fn() + Send + Sync + 's
     }))
 }
 
-fn section(heading: &str, choices: Div) -> Div {
+pub(super) fn section(heading: &str, choices: Div) -> Div {
     div()
         .flex_col()
-        .class("fs-store-empty")
-        .child(text(heading))
+        .class("fs-store-section")
+        .child(text(heading).bold())
         .child(choices)
 }
 
-pub(super) fn settings(model: &StoreModel, shared: &Shared) -> Div {
+pub(super) fn updates_section(model: &StoreModel, shared: &Shared) -> Div {
     let now = model.settings();
     let mut every = div().class("fs-store-add");
     for value in [
@@ -98,5 +103,5 @@ pub(super) fn settings(model: &StoreModel, shared: &Shared) -> Div {
                 .child(text(words::INSTALL_AUTO_HINT).class("fs-store-sub")),
         )
         .child(section(words::SETTINGS_NOTIFY, notify))
-        .child(div().class("fs-store-empty").child(now_row))
+        .child(div().class("fs-store-section").child(now_row))
 }

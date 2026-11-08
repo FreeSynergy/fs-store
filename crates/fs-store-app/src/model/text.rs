@@ -92,6 +92,9 @@ impl StoreModel {
                     words::REPOSITORY_FAILED,
                     &[("url", url), ("detail", detail)],
                 ),
+                Problem::TimerFailed(detail) => {
+                    words::fill(words::TIMER_FAILED, &[("detail", detail)])
+                }
                 Problem::EmptyAddress => words::EMPTY_ADDRESS.to_owned(),
             })
             .collect()

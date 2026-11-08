@@ -4,8 +4,9 @@
 use std::sync::Arc;
 
 use blinc_cn::components::button::{ButtonBuilder, ButtonVariant};
-use blinc_core::Color;
+use blinc_core::{Brush, Color, Gradient, GradientSpace, GradientSpread, GradientStop, Point};
 use blinc_layout::div::{Div, div};
+use blinc_layout::image::img;
 use blinc_layout::prelude::text;
 
 use crate::launcher::Launcher;
@@ -34,14 +35,43 @@ fn colour(rgb: (u8, u8, u8)) -> Color {
     )
 }
 
-/// The logo until a real one exists: the first letter on a block, the colour from the name.
+/// Side of the logo square, in pixels.
+const LOGO: f32 = 56.0;
+/// Corner radius of the logo square.
+const LOGO_RADIUS: f32 = 14.0;
+
+/// The soft gradient of the stand-in, from the top left to the bottom right.
+fn gradient(card: &Card) -> Gradient {
+    Gradient::Linear {
+        start: Point::new(0.0, 0.0),
+        end: Point::new(1.0, 1.0),
+        stops: vec![
+            GradientStop::new(0.0, colour(card.placeholder.rgb)),
+            GradientStop::new(1.0, colour(card.placeholder.rgb_end)),
+        ],
+        space: GradientSpace::ObjectBoundingBox,
+        spread: GradientSpread::Pad,
+    }
+}
+
+/// The logo: the stored icon (a PNG) when there is one, else a rounded square with a gradient from the name's
+/// colour and the first letter in the middle. Both have the same size.
 fn logo(card: &Card) -> Div {
-    div()
-        .w(56.0)
-        .h(56.0)
+    let frame = div()
+        .w(LOGO)
+        .h(LOGO)
         .flex_shrink_0()
-        .rounded(12.0)
-        .bg(colour(card.placeholder.rgb))
+        .rounded(LOGO_RADIUS)
+        .overflow_clip();
+    if let Some(path) = &card.icon {
+        return frame.child(
+            img(path.to_string_lossy().into_owned())
+                .size(LOGO, LOGO)
+                .cover(),
+        );
+    }
+    frame
+        .background(Brush::Gradient(gradient(card)))
         .items_center()
         .justify_center()
         .child(

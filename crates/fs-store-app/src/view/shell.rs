@@ -15,12 +15,11 @@ use crate::launcher::Launcher;
 use crate::model::{StoreModel, View, is_quit_key};
 use crate::words;
 
+use super::admin::admin;
 use super::cards::cards;
 use super::job::job_bar;
 use super::menu::{install_menus, quit};
 use super::pages::about;
-use super::settings::settings;
-use super::sources::sources;
 
 /// The model, shared between the window and the worker of a job.
 pub type Shared = Arc<Mutex<StoreModel>>;
@@ -108,8 +107,7 @@ impl Surface for StoreSurface {
         }
         let body = match view {
             View::Cards => cards(&model, &self.model, &self.launcher, width),
-            View::Sources => sources(&model, &self.model),
-            View::Settings => settings(&model, &self.model),
+            View::Sources | View::Settings => admin(&model, &self.model, view == View::Sources),
             View::About => about(),
         };
         Box::new(page.child(body))
@@ -143,6 +141,7 @@ const STYLES: &str = r"
 .fs-more-open { background: var(--surface-hover); }
 .fs-panel { padding: 16px; border-width: 1px; border-color: var(--border); border-radius: 8px; background: var(--surface); }
 .fs-store-add { display: flex; flex-direction: row; align-items: center; gap: var(--space-2); }
+.fs-store-section { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-2) var(--space-4); color: var(--text-secondary); }
 ";
 
 pub(super) fn button(

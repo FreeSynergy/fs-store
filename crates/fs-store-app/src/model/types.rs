@@ -94,6 +94,8 @@ pub enum Problem {
         /// The reason, as a developer text.
         detail: String,
     },
+    /// The daily timer could not be switched; what the process said.
+    TimerFailed(String),
     /// "Add" was pressed with an empty field.
     EmptyAddress,
 }

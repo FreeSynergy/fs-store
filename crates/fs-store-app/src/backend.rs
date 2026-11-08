@@ -158,6 +158,10 @@ pub trait StoreBackend: Send + Sync {
     fn details(&self, _name: &str) -> InstalledDetails {
         InstalledDetails::default()
     }
+    /// The stored icon file of `name` (a PNG the engine kept at install), if there is one. Default: none.
+    fn icon_path(&self, _name: &str) -> Option<std::path::PathBuf> {
+        None
+    }
     /// Takes the program `name` away (rpm: `pkexec dnf remove`; unpacked: deleted) and forgets it in the
     /// register. The data of the person stays.
     ///
