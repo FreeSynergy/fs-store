@@ -192,3 +192,42 @@ fn proc_check_sees_a_running_program_and_ignores_the_caller() {
     child.kill().unwrap();
     child.wait().unwrap();
 }
+
+#[test]
+fn a_wrapper_directory_named_after_the_package_is_stripped() {
+    let tmp = tempfile::tempdir().unwrap();
+    let root = tmp.path().join("root");
+    let path = tmp.path().join("w.tar.gz");
+    let enc = flate2::write::GzEncoder::new(
+        fs::File::create(&path).unwrap(),
+        flate2::Compression::fast(),
+    );
+    let mut b = tar::Builder::new(enc);
+    for name in ["tasks-1.0.0-linux/", "tasks-1.0.0-linux/tasks"] {
+        let mut h = tar::Header::new_gnu();
+        if name.ends_with('/') {
+            h.set_entry_type(tar::EntryType::Directory);
+            h.set_size(0);
+            h.set_mode(0o755);
+            h.set_cksum();
+            b.append_data(&mut h, name, std::io::empty()).unwrap();
+        } else {
+            h.set_size(1);
+            h.set_mode(0o755);
+            h.set_cksum();
+            b.append_data(&mut h, name, &b"x"[..]).unwrap();
+        }
+    }
+    b.into_inner().unwrap().finish().unwrap();
+    let mut s = TarGz::new(&root, &path);
+    run_update(
+        &Update {
+            package: &verified("tasks", Version::new(1, 0, 0)),
+            previous: None,
+        },
+        &mut s,
+        &Idle,
+    )
+    .unwrap();
+    assert!(root.join("current/tasks/tasks").exists());
+}

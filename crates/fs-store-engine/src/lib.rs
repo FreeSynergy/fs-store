@@ -7,7 +7,7 @@ pub mod service;
 
 use std::fs;
 use std::io;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
 use flate2::read::GzDecoder;
 use fs_store_core::{
@@ -47,17 +47,56 @@ impl TarGz {
         fs::rename(&tmp, cur.join(name))
     }
 
-    fn unpack(&self, dest: &Path) -> io::Result<()> {
+    fn open(&self) -> io::Result<tar::Archive<GzDecoder<fs::File>>> {
+        Ok(tar::Archive::new(GzDecoder::new(fs::File::open(
+            &self.archive,
+        )?)))
+    }
+
+    /// The one directory every entry sits in, when there is exactly one and it is named after the package.
+    fn common_top(&self, name: &str) -> io::Result<Option<std::ffi::OsString>> {
+        let mut top: Option<std::ffi::OsString> = None;
+        for entry in self.open()?.entries()? {
+            let entry = entry?;
+            let path = entry.path()?;
+            let mut comps = path.components();
+            let Some(Component::Normal(first)) = comps.next() else {
+                return Ok(None);
+            };
+            let nested = comps.next().is_some() || entry.header().entry_type().is_dir();
+            if !nested || top.as_ref().is_some_and(|t| t != first) {
+                return Ok(None);
+            }
+            top = Some(first.to_owned());
+        }
+        // Only a directory named after the package is a wrapper; `bin/` or `share/` alone are content.
+        Ok(top.filter(|t| t.to_str().is_some_and(|t| t.starts_with(name))))
+    }
+
+    fn unpack(&self, name: &str, dest: &Path) -> io::Result<()> {
         fs::create_dir_all(dest)?;
-        let mut ar = tar::Archive::new(GzDecoder::new(fs::File::open(&self.archive)?));
-        for entry in ar.entries()? {
-            // `unpack_in` skips entries that leave `dest` (`..`, absolute paths); that is an error for us.
-            if !entry?.unpack_in(dest)? {
+        let top = self.common_top(name)?;
+        for entry in self.open()?.entries()? {
+            let mut entry = entry?;
+            let path = entry.path()?.into_owned();
+            let rel: PathBuf = match &top {
+                Some(t) => path.strip_prefix(t).map_err(io::Error::other)?.to_owned(),
+                None => path,
+            };
+            if rel.as_os_str().is_empty() {
+                continue;
+            }
+            // Only plain names: no `..`, no absolute paths. That is an error for us, not a silent skip.
+            if !rel.components().all(|c| matches!(c, Component::Normal(_))) {
                 return Err(io::Error::new(
                     io::ErrorKind::InvalidData,
                     "archive entry leaves its directory",
                 ));
             }
+            if let Some(parent) = dest.join(&rel).parent() {
+                fs::create_dir_all(parent)?;
+            }
+            entry.unpack(dest.join(&rel))?;
         }
         Ok(())
     }
@@ -84,7 +123,7 @@ impl InstallStrategy for TarGz {
         safe_name(p.name.as_str())?;
         let dest = self.dir(p.name.as_str(), p.version);
         let _ = fs::remove_dir_all(&dest);
-        if let Err(e) = self.unpack(&dest) {
+        if let Err(e) = self.unpack(p.name.as_str(), &dest) {
             let _ = fs::remove_dir_all(&dest);
             return Err(err(&e));
         }

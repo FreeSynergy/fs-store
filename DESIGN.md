@@ -78,8 +78,7 @@ Old note: installing it through a catalog. Blockers: (1) fixed 2026-11-08: `Vers
 catalog needs a signature by the release key, which only the user holds. Options for (2): the user signs a test catalog,
 or a test-only trusted key for local sources.
 
-Known gap: the release archive has one top directory (`fs-tasks-server-0.6.1-rc.2-linux-x86_64/`); `TarGz` keeps it, so
-the program sits one level down in `current/<name>/`. Stripping a single common top directory is the next change.
+A single top directory named after the package (`fs-tasks-server-0.6.1-rc.2-linux-x86_64/`) is stripped on install, so the program sits directly in `current/<name>/`; other single directories such as `bin/` are content and stay.
 
 ## Provisional decisions
 - Versions are `major.minor.patch` with an optional pre-release `-alpha|beta|rc[.N]` (`~` accepted as in `AppStream`/rpm); a pre-release is older than its release. Anything else is skipped with a reason.
