@@ -1,4 +1,4 @@
-//! Key generation: the root keys (for the person, to be kept offline) and the three role keys, plus a signed first `root.json`.
+//! Pattern: Factory (builds the keys and the first signed `root.json`). Key generation: the root keys (for the person, to be kept offline) and the three role keys, plus a signed first `root.json`.
 
 use std::collections::HashMap;
 use std::num::NonZeroU64;

@@ -1,4 +1,4 @@
-//! TUF check of a fetched source (ADR 0062).
+//! Pattern: Adapter (`fs-store-tuf` behind one check). TUF check of a fetched source (ADR 0062).
 
 use std::fs;
 use std::path::Path;
