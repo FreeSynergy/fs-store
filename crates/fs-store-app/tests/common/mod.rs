@@ -24,6 +24,7 @@ pub struct State {
     pub uninstall_fails: Option<String>,
     pub runs: Vec<(JobKind, String)>,
     pub details: Vec<(String, InstalledDetails)>,
+    pub icons: Vec<(String, std::path::PathBuf)>,
 }
 
 pub fn v(a: u64, b: u64, c: u64) -> Version {
@@ -62,6 +63,7 @@ pub fn fake(installed: Vec<InstalledRow>, fail: Option<JobError>) -> Arc<Fake> {
             uninstall_fails: None,
             runs: Vec::new(),
             details: Vec::new(),
+            icons: Vec::new(),
         }),
     })
 }
@@ -118,6 +120,13 @@ impl StoreBackend for Fake {
             .find(|(n, _)| n == name)
             .map(|(_, d)| d.clone())
             .unwrap_or_default()
+    }
+    fn icon_path(&self, name: &str) -> Option<std::path::PathBuf> {
+        let s = self.state.lock().unwrap();
+        s.icons
+            .iter()
+            .find(|(n, _)| n == name)
+            .map(|(_, p)| p.clone())
     }
     fn uninstall(&self, name: &str) -> Result<(), String> {
         let mut s = self.state.lock().unwrap();

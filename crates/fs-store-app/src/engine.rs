@@ -214,6 +214,14 @@ impl StoreBackend for EngineBackend {
         ))
     }
 
+    fn icon_path(&self, name: &str) -> Option<PathBuf> {
+        if name.is_empty() || name.contains(['/', '\\']) || name.starts_with('.') {
+            return None;
+        }
+        let path = self.root.join("icons").join(format!("{name}.png"));
+        path.is_file().then_some(path)
+    }
+
     fn details(&self, name: &str) -> InstalledDetails {
         crate::installed::details(
             &self.root,

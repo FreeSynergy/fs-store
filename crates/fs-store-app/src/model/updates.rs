@@ -60,6 +60,7 @@ impl StoreModel {
             Ok(findings) => self.findings = findings,
             Err(detail) => self.problems.push(Problem::Backend(detail)),
         }
+        self.load_admin();
     }
 
     /// The settings.

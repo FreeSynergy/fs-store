@@ -7,6 +7,7 @@ use std::sync::{Arc, Mutex};
 
 use fs_store_app::backend::InstalledRow;
 use fs_store_app::launcher::Launcher;
+use fs_store_app::model::View;
 use fs_store_app::view::store_app;
 
 use common::{fake, model, package, v};
@@ -62,7 +63,17 @@ fn picture_of_the_cards() {
             s.offered.push(p);
         }
     }
+    if let Some(icon) = std::env::var_os("FS_STORE_ICON") {
+        f.state
+            .lock()
+            .unwrap()
+            .icons
+            .push(("fs-wiki".into(), icon.into()));
+    }
     let mut m = model(&f);
+    if std::env::var_os("FS_STORE_VIEW").is_some_and(|v| v == "settings") {
+        m.show(View::Settings);
+    }
     if let Some(name) = std::env::var_os("FS_STORE_SELECT") {
         m.select(&name.to_string_lossy());
     }

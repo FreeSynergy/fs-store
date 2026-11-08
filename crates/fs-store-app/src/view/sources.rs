@@ -1,4 +1,4 @@
-//! Pattern: Adapter (the sources screen: a field and buttons that call the model's commands).
+//! Pattern: Adapter (the sources section of the admin page: a field and buttons that call the model's commands).
 
 use std::sync::Arc;
 
@@ -12,7 +12,7 @@ use crate::words;
 
 use super::shell::{Shared, button, locked, rebuild};
 
-pub(super) fn sources(model: &StoreModel, shared: &Shared) -> Div {
+pub(super) fn sources_section(model: &StoreModel, shared: &Shared) -> Div {
     let typed = Arc::clone(shared);
     let field = SearchField::new(words::ADD_PLACEHOLDER).on_change(Arc::new(move |t: &str| {
         locked(&typed).set_new_source(t);
