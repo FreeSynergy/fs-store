@@ -95,6 +95,6 @@ fn several_rpms_go_to_one_dnf_call() {
     assert_eq!(fake.calls.len(), 1);
     let args = &fake.calls[0].1;
     assert_eq!(&args[..3], ["dnf", "install", "-y"]);
-    assert_eq!(args.len(), 5); // two files
+    assert_eq!(args.len(), 6); // dnf install -y <option> and two files
     assert_eq!(fs::read_dir(tmp.path().join("rpm")).unwrap().count(), 0);
 }

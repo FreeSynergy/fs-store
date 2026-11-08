@@ -145,15 +145,21 @@ impl Installer<'_> {
         let mut files = Vec::new();
         let mut outcome = SignatureOutcome::Missing;
         for (location, signature_url, sha256) in wanted {
+            let t = std::time::Instant::now();
             let file = self.fetch.get(location).map_err(InstallFailure::Fetch)?;
             let sig = self
                 .fetch
                 .get(signature_url)
                 .map_err(InstallFailure::Fetch)?;
+            timing("download", location, t);
+            let t = std::time::Instant::now();
             if hex(&Sha256::digest(&file)) != sha256.to_ascii_lowercase() {
                 return Err(InstallFailure::Checksum);
             }
+            timing("sha256", location, t);
+            let t = std::time::Instant::now();
             outcome = self.verifier.verify(&file, Some(&sig));
+            timing("signature", location, t);
             if !policy.is_satisfied_by(&outcome) {
                 return Err(InstallFailure::ReleaseSignature);
             }
@@ -177,6 +183,7 @@ impl Installer<'_> {
             Box::new(TarGz::from_bytes(&self.root, files.remove(0)))
         };
         observe(InstallState::Installing);
+        let t = std::time::Instant::now();
         let result = run_update(
             &Update {
                 package: &verified,
@@ -185,9 +192,20 @@ impl Installer<'_> {
             strategy.as_mut(),
             self.running,
         );
+        timing("install", name, t);
         result
             .map(|_| entry.version)
             .map_err(InstallFailure::Update)
+    }
+}
+
+/// With `FS_STORE_TIMING=1` the time of each step goes to stderr, to find out where a slow install spends it.
+fn timing(step: &str, what: &str, since: std::time::Instant) {
+    if std::env::var_os("FS_STORE_TIMING").is_some() {
+        eprintln!(
+            "timing {step:<9} {:>7.2}s  {what}",
+            since.elapsed().as_secs_f64()
+        );
     }
 }
 

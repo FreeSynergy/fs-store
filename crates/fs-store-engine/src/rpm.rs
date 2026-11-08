@@ -103,7 +103,9 @@ impl<C: Commander> InstallStrategy for Rpm<C> {
                 .iter()
                 .map(|f| f.to_string_lossy().into_owned())
                 .collect();
-            let mut args = vec!["dnf", "install", "-y"];
+            // A local rpm needs no fresh repository metadata (measured 2026-11-08: a refresh of all repositories is what
+            // makes `dnf install` slow); dnf still downloads metadata when there is none.
+            let mut args = vec!["dnf", "install", "-y", "--setopt=metadata_expire=never"];
             args.extend(names.iter().map(String::as_str));
             self.commander.run("pkexec", &args)
         });
