@@ -8,6 +8,10 @@ authors.workspace = true
 repository.workspace = true
 rust-version = "1.89"
 
+[[bin]]
+name = "fs-store"
+path = "src/main.rs"
+
 [dependencies]
 fs-store-core = { path = "../fs-store-core" }
 fs-store-catalog = { path = "../fs-store-catalog" }

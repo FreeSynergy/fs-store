@@ -10,7 +10,7 @@ jobs:
   release:
     uses: FreeSynergy/fs-release/.github/workflows/release.yml@main
     with:
-      binaries: fs-store,fs-store-app
+      binaries: fs-store,fs-store-cli
       name: fs-store
       kind: app
       app-id: net.freesynergy.Store

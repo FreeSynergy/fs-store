@@ -111,6 +111,20 @@ real-file probe (`FS_PROBE_FILE`), not by the generated-key tests. Fixed in `0.1
 When `fs-release` rotates the key or subkey, the file in `crates/fs-store-pgp/keys/` must follow (a test against a
 real signed release belongs in the release checklist).
 
+## Names of what people start (Strategie, provisional, 2026-11-08)
+What a person starts is named like the program: the GUI binary is `fs-store` (crate `fs-store-app`), the CLI is `fs-store-cli`,
+the menu entry is "FreeSynergy.Store" (`packaging/net.freesynergy.Store.desktop`). Crate names stay.
+
+## Window resize crash (found by the user, 2026-11-08)
+Enlarging the window aborted with wgpu `Copy of X 0..1278 would end up overrunning the bounds of the Destination texture of
+X size 1276`. Cause (Blinc 0.6.0, `blinc_app` `try_render_with_compositor`): the compositor sizes its static-layer cache from
+the window's current size, but the swapchain texture it copies into is still the size of the last `Resized` event, one frame
+behind; the copy from the larger layer into the smaller surface is a validation error and wgpu aborts. The second message
+(`SurfaceAcquireSemaphores still in use`) is only the abort. Reproduced without a window with a surface texture 2 px narrower
+(`fs-components` `crates/fs-components-widgets/tests/resize_surface.rs`). Workaround: `[patch.crates-io] blinc_app` points to
+`FreeSynergy/blinc-app-fix` (blinc_app 0.6.0 plus one line: take width and height from the target texture). Every app
+workspace needs this patch until Blinc has the fix; a patch in a library is ignored by the apps that use it.
+
 ## Provisional decisions
 - Versions are `major.minor.patch` with an optional pre-release `-alpha|beta|rc[.N]` (`~` accepted as in `AppStream`/rpm); a pre-release is older than its release. Anything else is skipped with a reason.
 - Only one trusted fingerprint for now; sources may later bring their own keys, never replacing the built-in one.

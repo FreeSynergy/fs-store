@@ -1,11 +1,11 @@
-//! `fs-store`: a thin test front end for the engine. The GUI is the goal (sprint, step 6).
+//! `fs-store-cli`: a thin test front end for the engine. The GUI is the goal (sprint, step 6).
 //!
 //! ```text
-//! fs-store sources [add <url> | enable <id> | disable <id> | remove <id>]
-//! fs-store available [<source>]          # source: an id from the list, or a Git address; default: all enabled
-//! fs-store install <name> [<source>]
-//! fs-store update  <name> [<source>]     # only if the catalog offers a newer version
-//! fs-store installed
+//! fs-store-cli sources [add <url> | enable <id> | disable <id> | remove <id>]
+//! fs-store-cli available [<source>]          # source: an id from the list, or a Git address; default: all enabled
+//! fs-store-cli install <name> [<source>]
+//! fs-store-cli update  <name> [<source>]     # only if the catalog offers a newer version
+//! fs-store-cli installed
 //! Option: --trust-key <file>             # also trust this public key for this run (test key of a local source)
 //! ```
 //! A source is a Git address (https or file://) holding `catalog.xml` and `catalog.xml.asc`.
@@ -111,7 +111,7 @@ fn trust(extra: Option<&String>) -> Result<(PgpVerifier, SignaturePolicy), Strin
             let armored = fs::read_to_string(file).map_err(|e| format!("{file}: {e}"))?;
             let v = PgpVerifier::builtin_and(&armored).map_err(|e| format!("{file}: {e:?}"))?;
             let fp = v.fingerprints().pop().ok_or("no key")?;
-            eprintln!("fs-store: also trusting test key {fp} for this run");
+            eprintln!("fs-store-cli: also trusting test key {fp} for this run");
             Ok((v, SignaturePolicy::default().also_trusting(&fp)))
         }
     }
@@ -142,7 +142,7 @@ fn cmd_sources(root: &Path, rest: &[String]) -> Result<(), String> {
         [c, id] if c == "remove" => list.remove(&SourceId(id.clone())).map_err(err)?,
         _ => {
             return Err(
-                "usage: fs-store sources [add <url> | enable <id> | disable <id> | remove <id>]"
+                "usage: fs-store-cli sources [add <url> | enable <id> | disable <id> | remove <id>]"
                     .into(),
             );
         }
@@ -274,7 +274,7 @@ fn run(all: &[String]) -> Result<(), String> {
         [c, n, s] if c == "install" => cmd_install(&root, n, Some(s), extra, false),
         [c, n] if c == "update" => cmd_install(&root, n, None, extra, true),
         [c, n, s] if c == "update" => cmd_install(&root, n, Some(s), extra, true),
-        _ => Err("usage: fs-store sources | available [source] | install <name> [source] | update <name> [source] | installed".into()),
+        _ => Err("usage: fs-store-cli sources | available [source] | install <name> [source] | update <name> [source] | installed".into()),
     }
 }
 
@@ -283,7 +283,7 @@ fn main() -> ExitCode {
     match run(&args) {
         Ok(()) => ExitCode::SUCCESS,
         Err(e) => {
-            eprintln!("fs-store: {e}");
+            eprintln!("fs-store-cli: {e}");
             ExitCode::FAILURE
         }
     }

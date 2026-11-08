@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=FreeSynergy.Store
+GenericName=Software store
+Comment=Install, update and extend FreeSynergy programs
+Exec=fs-store
+Icon=net.freesynergy.Store
+Terminal=false
+Categories=System;PackageManager;
