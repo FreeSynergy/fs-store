@@ -155,3 +155,13 @@ fn a_remote_icon_needs_a_hash_to_be_used() {
     let without = with.replace(r#" fs-sha256="ab""#, "");
     assert!(parse_catalog(&without).unwrap().entries[0].icon.is_none());
 }
+
+#[test]
+fn description_and_homepage_are_read() {
+    let xml = r#"<components version="1.0"><component><id>a</id><url type="homepage"> https://github.com/FreeSynergy/fs-a </url>
+<description><p>Tasks   and
+ more.</p><p>Second.</p></description><releases><release version="1.0.0"><artifacts><artifact type="binary"><location>l</location><checksum type="sha256">1</checksum></artifact></artifacts></release></releases><custom><value key="fs:signature">s</value></custom></component></components>"#;
+    let e = &parse_catalog(xml).unwrap().entries[0];
+    assert_eq!(e.description, "Tasks and more. Second.");
+    assert_eq!(e.homepage, "https://github.com/FreeSynergy/fs-a");
+}

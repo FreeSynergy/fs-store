@@ -25,6 +25,10 @@ pub struct CatalogEntry {
     pub rpms: Vec<RpmFile>,
     /// The icon, when the component has a remote icon with a hash (an icon without a hash is not used).
     pub icon: Option<Icon>,
+    /// A longer description (`<description>` text, tags dropped), empty when there is none.
+    pub description: String,
+    /// The project page (`<url type="homepage">`), e.g. the Git repository; empty when there is none.
+    pub homepage: String,
     /// Facets the program offers (ADR 0061), `fs:facets`, comma separated.
     pub facets: Vec<String>,
 }
@@ -203,6 +207,8 @@ fn entry(c: roxmltree::Node) -> Result<CatalogEntry, (String, String)> {
         signature_url,
         rpms,
         icon: icon(c),
+        description: description(c),
+        homepage: homepage(c),
         facets,
     })
 }
@@ -241,4 +247,27 @@ fn icon(c: roxmltree::Node) -> Option<Icon> {
         url: n.text()?.trim().to_owned(),
         sha256: n.attribute("fs-sha256")?.to_owned(),
     })
+}
+
+/// All text below `<description>`, tags dropped, white space squeezed.
+fn description(c: roxmltree::Node) -> String {
+    c.children()
+        .find(|n| n.has_tag_name("description"))
+        .map(|d| {
+            d.descendants()
+                .filter(roxmltree::Node::is_text)
+                .filter_map(|n| n.text())
+                .collect::<Vec<_>>()
+                .join(" ")
+        })
+        .map(|t| t.split_whitespace().collect::<Vec<_>>().join(" "))
+        .unwrap_or_default()
+}
+
+fn homepage(c: roxmltree::Node) -> String {
+    c.children()
+        .find(|n| n.has_tag_name("url") && n.attribute("type") == Some("homepage"))
+        .and_then(|n| n.text())
+        .map(|t| t.trim().to_owned())
+        .unwrap_or_default()
 }
