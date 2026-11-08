@@ -176,3 +176,19 @@ fn proc_check_sees_no_program_that_is_not_there() {
     let tmp = tempfile::tempdir().unwrap();
     assert!(!ProcRunningCheck::new(tmp.path()).is_running("tasks"));
 }
+
+#[test]
+fn proc_check_sees_a_running_program_and_ignores_the_caller() {
+    use std::process::Command;
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = tmp.path().join("packages/tasks/1.0.0");
+    fs::create_dir_all(&dir).unwrap();
+    let prog = dir.join("sleeper");
+    fs::copy("/usr/bin/sleep", &prog).unwrap();
+    let mut child = Command::new(&prog).arg("30").spawn().unwrap();
+    assert!(ProcRunningCheck::new(tmp.path()).is_running("tasks"));
+    assert!(!ProcRunningCheck::ignoring(tmp.path(), child.id()).is_running("tasks"));
+    assert!(!ProcRunningCheck::new(tmp.path()).is_running("other"));
+    child.kill().unwrap();
+    child.wait().unwrap();
+}
