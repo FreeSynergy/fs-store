@@ -86,6 +86,27 @@ impl EngineBackend {
         Ok((parsed, catalog, sig))
     }
 
+    /// After a good install: note it in the register and put the commands on the PATH, as the commands do.
+    /// Neither may fail the install that already happened.
+    fn remember(&self, name: &str, version: Version, source: &str, facets: &[String]) {
+        let path = self.root.join("installed.toml");
+        if let Ok(mut registry) = fs_store_sources::Registry::load(&path) {
+            registry.record(name, &version.to_string(), source);
+            let made = fs_store_engine::link_facets(
+                &self.root,
+                name,
+                facets,
+                &fs_store_engine::default_bin_dir(),
+                &fs_store_engine::default_apps_dir(),
+            )
+            .unwrap_or_default();
+            registry.set_facets(name, made);
+            let _ = registry.save();
+        }
+        let _ =
+            fs_store_engine::link_programs(&self.root, name, &fs_store_engine::default_bin_dir());
+    }
+
     fn installed_version(&self, name: &str) -> Option<Version> {
         let target = fs::read_link(self.root.join("current").join(name)).ok()?;
         Version::parse(target.file_name()?.to_str()?)
@@ -237,9 +258,16 @@ impl StoreBackend for EngineBackend {
             if offered.is_none() {
                 continue;
             }
-            return installer
+            let version = installer
                 .install_observed(&bytes, &sig, name, current, observe)
-                .map_err(job_error);
+                .map_err(job_error)?;
+            self.remember(
+                name,
+                version,
+                &source.url,
+                &offered.map(|o| o.facets.clone()).unwrap_or_default(),
+            );
+            return Ok(version);
         }
         Err(last)
     }

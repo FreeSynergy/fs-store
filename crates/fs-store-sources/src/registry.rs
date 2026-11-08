@@ -19,6 +19,9 @@ pub struct Installed {
     /// Whether the store may update it by itself (default: yes).
     #[serde(default = "yes")]
     pub auto_update: bool,
+    /// Facet commands made for it (ADR 0063), so they can be taken away again.
+    #[serde(default)]
+    pub facets: Vec<String>,
 }
 
 fn yes() -> bool {
@@ -79,7 +82,15 @@ impl Registry {
                 version: version.to_owned(),
                 source: source.to_owned(),
                 auto_update: true,
+                facets: Vec::new(),
             }),
+        }
+    }
+
+    /// Notes the facet commands made for a package.
+    pub fn set_facets(&mut self, name: &str, facets: Vec<String>) {
+        if let Some(e) = self.entries.iter_mut().find(|e| e.name == name) {
+            e.facets = facets;
         }
     }
 

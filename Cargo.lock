@@ -1719,7 +1719,7 @@ dependencies = [
 
 [[package]]
 name = "fs-store"
-version = "0.1.0-rc.6"
+version = "0.1.0-rc.7"
 dependencies = [
  "fs-store-app",
  "fs-store-cli",
@@ -1727,7 +1727,7 @@ dependencies = [
 
 [[package]]
 name = "fs-store-app"
-version = "0.1.0-rc.6"
+version = "0.1.0-rc.7"
 dependencies = [
  "blinc_cn",
  "blinc_core",
@@ -1743,7 +1743,7 @@ dependencies = [
 
 [[package]]
 name = "fs-store-catalog"
-version = "0.1.0-rc.6"
+version = "0.1.0-rc.7"
 dependencies = [
  "fs-store-core",
  "roxmltree",
@@ -1751,7 +1751,7 @@ dependencies = [
 
 [[package]]
 name = "fs-store-cli"
-version = "0.1.0-rc.6"
+version = "0.1.0-rc.7"
 dependencies = [
  "fs-store-catalog",
  "fs-store-core",
@@ -1762,11 +1762,11 @@ dependencies = [
 
 [[package]]
 name = "fs-store-core"
-version = "0.1.0-rc.6"
+version = "0.1.0-rc.7"
 
 [[package]]
 name = "fs-store-engine"
-version = "0.1.0-rc.6"
+version = "0.1.0-rc.7"
 dependencies = [
  "flate2",
  "fs-store-catalog",
@@ -1783,7 +1783,7 @@ dependencies = [
 
 [[package]]
 name = "fs-store-pgp"
-version = "0.1.0-rc.6"
+version = "0.1.0-rc.7"
 dependencies = [
  "fs-store-core",
  "pgp",
@@ -1792,7 +1792,7 @@ dependencies = [
 
 [[package]]
 name = "fs-store-sources"
-version = "0.1.0-rc.6"
+version = "0.1.0-rc.7"
 dependencies = [
  "fs-store-core",
  "serde",

@@ -129,14 +129,14 @@ behind; the copy from the larger layer into the smaller surface is a validation 
 `FreeSynergy/blinc-app-fix` (blinc_app 0.6.0 plus one line: take width and height from the target texture). Every app
 workspace needs this patch until Blinc has the fix; a patch in a library is ignored by the apps that use it.
 
-## Facets as commands (ADR 0063 addendum, 2026-11-08; format provisional, not built yet)
+## Facets as commands (ADR 0063 addendum, 2026-11-08; format provisional, built 2026-11-08 for the links and menu entries)
 A facet gets its own command as a symbolic link to the program (`fs-contacts` -> `fs-people`); the program reads `argv[0]`
 (like busybox) and opens that facet, `fs-contacts admin` is the facet's admin. For the store this means, on installing a
 program: for every facet in its catalog entry, create the link in `~/.local/bin` and a menu entry (`.desktop`) with the facet's
 icon ("FreeSynergy.People", "FreeSynergy.Contacts"); on removing: take both away again, and only links that point into the
 package. Catalog format: the program's `fs:facets` (comma separated command names) names the links; a facet's display name
 and icon come from its own component (`<name>`, `<icon type="remote">`), whose `fs:facet-of` names the program. Facet names are
-reserved project-wide: the store refuses a link whose name already exists and is not its own. Built after the installable store.
+reserved project-wide: the store refuses a link whose name already exists and is not its own. Built: `fs-store-engine::link_facets/unlink_facets`; links point to the program (`<package>` or `<package>-app`), menu entries `net.freesynergy.<command>.desktop` (marked `X-FreeSynergy-Managed=true`; only such files and links into the package are ever replaced or removed), the facets made are kept in `installed.toml` so `remove` can take them away; GUI installs do the same as the commands. No icons yet; a facet's own name and icon from its catalog component are not read yet (the name is derived from the command).
 
 ## TUF (ADR 0062) – roles and keys, proposal for the user to confirm (2026-11-08)
 Library: `tough` 0.24 (MIT OR Apache-2.0, builds here); client = `RepositoryLoader`, publishing = its editor. TUF keys are

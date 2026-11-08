@@ -43,21 +43,25 @@ pub(crate) fn remove(root: &Path, name: &str) -> Result<(), String> {
     fs_store_engine::remove(root, name, &running).map_err(|e| format!("{name}: {e:?}"))?;
     let _ = fs_store_engine::unlink_programs(root, name, &bin_dir());
     let mut registry = registry(root)?;
+    let facets = registry
+        .get(name)
+        .map(|e| e.facets.clone())
+        .unwrap_or_default();
+    let _ = fs_store_engine::unlink_facets(
+        root,
+        name,
+        &facets,
+        &bin_dir(),
+        &fs_store_engine::default_apps_dir(),
+    );
     registry.forget(name);
     registry.save().map_err(|e| format!("{e:?}"))?;
     println!("removed {name}");
     Ok(())
 }
 
-/// Where the commands of installed programs are linked: `FS_STORE_BIN`, else `~/.local/bin`.
 fn bin_dir() -> std::path::PathBuf {
-    std::env::var_os("FS_STORE_BIN").map_or_else(
-        || {
-            std::path::PathBuf::from(std::env::var_os("HOME").unwrap_or_default())
-                .join(".local/bin")
-        },
-        std::path::PathBuf::from,
-    )
+    fs_store_engine::default_bin_dir()
 }
 
 /// Puts the programs of `name` on the PATH; says what it did, never fails the install.
@@ -100,6 +104,28 @@ pub(crate) fn check(root: &Path, extra: Option<&String>) -> Result<(), String> {
         println!("everything is up to date");
     }
     Ok(())
+}
+
+/// Makes the facet commands and menu entries of a program; returns the names made (for the register).
+pub(crate) fn link_facets(root: &Path, name: &str, facets: &[String]) -> Vec<String> {
+    match fs_store_engine::link_facets(
+        root,
+        name,
+        facets,
+        &bin_dir(),
+        &fs_store_engine::default_apps_dir(),
+    ) {
+        Ok(made) => {
+            if !made.is_empty() {
+                println!("facet commands: {}", made.join(", "));
+            }
+            made
+        }
+        Err(e) => {
+            eprintln!("{name}: facet commands not made: {e}");
+            Vec::new()
+        }
+    }
 }
 
 /// `fs-store auto <name> on|off`.

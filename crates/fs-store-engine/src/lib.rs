@@ -2,6 +2,7 @@
 //! (`TarGz` for `InstallStrategy`, `ProcRunningCheck` for `RunningCheck`). No root needed.
 #![deny(missing_docs)]
 
+mod facets;
 mod links;
 pub mod net;
 mod proc;
@@ -10,7 +11,8 @@ mod rpm;
 pub mod service;
 mod targz;
 
-pub use links::{link_programs, unlink_programs};
+pub use facets::{default_apps_dir, link_facets, unlink_facets};
+pub use links::{default_bin_dir, link_programs, unlink_programs};
 pub use proc::ProcRunningCheck;
 pub use remove::{RemoveError, remove};
 pub use rpm::{Commander, Rpm, SystemCommander};

@@ -6,6 +6,18 @@ use std::io;
 use std::os::unix::fs::{PermissionsExt, symlink};
 use std::path::Path;
 
+/// Where the commands of installed programs are linked: `FS_STORE_BIN`, else `~/.local/bin`.
+#[must_use]
+pub fn default_bin_dir() -> std::path::PathBuf {
+    std::env::var_os("FS_STORE_BIN").map_or_else(
+        || {
+            std::path::PathBuf::from(std::env::var_os("HOME").unwrap_or_default())
+                .join(".local/bin")
+        },
+        std::path::PathBuf::from,
+    )
+}
+
 /// Links every executable file at the top of `current/<name>/` into `bin_dir`. Returns the names linked.
 /// A name that exists and is not one of our links is left alone and reported in `skipped`.
 ///

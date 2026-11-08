@@ -241,6 +241,10 @@ pub(crate) fn cmd_install(
         let mut registry = fs_store_sources::Registry::load(&root.join("installed.toml"))
             .map_err(|e| format!("{e:?}"))?;
         registry.record(name, &v.to_string(), &url);
+        registry.set_facets(
+            name,
+            crate::updates::link_facets(root, name, &offered.facets),
+        );
         registry.save().map_err(|e| format!("{e:?}"))?;
         println!("installed {name} {v}");
         crate::updates::link(root, name);
