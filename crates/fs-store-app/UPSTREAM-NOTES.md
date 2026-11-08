@@ -8,3 +8,6 @@ Modell geprueft hat, dass kein Auftrag laeuft. Zweitens gibt es keinen globalen 
 haengt der Store darum als `on_key_down` an die Seite und verlaesst sich darauf, dass Blinc Tasten an alle Handler
 sendet. Das ist nicht in einem echten Fenster geprueft und kann fehlen, solange kein Element der Seite den Fokus
 hat. Gewuenscht: ein `Shortcut`-Eintrag (Taste plus Strg) am `MenuEntry`, den die Shell selbst behandelt.
+
+## Zähler im Fenstertitel und in der Navigation (2026-11-08)
+`Shell` hat keinen Setter für Navigationsbeschriftungen und `launch` nimmt den Fenstertitel nur einmal: "Updates (n)" und "FreeSynergy.Store (n)" zeigen den Zähler vom Start des Fensters und werden danach alt. Aktuell ist er im Banner und auf der Updates-Seite. `AppWidget::set_status` geht nur aus dem Oberflächen-Thread, deshalb zeigt die Statuszeile den Prüfstand nicht.
