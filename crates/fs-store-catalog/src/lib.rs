@@ -1,6 +1,6 @@
-//! Pattern: Adapter (AppStream collection XML into our package offers).
-//! Format: freedesktop AppStream "collection metadata" (XML). Our extra fields live in `<custom>` values with the
-//! `fs:` prefix, which is how AppStream allows extensions; no format of our own (see `DESIGN.md`).
+//! Pattern: Adapter (`AppStream` collection XML into our package offers).
+//! Format: freedesktop `AppStream` "collection metadata" (XML). Our extra fields live in `<custom>` values with the
+//! `fs:` prefix, which is how `AppStream` allows extensions; no format of our own (see `DESIGN.md`).
 #![deny(missing_docs)]
 
 use fs_store_core::{Format, Kind, PackageName, Version};
@@ -8,7 +8,7 @@ use fs_store_core::{Format, Kind, PackageName, Version};
 /// One package as the catalog offers it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CatalogEntry {
-    /// AppStream component id.
+    /// `AppStream` component id.
     pub name: PackageName,
     /// Kind (`fs:kind`, default program).
     pub kind: Kind,
@@ -48,7 +48,7 @@ pub struct Catalog {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CatalogError(pub String);
 
-/// Reads an AppStream collection.
+/// Reads an `AppStream` collection.
 ///
 /// # Errors
 /// `CatalogError` when the text is not XML or not a `<components>` document.
