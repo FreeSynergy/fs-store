@@ -35,6 +35,18 @@ talk to the engine through the contract below. They are interchangeable.
 - Outcome other than `Valid` with the trusted fingerprint: no `VerifiedPackage`, so no install.
 - Update order: running check, install (previous version remembered), on error `Failed` then `invert` then `RolledBack`.
 
+## Catalog format (decision, step 2)
+Standard: **AppStream collection metadata, XML** (freedesktop). Reasons: it is the format `dnf`/GNOME Software/Flathub
+already use, it has `<releases>`, `<artifacts>` with `<location>` and `<checksum>`, and it allows extensions through
+`<custom><value key="fs:...">`; the DEP-11 YAML variant is the same data for Debian and adds nothing for us. A source
+is a Git repo with `catalog.xml` and `catalog.xml.asc` (detached OpenPGP signature over the catalog). Extension keys:
+`fs:kind` (program, frontend, component, theme; default program), `fs:format` (tar.gz, rpm, flatpak, appimage; default
+tar.gz), `fs:signature` (URL of the detached signature of the release file), `fs:facets` (ADR 0061, comma separated
+facet ids of a program; each facet is its own component with a logo, installing it installs the program). A component
+without `fs:signature`, without sha256, or with a version that is not `major.minor.patch` is **reported as skipped,
+never offered and never dropped silently** (`fs-store-catalog`, `Catalog::skipped`). The facet list format is
+provisional until a first program ships facets.
+
 ## Contract sketch `launcher.capnp` (text only, not yet in `fs-interfaces`)
 ```
 interface Launcher {
@@ -64,7 +76,7 @@ Risk marks (ADR 0021): `install`, `update`, `removeSource` are write operations 
 
 ## State
 Core traits and value types; rPGP adapter (`fs-store-pgp`, built-in release key and the revoked key as files, tested with
-generated test keys); TOML source list (`fs-store-sources`); `words.rs`. 27 tests. Not built: network, `gix`, real
+generated test keys); TOML source list (`fs-store-sources`); `words.rs`. 27 tests; `fs-store-catalog` reads AppStream (4 tests). Not built: network, `gix`, real
 installers, self-replacement of the executable, GUI/CLI, the capnp file, a `Command` trait (comes with remove),
 key expiry checks and subkey rules in `fs-store-pgp` (provisional: a valid signature by the primary key or a public
 subkey of a non-revoked trusted key counts), translation of `words.rs`, atomic write of the source file.

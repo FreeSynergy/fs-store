@@ -1,0 +1,11 @@
+[package]
+name = "fs-store-catalog"
+description = "FreeSynergy.Store: reads an AppStream collection catalog into package offers"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+fs-store-core = { path = "../fs-store-core" }
+roxmltree = "0.20"
