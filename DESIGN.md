@@ -76,7 +76,7 @@ Risk marks (ADR 0021): `install`, `update`, `removeSource` are write operations 
 
 ## State
 Core traits and value types; rPGP adapter (`fs-store-pgp`, built-in release key and the revoked key as files, tested with
-generated test keys); TOML source list (`fs-store-sources`); `words.rs`. 27 tests; `fs-store-catalog` reads AppStream (4 tests). Not built: network, `gix`, real
+generated test keys); TOML source list (`fs-store-sources`); `words.rs`. 27 tests; `fs-store-catalog` reads AppStream (4 tests); `fs-store-engine` has `TarGz` (install to a root dir, atomic symlink switch, old version kept, escaping archive entries refused) and `ProcRunningCheck` (5 tests). Still open in step 3: `gix` fetch, HTTPS download, rpm via dnf/pkexec, self-update (atomic swap of the own executable). Not built: network, `gix`, real
 installers, self-replacement of the executable, GUI/CLI, the capnp file, a `Command` trait (comes with remove),
 key expiry checks and subkey rules in `fs-store-pgp` (provisional: a valid signature by the primary key or a public
 subkey of a non-revoked trusted key counts), translation of `words.rs`, atomic write of the source file.

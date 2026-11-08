@@ -1,0 +1,16 @@
+[package]
+name = "fs-store-engine"
+description = "FreeSynergy.Store engine: installs tar.gz packages without root, checks for running programs"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+fs-store-core = { path = "../fs-store-core" }
+flate2 = "1"
+tar = "0.4"
+
+[dev-dependencies]
+tempfile = "3"
+fs-store-pgp = { path = "../fs-store-pgp" }
