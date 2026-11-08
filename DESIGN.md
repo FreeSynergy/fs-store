@@ -138,6 +138,20 @@ package. Catalog format: the program's `fs:facets` (comma separated command name
 and icon come from its own component (`<name>`, `<icon type="remote">`), whose `fs:facet-of` names the program. Facet names are
 reserved project-wide: the store refuses a link whose name already exists and is not its own. Built after the installable store.
 
+## TUF (ADR 0062) – roles and keys, proposal for the user to confirm (2026-11-08)
+Library: `tough` 0.24 (MIT OR Apache-2.0, builds here); client = `RepositoryLoader`, publishing = its editor. TUF keys are
+raw Ed25519 (or RSA/ECDSA) keys, **not OpenPGP keys**; gpg cannot sign TUF's canonical JSON. So the OpenPGP key `16A4…4342`
+cannot literally be the TUF root key. Proposal that keeps the chain of trust on `16A4…4342`:
+- `root`: 2 of 3 offline Ed25519 TUF keys of the user, expiry 1 year. The first `root.json` is **built into the store** (like the
+  OpenPGP key) and `root.json` is published with a detached OpenPGP signature by `16A4…4342`; a new root is accepted only
+  when TUF's rotation rules hold **and** that signature is valid. So both the TUF keys and the project key must agree.
+- `targets`: a CI key (Ed25519, secret in `fs-catalog`), expiry 3 months; lists `catalog.xml` and the package files with hashes.
+- `snapshot` and `timestamp`: another CI key, expiry 7 days / 1 day (renewed by a scheduled CI run), so a mirror cannot
+  keep an old state alive. A mirror that serves expired metadata is refused (the freeze attack named in the review).
+- The OpenPGP signatures on catalog and packages stay (ADR 0051): TUF protects against rollback, freeze and mix-and-match;
+  the OpenPGP signature protects the content, and works without TUF for a plain download.
+The user must make the root keys; the CI keys are made in `fs-catalog` by a workflow. Not built yet.
+
 ## Provisional decisions
 - Versions are `major.minor.patch` with an optional pre-release `-alpha|beta|rc[.N]` (`~` accepted as in `AppStream`/rpm); a pre-release is older than its release. Anything else is skipped with a reason.
 - Only one trusted fingerprint for now; sources may later bring their own keys, never replacing the built-in one.
