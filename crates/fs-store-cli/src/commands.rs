@@ -244,6 +244,13 @@ fn cmd_install(
     Err(last)
 }
 
+fn cmd_remove(root: &Path, name: &str) -> Result<(), String> {
+    let running = ProcRunningCheck::new(root);
+    fs_store_engine::remove(root, name, &running).map_err(|e| format!("{name}: {e:?}"))?;
+    println!("removed {name}");
+    Ok(())
+}
+
 /// Runs one command (`sources`, `available`, `install`, `update`, `installed`) with its arguments.
 ///
 /// # Errors
@@ -275,8 +282,9 @@ pub fn run(all: &[String]) -> Result<(), String> {
         [c, s] if c == "available" => cmd_available(&root, Some(s), extra),
         [c, n] if c == "install" => cmd_install(&root, n, None, extra, false),
         [c, n, s] if c == "install" => cmd_install(&root, n, Some(s), extra, false),
+        [c, n] if c == "remove" => cmd_remove(&root, n),
         [c, n] if c == "update" => cmd_install(&root, n, None, extra, true),
         [c, n, s] if c == "update" => cmd_install(&root, n, Some(s), extra, true),
-        _ => Err("usage: fs-store sources | available [source] | install <name> [source] | update <name> [source] | installed".into()),
+        _ => Err("usage: fs-store sources | available [source] | install <name> [source] | update <name> [source] | remove <name> | installed".into()),
     }
 }
