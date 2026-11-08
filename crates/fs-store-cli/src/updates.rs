@@ -37,10 +37,17 @@ pub(crate) fn update_all(root: &Path, extra: Option<&String>) -> Result<(), Stri
     }
 }
 
-/// `fs-store remove <name>`: takes the package away and forgets it in the register.
+/// `fs-store uninstall <name>` (also `remove`): takes the package away and forgets it in the register.
 pub(crate) fn remove(root: &Path, name: &str) -> Result<(), String> {
-    let running = fs_store_engine::ProcRunningCheck::new(root);
-    fs_store_engine::remove(root, name, &running).map_err(|e| format!("{name}: {e:?}"))?;
+    // Installed by rpm: dnf takes it away (pkexec asks for the password); else the unpacked package is deleted.
+    // The person's data is never removed.
+    if fs_store_engine::rpm_installed_version(name).is_some() {
+        fs_store_engine::remove_rpm(name, &mut fs_store_engine::SystemCommander)
+            .map_err(|e| format!("{name}: {e}"))?;
+    } else {
+        let running = fs_store_engine::ProcRunningCheck::new(root);
+        fs_store_engine::remove(root, name, &running).map_err(|e| format!("{name}: {e:?}"))?;
+    }
     let _ = fs_store_engine::unlink_programs(root, name, &bin_dir());
     let mut registry = registry(root)?;
     let facets = registry

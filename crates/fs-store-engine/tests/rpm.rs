@@ -98,3 +98,15 @@ fn several_rpms_go_to_one_dnf_call() {
     assert_eq!(args.len(), 6); // dnf install -y <option> and two files
     assert_eq!(fs::read_dir(tmp.path().join("rpm")).unwrap().count(), 0);
 }
+
+#[test]
+fn removing_an_rpm_asks_dnf_through_pkexec_and_refuses_odd_names() {
+    let mut fake = Fake::default();
+    let mut runner = &mut fake;
+    fs_store_engine::remove_rpm("tasks", &mut runner).unwrap();
+    assert!(fs_store_engine::remove_rpm("../x", &mut runner).is_err());
+    assert!(fs_store_engine::remove_rpm("-rf", &mut runner).is_err());
+    assert_eq!(fake.calls.len(), 1);
+    assert_eq!(fake.calls[0].0, "pkexec");
+    assert_eq!(fake.calls[0].1, ["dnf", "remove", "-y", "tasks"]);
+}

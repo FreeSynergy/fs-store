@@ -19,5 +19,5 @@ pub use links::{default_bin_dir, link_programs, unlink_programs};
 pub use mode::{preferred_format, rpm_installed_version};
 pub use proc::ProcRunningCheck;
 pub use remove::{RemoveError, remove};
-pub use rpm::{Commander, Rpm, SystemCommander};
+pub use rpm::{Commander, Rpm, SystemCommander, remove_rpm};
 pub use targz::TarGz;

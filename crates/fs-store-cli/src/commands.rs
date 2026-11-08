@@ -278,7 +278,7 @@ pub fn run(all: &[String]) -> Result<(), String> {
         [c, s] if c == "available" => cmd_available(&root, Some(s), extra),
         [c, n] if c == "install" => cmd_install(&root, n, None, extra, false),
         [c, n, s] if c == "install" => cmd_install(&root, n, Some(s), extra, false),
-        [c, n] if c == "remove" => crate::updates::remove(&root, n),
+        [c, n] if c == "remove" || c == "uninstall" => crate::updates::remove(&root, n),
         [c] if c == "update" => crate::updates::update_all(&root, extra),
         [c, a] if c == "update" && a == "--all" => crate::updates::update_all(&root, extra),
         [c, n] if c == "update" => {
@@ -291,6 +291,6 @@ pub fn run(all: &[String]) -> Result<(), String> {
         [c, n, m] if c == "auto" => crate::updates::auto(&root, n, m),
         [c, rest @ ..] if c == "timer" => crate::updates::timer(rest),
         [c, n, s] if c == "update" => cmd_install(&root, n, Some(s), extra, true),
-        _ => Err("usage: fs-store sources | available [source] | install <name> [source] | update <name> [source] | check | background | settings | update --all | auto <name> on|off | timer enable|disable|status | remove <name> | installed".into()),
+        _ => Err("usage: fs-store sources | available [source] | install <name> [source] | update <name> [source] | check | background | settings | update --all | auto <name> on|off | timer enable|disable|status | uninstall <name> | installed".into()),
     }
 }

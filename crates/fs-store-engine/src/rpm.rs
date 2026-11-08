@@ -119,3 +119,15 @@ impl<C: Commander> InstallStrategy for Rpm<C> {
         Ok(())
     }
 }
+
+/// Removes an installed rpm with `pkexec dnf remove -y <name>`; the person's data (`~/.local/share/...`) is never touched.
+/// `name` must be a plain package name.
+///
+/// # Errors
+/// A sentence when the name is not plain or `dnf` fails.
+pub fn remove_rpm<C: Commander>(name: &str, commander: &mut C) -> Result<(), String> {
+    if fs_store_core::PackageName::new(name).is_none_or(|n| n.as_str() != name) {
+        return Err(format!("`{name}` is not a plain package name"));
+    }
+    commander.run("pkexec", &["dnf", "remove", "-y", name])
+}
