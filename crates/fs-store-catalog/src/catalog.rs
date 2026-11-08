@@ -25,7 +25,7 @@ pub struct CatalogEntry {
     pub rpms: Vec<RpmFile>,
     /// The icon, when the component has a remote icon with a hash (an icon without a hash is not used).
     pub icon: Option<Icon>,
-    /// A longer description (`<description>` text, tags dropped), empty when there is none.
+    /// A longer description (`<description>` text, tags dropped); the one-line `<summary>` when there is none.
     pub description: String,
     /// The project page (`<url type="homepage">`), e.g. the Git repository; empty when there is none.
     pub homepage: String,
@@ -207,7 +207,9 @@ fn entry(c: roxmltree::Node) -> Result<CatalogEntry, (String, String)> {
         signature_url,
         rpms,
         icon: icon(c),
-        description: description(c),
+        description: Some(description(c))
+            .filter(|d| !d.is_empty())
+            .unwrap_or_else(|| text(c, "summary").unwrap_or_default().to_owned()),
         homepage: homepage(c),
         facets,
     })

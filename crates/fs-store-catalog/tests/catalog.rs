@@ -165,3 +165,12 @@ fn description_and_homepage_are_read() {
     assert_eq!(e.description, "Tasks and more. Second.");
     assert_eq!(e.homepage, "https://github.com/FreeSynergy/fs-a");
 }
+
+#[test]
+fn the_summary_stands_in_when_there_is_no_description() {
+    let xml = r#"<components version="1.0"><component><id>a</id><summary>One line.</summary><releases><release version="1.0.0"><artifacts><artifact type="binary"><location>l</location><checksum type="sha256">1</checksum></artifact></artifacts></release></releases><custom><value key="fs:signature">s</value></custom></component></components>"#;
+    assert_eq!(
+        parse_catalog(xml).unwrap().entries[0].description,
+        "One line."
+    );
+}
