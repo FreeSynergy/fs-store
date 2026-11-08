@@ -5,6 +5,7 @@
 mod background;
 mod commands;
 mod source_list;
+mod tuf;
 mod updates;
 
 pub use commands::run;

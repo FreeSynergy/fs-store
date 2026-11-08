@@ -2217,6 +2217,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "fs-store-tuf-publish"
+version = "0.0.4"
+dependencies = [
+ "aws-lc-rs",
+ "fs-store-tuf",
+ "jiff",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "tough",
+]
+
+[[package]]
 name = "fs_extra"
 version = "1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
