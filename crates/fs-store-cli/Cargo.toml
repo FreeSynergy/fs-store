@@ -14,3 +14,4 @@ fs-store-catalog = { path = "../fs-store-catalog" }
 fs-store-engine = { path = "../fs-store-engine" }
 fs-store-pgp = { path = "../fs-store-pgp" }
 fs-store-sources = { path = "../fs-store-sources" }
+fs-store-tuf = { path = "../fs-store-tuf" }

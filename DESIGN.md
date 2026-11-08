@@ -213,6 +213,15 @@ is `program` and format `tarGz` otherwise, as the register does not hold them). 
 know the caller yet, ADR 0054), and `job`, `subscribe` (the server starts no job). No change feed yet. Later: writes once the
 caller is known (acts-in-name), jobs and `subscribe` with them.
 
+## TUF client (2026-11-08, first slice)
+`fs-store-tuf::read_target(root, metadata_dir, targets_dir, name)` reads a file through `tough` 0.24: signatures of the chain
+root -> timestamp -> snapshot -> targets, versions, expiry, and the target's length and hash are checked before a byte is returned
+(5 tests against the TUF reference-implementation repository: a listed file is read; an unlisted, a changed file, damaged metadata and an unrelated root
+are refused). In the store: when `FS_STORE_TUF_ROOT=<root.json>` is set, a source must carry `tuf/metadata` and `tuf/targets` and its `catalog.xml`
+must be the exact file the metadata signs; else the source is refused. **Not done:** the project's own root (the user makes the root keys and signs
+`root.json` with `16A4…4342` as described above), a TUF layout in `fs-catalog` (CI keys for targets/snapshot/timestamp, weekly re-signing of timestamp),
+TUF for the release files themselves (today: OpenPGP signature plus the sha256 in the signed catalog), the built-in root.
+
 ## Provisional decisions
 - Versions are `major.minor.patch` with an optional pre-release `-alpha|beta|rc[.N]` (`~` accepted as in `AppStream`/rpm); a pre-release is older than its release. Anything else is skipped with a reason.
 - Only one trusted fingerprint for now; sources may later bring their own keys, never replacing the built-in one.

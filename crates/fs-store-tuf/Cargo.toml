@@ -1,0 +1,17 @@
+[package]
+name = "fs-store-tuf"
+description = "FreeSynergy.Store: reads files from a TUF repository (The Update Framework) with a trusted root, through tough"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version = "1.89"
+
+[dependencies]
+tough = { version = "0.24", default-features = false }
+tokio = { version = "1", default-features = false, features = ["rt", "io-util"] }
+url = "2"
+
+[dev-dependencies]
+tempfile = "3"

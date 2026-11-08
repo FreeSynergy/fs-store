@@ -100,6 +100,7 @@ pub(crate) fn fetch_source(
             "{url}: the catalog signature is not valid for a trusted key"
         ));
     }
+    tuf_check(&work, url, &catalog)?;
     let parsed = read_catalog(&catalog)?;
     fs_store_sources::ensure_fresh(
         &root.join("serials.toml"),
@@ -108,6 +109,29 @@ pub(crate) fn fetch_source(
         parsed.expires,
     )?;
     Ok((catalog, sig))
+}
+
+/// TUF (ADR 0062), when a trusted root is configured (`FS_STORE_TUF_ROOT=<root.json>`; the built-in root of the project follows
+/// when the person has made the root keys): the signed `tuf/` directory of the source must list this exact `catalog.xml`.
+/// Without a configured root nothing changes: the OpenPGP signature and the freshness check still apply.
+fn tuf_check(work: &Path, url: &str, catalog: &[u8]) -> Result<(), String> {
+    let Some(root_file) = std::env::var_os("FS_STORE_TUF_ROOT") else {
+        return Ok(());
+    };
+    let root = fs::read(&root_file).map_err(|e| format!("FS_STORE_TUF_ROOT: {e}"))?;
+    let (meta, targets) = (work.join("tuf/metadata"), work.join("tuf/targets"));
+    if !meta.is_dir() {
+        return Err(format!("{url}: no TUF metadata, but a TUF root is trusted"));
+    }
+    let signed = fs_store_tuf::read_target(&root, &meta, &targets, "catalog.xml")
+        .map_err(|e| format!("{url}: TUF: {e:?}"))?;
+    if signed == catalog {
+        Ok(())
+    } else {
+        Err(format!(
+            "{url}: catalog.xml is not the file the TUF metadata signs"
+        ))
+    }
 }
 
 pub(crate) fn read_catalog(bytes: &[u8]) -> Result<Catalog, String> {
