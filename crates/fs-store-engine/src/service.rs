@@ -116,10 +116,9 @@ impl Installer<'_> {
             .admit(package, outcome)
             .map_err(|_| InstallFailure::ReleaseSignature)?;
         fs::create_dir_all(&self.staging).map_err(|e| InstallFailure::Fetch(e.to_string()))?;
-        let staged = self.staging.join(format!(
-            "{name}-{}.{}.{}.tar.gz",
-            entry.version.0, entry.version.1, entry.version.2
-        ));
+        let staged = self
+            .staging
+            .join(format!("{name}-{}.tar.gz", entry.version));
         fs::write(&staged, &file).map_err(|e| InstallFailure::Fetch(e.to_string()))?;
         let mut strategy = TarGz::new(&self.root, &staged);
         let result = run_update(

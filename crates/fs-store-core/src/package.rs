@@ -46,17 +46,92 @@ impl PackageName {
     }
 }
 
-/// A `major.minor.patch` version, ordered numerically.
+/// Stage of a pre-release, ordered `alpha < beta < rc`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Version(pub u64, pub u64, pub u64);
+pub enum Stage {
+    /// `alpha`.
+    Alpha,
+    /// `beta`.
+    Beta,
+    /// Release candidate.
+    Rc,
+}
+
+/// A pre-release part such as `rc.2`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Pre(pub Stage, pub u64);
+
+/// `major.minor.patch` with an optional pre-release (`-rc.2`, also written `~rc.2` in `AppStream`/rpm style).
+/// A pre-release is older than the release it precedes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Version(pub u64, pub u64, pub u64, pub Option<Pre>);
 
 impl Version {
-    /// Parses `1.2.3`; `None` for anything else.
+    /// A release version without pre-release part.
+    #[must_use]
+    pub const fn new(major: u64, minor: u64, patch: u64) -> Self {
+        Self(major, minor, patch, None)
+    }
+
+    /// Parses `1.2.3`, `1.2.3-rc.2`, `1.2.3~beta`; `None` for anything else.
     #[must_use]
     pub fn parse(text: &str) -> Option<Self> {
-        let mut parts = text.split('.').map(|p| p.parse::<u64>().ok());
-        let v = Self(parts.next()??, parts.next()??, parts.next()??);
-        parts.next().is_none().then_some(v)
+        let (core, pre) = match text.split_once(['-', '~']) {
+            Some((c, p)) => (c, Some(p)),
+            None => (text, None),
+        };
+        let mut parts = core.split('.').map(|p| p.parse::<u64>().ok());
+        let (major, minor, patch) = (parts.next()??, parts.next()??, parts.next()??);
+        parts.next().is_none().then_some(())?;
+        let pre = match pre {
+            None => None,
+            Some(text) => {
+                let (stage, n) = text.split_once('.').unwrap_or((text, "0"));
+                let stage = match stage {
+                    "alpha" => Stage::Alpha,
+                    "beta" => Stage::Beta,
+                    "rc" => Stage::Rc,
+                    _ => return None,
+                };
+                Some(Pre(stage, n.parse().ok()?))
+            }
+        };
+        Some(Self(major, minor, patch, pre))
+    }
+}
+
+impl PartialOrd for Version {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Version {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        use std::cmp::Ordering::{Equal, Greater, Less};
+        (self.0, self.1, self.2)
+            .cmp(&(other.0, other.1, other.2))
+            .then_with(|| match (self.3, other.3) {
+                (None, None) => Equal,
+                (None, Some(_)) => Greater,
+                (Some(_), None) => Less,
+                (Some(a), Some(b)) => a.cmp(&b),
+            })
+    }
+}
+
+impl std::fmt::Display for Version {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}.{}.{}", self.0, self.1, self.2)?;
+        if let Some(Pre(stage, n)) = self.3 {
+            let s = match stage {
+                Stage::Alpha => "alpha",
+                Stage::Beta => "beta",
+                Stage::Rc => "rc",
+            };
+            write!(f, "-{s}.{n}")?;
+        }
+        Ok(())
     }
 }
 

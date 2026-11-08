@@ -52,8 +52,7 @@ fn run(args: &[String]) -> Result<(), String> {
                 if !name.starts_with('.') {
                     println!(
                         "{name} {}",
-                        installed(&root, &name)
-                            .map_or("?".into(), |v| format!("{}.{}.{}", v.0, v.1, v.2))
+                        installed(&root, &name).map_or("?".into(), |v| v.to_string())
                     );
                 }
             }
@@ -73,13 +72,7 @@ fn run(args: &[String]) -> Result<(), String> {
     if cmd == "available" {
         let parsed = parse_catalog(&String::from_utf8_lossy(&catalog)).map_err(|e| e.0)?;
         for e in parsed.entries {
-            println!(
-                "{} {}.{}.{}",
-                e.name.as_str(),
-                e.version.0,
-                e.version.1,
-                e.version.2
-            );
+            println!("{} {}", e.name.as_str(), e.version);
         }
         for s in parsed.skipped {
             eprintln!("skipped {}: {}", s.id, s.reason);
@@ -99,7 +92,7 @@ fn run(args: &[String]) -> Result<(), String> {
     let v = i
         .install(&catalog, &sig, name, installed(&root, name))
         .map_err(|e| format!("{e:?}"))?;
-    println!("installed {name} {}.{}.{}", v.0, v.1, v.2);
+    println!("installed {name} {v}");
     Ok(())
 }
 

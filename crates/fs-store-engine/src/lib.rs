@@ -35,10 +35,7 @@ impl TarGz {
     }
 
     fn dir(&self, name: &str, v: Version) -> PathBuf {
-        self.root
-            .join("packages")
-            .join(name)
-            .join(format!("{}.{}.{}", v.0, v.1, v.2))
+        self.root.join("packages").join(name).join(v.to_string())
     }
 
     fn point_current(&self, name: &str, target: &Path) -> io::Result<()> {

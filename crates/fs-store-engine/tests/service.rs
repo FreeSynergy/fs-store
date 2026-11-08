@@ -80,7 +80,7 @@ fn run(
 #[test]
 fn good_chain_installs() {
     let (r, tmp) = run(b"good", b"good", None);
-    assert_eq!(r, Ok(Version(1, 2, 3)));
+    assert_eq!(r, Ok(Version::new(1, 2, 3)));
     assert_eq!(
         fs::read_to_string(tmp.path().join("root/current/tasks/bin/prog")).unwrap(),
         "hello"

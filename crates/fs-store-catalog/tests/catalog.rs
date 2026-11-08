@@ -35,7 +35,7 @@ const XML: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
   </component>
   <component type="desktop-application">
     <id>net.freesynergy.pre</id>
-    <releases><release version="0.6.1~rc.2"><artifacts><artifact type="binary">
+    <releases><release version="0.6.1~nightly"><artifacts><artifact type="binary">
       <location>https://example.org/pre.tar.gz</location><checksum type="sha256">p</checksum>
     </artifact></artifacts></release></releases>
     <custom><value key="fs:signature">https://example.org/pre.asc</value></custom>
@@ -55,7 +55,7 @@ fn newest_release_with_artifact_is_offered() {
     assert_eq!(t.name.as_str(), "net.freesynergy.tasks");
     assert_eq!(t.kind, Kind::Program);
     assert_eq!(t.format, Format::TarGz);
-    assert_eq!(t.version, Version(0, 8, 0));
+    assert_eq!(t.version, Version::new(0, 8, 0));
     assert_eq!(t.location, "https://example.org/tasks-0.8.0.tar.gz");
     assert_eq!(t.sha256, "abc123");
     assert_eq!(
@@ -78,7 +78,7 @@ fn unusable_components_are_reported_never_dropped_silently() {
     assert_eq!(c.skipped.len(), 2);
     assert!(c.skipped.contains(&Skipped {
         id: "net.freesynergy.pre".into(),
-        reason: "version `0.6.1~rc.2` is not major.minor.patch".into()
+        reason: "version `0.6.1~nightly` is not major.minor.patch".into()
     }));
     assert!(
         c.skipped

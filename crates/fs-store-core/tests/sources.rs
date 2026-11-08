@@ -33,3 +33,17 @@ fn version_and_name_are_valid_on_construction() {
     assert_eq!(Version::parse("a.b.c"), None);
     assert!(PackageName::new("  ").is_none());
 }
+
+#[test]
+fn pre_releases_parse_order_and_print() {
+    use fs_store_core::Version;
+    let rc2 = Version::parse("0.6.1-rc.2").unwrap();
+    assert_eq!(Version::parse("0.6.1~rc.2"), Some(rc2));
+    assert_eq!(rc2.to_string(), "0.6.1-rc.2");
+    assert!(Version::parse("0.6.1-rc.1").unwrap() < rc2);
+    assert!(Version::parse("0.6.1-beta.9").unwrap() < Version::parse("0.6.1-rc.0").unwrap());
+    assert!(rc2 < Version::new(0, 6, 1));
+    assert!(Version::new(0, 6, 0) < rc2);
+    assert_eq!(Version::parse("0.6.1-nightly"), None);
+    assert_eq!(Version::parse("0.6"), None);
+}

@@ -52,7 +52,7 @@ fn install_then_update_keeps_old_version_and_switches_current() {
     let root = tmp.path().join("root");
     let a1 = archive(tmp.path(), "one", "v1");
     let a2 = archive(tmp.path(), "two", "v2");
-    let p1 = verified("tasks", Version(1, 0, 0));
+    let p1 = verified("tasks", Version::new(1, 0, 0));
     let mut s = TarGz::new(&root, &a1);
     run_update(
         &Update {
@@ -67,12 +67,12 @@ fn install_then_update_keeps_old_version_and_switches_current() {
         fs::read_to_string(root.join("current/tasks/bin/prog")).unwrap(),
         "v1"
     );
-    let p2 = verified("tasks", Version(1, 1, 0));
+    let p2 = verified("tasks", Version::new(1, 1, 0));
     let mut s = TarGz::new(&root, &a2);
     run_update(
         &Update {
             package: &p2,
-            previous: Some(Version(1, 0, 0)),
+            previous: Some(Version::new(1, 0, 0)),
         },
         &mut s,
         &Idle,
@@ -93,7 +93,7 @@ fn broken_archive_rolls_back_to_previous() {
     let mut s = TarGz::new(&root, &a1);
     run_update(
         &Update {
-            package: &verified("tasks", Version(1, 0, 0)),
+            package: &verified("tasks", Version::new(1, 0, 0)),
             previous: None,
         },
         &mut s,
@@ -105,8 +105,8 @@ fn broken_archive_rolls_back_to_previous() {
     let mut s = TarGz::new(&root, &bad);
     let r = run_update(
         &Update {
-            package: &verified("tasks", Version(1, 1, 0)),
-            previous: Some(Version(1, 0, 0)),
+            package: &verified("tasks", Version::new(1, 1, 0)),
+            previous: Some(Version::new(1, 0, 0)),
         },
         &mut s,
         &Idle,
@@ -128,7 +128,7 @@ fn failed_first_install_leaves_nothing() {
     let mut s = TarGz::new(&root, &bad);
     let r = run_update(
         &Update {
-            package: &verified("tasks", Version(1, 0, 0)),
+            package: &verified("tasks", Version::new(1, 0, 0)),
             previous: None,
         },
         &mut s,
@@ -160,7 +160,7 @@ fn archive_cannot_escape_its_directory() {
     let mut s = TarGz::new(&root, &path);
     let r = run_update(
         &Update {
-            package: &verified("tasks", Version(1, 0, 0)),
+            package: &verified("tasks", Version::new(1, 0, 0)),
             previous: None,
         },
         &mut s,

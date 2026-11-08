@@ -72,13 +72,12 @@ Risk marks (ADR 0021): `install`, `update`, `removeSource` are write operations 
 Draft `v0.6.1-rc.2` of `fs-tasks` (made by `fs-release`, fetched with `gh release download`, because drafts are not
 public): the built-in `PgpVerifier` accepts `fs-tasks-server-0.6.1-rc.2-linux-x86_64.tar.gz` with its `.asc` as `Valid`
 for `16A4…4342`, and rejects it after one flipped byte (`crates/fs-store-pgp/tests/real_release.rs`, runs when
-`FS_PROBE_FILE`/`FS_PROBE_SIG` are set). **Not yet done:** installing it through a catalog. Two blockers: (1) `Version`
-has no pre-release part, so `0.6.1-rc.2` cannot be offered (needed for pre-releases, decided to allow); (2) a local
+`FS_PROBE_FILE`/`FS_PROBE_SIG` are set). **Not yet done:** installing it through a catalog. Blockers: (1) fixed 2026-11-08: `Version` now has a pre-release part; (2) a local
 catalog needs a signature by the release key, which only the user holds. Options for (2): the user signs a test catalog,
 or a test-only trusted key for local sources.
 
 ## Provisional decisions
-- Versions are `major.minor.patch` numbers only (SemVer subset); pre-release tags later.
+- Versions are `major.minor.patch` with an optional pre-release `-alpha|beta|rc[.N]` (`~` accepted as in `AppStream`/rpm); a pre-release is older than its release. Anything else is skipped with a reason.
 - Only one trusted fingerprint for now; sources may later bring their own keys, never replacing the built-in one.
 - Texts a person reads (`words.rs`) come with the first frontend; the core only has English developer errors.
 - Name of the program "Launcher" and crate names are provisional.

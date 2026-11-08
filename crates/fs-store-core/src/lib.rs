@@ -10,7 +10,7 @@ pub mod strategy;
 pub mod update;
 pub mod words;
 
-pub use package::{Format, Kind, Package, PackageName, Version};
+pub use package::{Format, Kind, Package, PackageName, Pre, Stage, Version};
 pub use signature::{
     SignatureOutcome, SignaturePolicy, SignatureVerifier, TRUSTED_FINGERPRINT, VerifiedPackage,
 };

@@ -7,7 +7,7 @@ pub fn pkg(version: (u64, u64, u64)) -> Package {
     Package {
         name: PackageName::new("fs-demo").unwrap(),
         kind: Kind::Program,
-        version: Version(version.0, version.1, version.2),
+        version: Version::new(version.0, version.1, version.2),
         format: Format::TarGz,
         source: SourceId("fs".into()),
     }

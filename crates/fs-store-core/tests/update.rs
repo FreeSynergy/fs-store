@@ -35,13 +35,13 @@ fn update_installs() {
     let mut inst = FakeInstaller::default();
     let u = Update {
         package: &v,
-        previous: Some(Version(1, 0, 0)),
+        previous: Some(Version::new(1, 0, 0)),
     };
     assert_eq!(
         run_update(&u, &mut inst, &Running(false)),
         Ok(InstallState::Installed)
     );
-    assert_eq!(inst.installed, vec![Version(2, 0, 0)]);
+    assert_eq!(inst.installed, vec![Version::new(2, 0, 0)]);
 }
 
 #[test]
@@ -68,13 +68,13 @@ fn failed_update_is_rolled_back_to_previous() {
     };
     let u = Update {
         package: &v,
-        previous: Some(Version(1, 0, 0)),
+        previous: Some(Version::new(1, 0, 0)),
     };
     assert_eq!(
         run_update(&u, &mut inst, &Running(false)),
         Err(UpdateError::RolledBack)
     );
-    assert_eq!(inst.restored, vec![Some(Version(1, 0, 0))]);
+    assert_eq!(inst.restored, vec![Some(Version::new(1, 0, 0))]);
 }
 
 #[test]
