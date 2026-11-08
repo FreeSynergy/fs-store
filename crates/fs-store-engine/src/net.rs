@@ -20,7 +20,12 @@ impl Fetch for HttpsFetch {
         if !url.starts_with("https://") {
             return Err(format!("{url}: only https addresses are downloaded"));
         }
-        let resp = ureq::get(url).call().map_err(|e| format!("{url}: {e}"))?;
+        // A server that does not answer must not hang the store (the window shows the error instead).
+        let agent = ureq::AgentBuilder::new()
+            .timeout_connect(std::time::Duration::from_secs(20))
+            .timeout_read(std::time::Duration::from_secs(60))
+            .build();
+        let resp = agent.get(url).call().map_err(|e| format!("{url}: {e}"))?;
         let mut out = Vec::new();
         resp.into_reader()
             .take(MAX_DOWNLOAD + 1)
