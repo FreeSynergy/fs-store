@@ -111,9 +111,13 @@ real-file probe (`FS_PROBE_FILE`), not by the generated-key tests. Fixed in `0.1
 When `fs-release` rotates the key or subkey, the file in `crates/fs-store-pgp/keys/` must follow (a test against a
 real signed release belongs in the release checklist).
 
-## Names of what people start (Strategie, provisional, 2026-11-08)
-What a person starts is named like the program: the GUI binary is `fs-store` (crate `fs-store-app`), the CLI is `fs-store-cli`,
-the menu entry is "FreeSynergy.Store" (`packaging/net.freesynergy.Store.desktop`). Crate names stay.
+## One binary (ADR 0063, 2026-11-08; replaces the two-binary naming of the same day)
+`fs-store` is the only binary (crate `fs-store`, `crates/fs-store`). No arguments: the window (`fs-store-app::gui::run`).
+Subcommands as in git: `fs-store sources|available|install|update|installed ...` (`fs-store-cli::run`), `fs-store serve`
+(server; answers "not built yet" until `fs-store-server` exists). The other crates are libraries. Pattern: Facade over
+Command. Cargo feature `gui` (default): `cargo build --no-default-features -p fs-store` builds without graphics (then
+the bare command prints a hint). rpm, menu entry "FreeSynergy.Store" (`packaging/net.freesynergy.Store.desktop`) and the
+catalog list only `fs-store`.
 
 ## Window resize crash (found by the user, 2026-11-08)
 Enlarging the window aborted with wgpu `Copy of X 0..1278 would end up overrunning the bounds of the Destination texture of

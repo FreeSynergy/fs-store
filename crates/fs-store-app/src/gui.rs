@@ -1,21 +1,18 @@
-//! The binary: wiring only. `fs-store-app [--size WxH] [--snapshot file.png]`; `FS_STORE_ROOT` as for the CLI.
+//! The window: `fs-store [--size WxH] [--snapshot file.png]`; `FS_STORE_ROOT` as for the commands.
+//! Pattern: Facade (one entry point over model, engine and view).
 
 use std::sync::{Arc, Mutex};
 
+use crate::engine::EngineBackend;
+use crate::model::StoreModel;
+use crate::view::store_app;
 use fs_components_app::{WindowOptions, launch, parse_size};
-use fs_store_app::engine::EngineBackend;
-use fs_store_app::model::StoreModel;
-use fs_store_app::view::store_app;
 
-fn main() {
-    if let Err(message) = run() {
-        eprintln!("fs-store-app: {message}");
-        std::process::exit(1);
-    }
-}
-
-fn run() -> Result<(), String> {
-    let argv: Vec<String> = std::env::args().skip(1).collect();
+/// Opens the window, or draws a picture with `--snapshot`.
+///
+/// # Errors
+/// Text for the person when an argument is wrong or the window cannot open.
+pub fn run(argv: &[String]) -> Result<(), String> {
     let mut size = (900, 640);
     let mut snapshot = None;
     let mut it = argv.iter();

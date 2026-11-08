@@ -1,16 +1,12 @@
 [package]
 name = "fs-store-cli"
-description = "FreeSynergy.Store command line: thin first user of the engine"
+description = "FreeSynergy.Store commands (install, update, sources ...) as a library; the binary is crate fs-store"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
 rust-version.workspace = true
-
-[[bin]]
-name = "fs-store-cli"
-path = "src/main.rs"
 
 [dependencies]
 fs-store-core = { path = "../fs-store-core" }

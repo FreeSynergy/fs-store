@@ -1,0 +1,22 @@
+[package]
+name = "fs-store"
+description = "FreeSynergy.Store: install, update and extend FreeSynergy programs. Without arguments the window opens; subcommands work like git."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version = "1.89"
+
+[[bin]]
+name = "fs-store"
+path = "src/main.rs"
+
+[features]
+default = ["gui"]
+# The window (Blinc). Without it the binary has the commands only: `cargo build --no-default-features`.
+gui = ["dep:fs-store-app"]
+
+[dependencies]
+fs-store-cli = { path = "../fs-store-cli" }
+fs-store-app = { path = "../fs-store-app", optional = true }
