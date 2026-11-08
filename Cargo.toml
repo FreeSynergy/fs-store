@@ -3,7 +3,7 @@ resolver = "2"
 members = ["crates/*"]
 
 [workspace.package]
-version = "0.0.4"
+version = "0.0.5"
 authors = ["FreeSynergy <support@freesynergy.net>"]
 edition = "2024"
 license = "MIT OR Apache-2.0"
@@ -12,4 +12,4 @@ rust-version = "1.89"
 
 # Window resize crash (wgpu validation error when the window is enlarged); see DESIGN.md and todo/upstream.md.
 [patch.crates-io]
-blinc_app = { git = "https://github.com/FreeSynergy/blinc-app-fix" }
+blinc_app = { git = "https://github.com/FreeSynergy/blinc-app-fix", rev = "a139138fd4a8" }

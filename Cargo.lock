@@ -469,7 +469,7 @@ dependencies = [
 [[package]]
 name = "blinc_app"
 version = "0.6.0"
-source = "git+https://github.com/FreeSynergy/blinc-app-fix#1c5d217c3b07872b1de8c7959fe44f07b344783c"
+source = "git+https://github.com/FreeSynergy/blinc-app-fix?rev=a139138fd4a8#a139138fd4a8516450f01a13d96804d5f5c383c4"
 dependencies = [
  "anyhow",
  "blinc_animation",
@@ -1108,7 +1108,7 @@ checksum = "fe6d2e5af09e8c8ad56c969f2157a3d4238cebc7c55f0a517728c38f7b200f81"
 dependencies = [
  "serde",
  "termcolor",
- "unicode-width 0.2.3",
+ "unicode-width 0.1.14",
 ]
 
 [[package]]
@@ -2105,7 +2105,7 @@ dependencies = [
 
 [[package]]
 name = "fs-store"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "fs-store-app",
  "fs-store-cli",
@@ -2116,7 +2116,7 @@ dependencies = [
 
 [[package]]
 name = "fs-store-app"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "blinc_cn",
  "blinc_core",
@@ -2132,7 +2132,7 @@ dependencies = [
 
 [[package]]
 name = "fs-store-catalog"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "fs-store-core",
  "roxmltree",
@@ -2140,7 +2140,7 @@ dependencies = [
 
 [[package]]
 name = "fs-store-cli"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "fs-store-catalog",
  "fs-store-core",
@@ -2152,7 +2152,7 @@ dependencies = [
 
 [[package]]
 name = "fs-store-client"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "fs-store-sources",
  "tempfile",
@@ -2160,11 +2160,11 @@ dependencies = [
 
 [[package]]
 name = "fs-store-core"
-version = "0.0.4"
+version = "0.0.5"
 
 [[package]]
 name = "fs-store-engine"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "flate2",
  "fs-store-catalog",
@@ -2181,7 +2181,7 @@ dependencies = [
 
 [[package]]
 name = "fs-store-pgp"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "fs-store-core",
  "pgp",
@@ -2190,7 +2190,7 @@ dependencies = [
 
 [[package]]
 name = "fs-store-server"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "capnp",
  "capnp-rpc",
@@ -2206,7 +2206,7 @@ dependencies = [
 
 [[package]]
 name = "fs-store-sources"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "fs-store-core",
  "serde",
@@ -2216,7 +2216,7 @@ dependencies = [
 
 [[package]]
 name = "fs-store-tuf"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "tempfile",
  "tokio",
