@@ -69,7 +69,12 @@ fn a_failing_dnf_is_reported_as_rolled_back_and_leaves_no_file() {
         &mut s,
         &Idle,
     );
-    assert_eq!(r, Err(UpdateError::RolledBack));
+    assert_eq!(
+        r,
+        Err(UpdateError::RolledBack(fs_store_core::InstallError(
+            "dnf failed".into()
+        )))
+    ); // the cause comes up, it is not swallowed
     assert_eq!(fs::read_dir(tmp.path().join("rpm")).unwrap().count(), 0);
 }
 

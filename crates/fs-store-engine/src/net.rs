@@ -20,24 +20,53 @@ impl Fetch for HttpsFetch {
         if !url.starts_with("https://") {
             return Err(format!("{url}: only https addresses are downloaded"));
         }
-        // A server that does not answer must not hang the store (the window shows the error instead).
-        let agent = ureq::AgentBuilder::new()
-            .timeout_connect(std::time::Duration::from_secs(20))
-            .timeout_read(std::time::Duration::from_secs(60))
-            .build();
-        let resp = agent.get(url).call().map_err(|e| format!("{url}: {e}"))?;
-        let mut out = Vec::new();
-        resp.into_reader()
-            .take(MAX_DOWNLOAD + 1)
-            .read_to_end(&mut out)
-            .map_err(|e| format!("{url}: {e}"))?;
-        if out.len() as u64 > MAX_DOWNLOAD {
-            return Err(format!(
-                "{url}: larger than the allowed {MAX_DOWNLOAD} bytes"
-            ));
+        // Servers have bad minutes (GitHub answered 5xx and timeouts on 2026-11-08): try three times with a pause,
+        // but only for what can pass (5xx, no answer); a 404 or a refusal is answered at once.
+        let mut last = String::new();
+        for attempt in 0..3 {
+            if attempt > 0 {
+                std::thread::sleep(std::time::Duration::from_secs(2 * attempt));
+            }
+            match once(url) {
+                Ok(bytes) => return Ok(bytes),
+                Err((message, retry)) => {
+                    last = message;
+                    if !retry {
+                        break;
+                    }
+                }
+            }
         }
-        Ok(out)
+        Err(last)
     }
+}
+
+/// One download; the flag says whether trying again can help.
+fn once(url: &str) -> Result<Vec<u8>, (String, bool)> {
+    // A server that does not answer must not hang the store (the window shows the error instead).
+    let agent = ureq::AgentBuilder::new()
+        .timeout_connect(std::time::Duration::from_secs(20))
+        .timeout_read(std::time::Duration::from_secs(60))
+        .build();
+    let resp = agent.get(url).call().map_err(|e| {
+        let retry = match &e {
+            ureq::Error::Status(code, _) => *code >= 500,
+            ureq::Error::Transport(_) => true,
+        };
+        (format!("{url}: {e}"), retry)
+    })?;
+    let mut out = Vec::new();
+    resp.into_reader()
+        .take(MAX_DOWNLOAD + 1)
+        .read_to_end(&mut out)
+        .map_err(|e| (format!("{url}: {e}"), true))?;
+    if out.len() as u64 > MAX_DOWNLOAD {
+        return Err((
+            format!("{url}: larger than the allowed {MAX_DOWNLOAD} bytes"),
+            false,
+        ));
+    }
+    Ok(out)
 }
 
 /// Clones the newest state of a source (depth 1) into `dest` with `gix`; `dest` must not exist or be empty.

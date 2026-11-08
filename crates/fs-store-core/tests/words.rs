@@ -1,6 +1,6 @@
 //! Tests of the sentences: all filled by name, none with positional `{}`.
 use fs_store_core::words::{SIGNATURE_REJECTED, fill, source_problem, update_problem};
-use fs_store_core::{SourceError, UpdateError};
+use fs_store_core::{InstallError, SourceError, UpdateError};
 
 #[test]
 fn every_problem_has_a_sentence_without_positional_braces() {
@@ -14,7 +14,7 @@ fn every_problem_has_a_sentence_without_positional_braces() {
     }
     for e in [
         UpdateError::Running,
-        UpdateError::RolledBack,
+        UpdateError::RolledBack(InstallError(String::new())),
         UpdateError::RollbackFailed,
     ] {
         all.push(update_problem(&e));

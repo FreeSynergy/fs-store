@@ -33,8 +33,8 @@ pub(crate) fn job_error(failure: InstallFailure) -> JobError {
         InstallFailure::Checksum => JobError::Checksum,
         InstallFailure::ReleaseSignature => JobError::ReleaseSignature,
         InstallFailure::Update(UpdateError::Running) => JobError::Running,
-        InstallFailure::Update(UpdateError::RolledBack) => {
-            JobError::Other("the installer failed".to_owned())
+        InstallFailure::Update(UpdateError::RolledBack(cause)) => {
+            JobError::Other(format!("the installer failed: {}", cause.0))
         }
         InstallFailure::Update(UpdateError::RollbackFailed) => JobError::RollbackFailed,
     }

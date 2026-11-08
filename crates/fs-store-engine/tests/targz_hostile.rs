@@ -34,7 +34,7 @@ fn archive_cannot_escape_its_directory() {
         &mut s,
         &Idle,
     );
-    assert_eq!(r, Err(UpdateError::RolledBack));
+    assert!(matches!(r, Err(UpdateError::RolledBack(_))));
     assert!(!root.join("packages/tasks/escaped").exists());
     assert!(!root.join("packages/escaped").exists());
 }
@@ -77,7 +77,7 @@ fn symlink_and_hard_link_entries_are_refused() {
             &mut s,
             &Idle,
         );
-        assert_eq!(r, Err(UpdateError::RolledBack));
+        assert!(matches!(r, Err(UpdateError::RolledBack(_))));
         assert!(!outside.join("pwned").exists());
     }
 }

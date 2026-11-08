@@ -5,7 +5,7 @@
 use crate::package::Version;
 use crate::signature::VerifiedPackage;
 use crate::state::{Event, InstallState};
-use crate::strategy::InstallStrategy;
+use crate::strategy::{InstallError, InstallStrategy};
 
 /// Asks the system whether a program is running.
 pub trait RunningCheck {
@@ -19,7 +19,8 @@ pub enum UpdateError {
     /// The program runs and is not replaced.
     Running,
     /// The installer failed; the update was rolled back.
-    RolledBack,
+    /// The install failed and the previous state is back; carries why it failed.
+    RolledBack(InstallError),
     /// The installer failed and the rollback failed too.
     RollbackFailed,
 }
@@ -50,14 +51,15 @@ pub fn run_update(
     let step = |s: InstallState, e| s.next(e).unwrap_or(s);
     let state = step(InstallState::Pending, Event::Verify);
     let state = step(state, Event::Start);
-    if strategy.install(update.package).is_ok() {
-        return Ok(step(state, Event::Finish));
-    }
+    let cause = match strategy.install(update.package) {
+        Ok(()) => return Ok(step(state, Event::Finish)),
+        Err(e) => e,
+    };
     let failed = step(state, Event::Fail);
     match strategy.restore(name, update.previous) {
         Ok(()) => {
             debug_assert_eq!(step(failed, Event::Rollback), InstallState::RolledBack);
-            Err(UpdateError::RolledBack)
+            Err(UpdateError::RolledBack(cause))
         }
         Err(_) => Err(UpdateError::RollbackFailed),
     }

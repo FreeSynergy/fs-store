@@ -72,7 +72,7 @@ fn broken_archive_rolls_back_to_previous() {
         &mut s,
         &Idle,
     );
-    assert_eq!(r, Err(UpdateError::RolledBack));
+    assert!(matches!(r, Err(UpdateError::RolledBack(_))));
     assert_eq!(
         fs::read_to_string(root.join("current/tasks/bin/prog")).unwrap(),
         "v1"
@@ -95,7 +95,7 @@ fn failed_first_install_leaves_nothing() {
         &mut s,
         &Idle,
     );
-    assert_eq!(r, Err(UpdateError::RolledBack));
+    assert!(matches!(r, Err(UpdateError::RolledBack(_))));
     assert!(!root.join("current/tasks").exists());
 }
 

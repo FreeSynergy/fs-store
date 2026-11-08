@@ -70,10 +70,10 @@ fn failed_update_is_rolled_back_to_previous() {
         package: &v,
         previous: Some(Version::new(1, 0, 0)),
     };
-    assert_eq!(
+    assert!(matches!(
         run_update(&u, &mut inst, &Running(false)),
-        Err(UpdateError::RolledBack)
-    );
+        Err(UpdateError::RolledBack(_))
+    ));
     assert_eq!(inst.restored, vec![Some(Version::new(1, 0, 0))]);
 }
 

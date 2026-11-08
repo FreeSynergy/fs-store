@@ -22,7 +22,7 @@ pub fn source_problem(error: &SourceError) -> &'static str {
 pub fn update_problem(error: &UpdateError) -> &'static str {
     match error {
         UpdateError::Running => "{name} is running and was not replaced. Close it and try again.",
-        UpdateError::RolledBack => "The update of {name} failed. The previous version is back.",
+        UpdateError::RolledBack(_) => "The update of {name} failed. The previous version is back.",
         UpdateError::RollbackFailed => {
             "The update of {name} failed and the previous version could not be restored."
         }

@@ -236,7 +236,10 @@ impl std::fmt::Display for InstallFailure {
             Self::ReleaseSignature => {
                 f.write_str("the downloaded file is not signed by a trusted key")
             }
-            Self::Update(e) => write!(f, "installing failed and was rolled back: {e:?}"),
+            Self::Update(UpdateError::RolledBack(cause)) => {
+                write!(f, "installing failed and was rolled back: {}", cause.0)
+            }
+            Self::Update(e) => write!(f, "installing failed: {e:?}"),
         }
     }
 }
