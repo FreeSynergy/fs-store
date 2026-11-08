@@ -62,10 +62,14 @@ pub(super) fn start_job(shared: &Shared, name: &str) {
     rebuild();
     let shared = Arc::clone(shared);
     std::thread::spawn(move || {
-        let result = backend.run(kind, &name, &mut |phase| {
-            locked(&shared).observe(phase);
-            rebuild();
-        });
+        // A panic in the worker must not leave the job "running" for ever, silently.
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            backend.run(kind, &name, &mut |phase| {
+                locked(&shared).observe(phase);
+                rebuild();
+            })
+        }))
+        .unwrap_or_else(|_| Err(JobError::Other(words::JOB_PANICKED.to_owned())));
         locked(&shared).finish(result);
         rebuild();
     });

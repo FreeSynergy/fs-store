@@ -42,6 +42,30 @@ pub struct InstalledRow {
     pub version: Version,
 }
 
+/// How an installed package came onto this machine.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum InstallKind {
+    /// Installed by the system package manager (rpm).
+    Rpm,
+    /// Unpacked by the store below its own folder (tar.gz).
+    Archive,
+}
+
+/// What is known about where an installed package is. Only facts that were found; nothing is guessed.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct InstalledDetails {
+    /// How it was installed (both, if both are found).
+    pub kinds: Vec<InstallKind>,
+    /// Commands that exist: (name, full path).
+    pub commands: Vec<(String, String)>,
+    /// The folder the store unpacked the active version into, if it did.
+    pub folder: Option<String>,
+    /// Git address of the source (from the register).
+    pub source: Option<String>,
+    /// Facet commands from the register.
+    pub facets: Vec<String>,
+}
+
 /// What the enabled sources offer, and what they could not.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Listing {
@@ -87,7 +111,7 @@ pub enum JobError {
     /// No enabled source offers the package.
     NotOffered,
     /// There is no installer for this format yet.
-    Unsupported,
+    Unsupported(String),
     /// The update failed and the previous version could not be restored.
     RollbackFailed,
     /// Anything else, as a developer text.
@@ -126,6 +150,10 @@ pub trait StoreBackend: Send + Sync {
     /// # Errors
     /// `BackendError` when the list cannot be read.
     fn installed(&self) -> Result<Vec<InstalledRow>, BackendError>;
+    /// What is known about where the installed package `name` is. Default: nothing is known.
+    fn details(&self, _name: &str) -> InstalledDetails {
+        InstalledDetails::default()
+    }
     /// Runs one job and tells `observe` each phase passed (`Verified`, `Installing`). The ending is the
     /// return value: the new version (`Installed`), or the reason (`Failed`, then `RolledBack`).
     ///

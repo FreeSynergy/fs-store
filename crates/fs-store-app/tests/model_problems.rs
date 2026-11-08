@@ -45,9 +45,9 @@ fn unreadable_and_skipped_are_told() {
     assert_eq!(
         m.problem_lines(),
         [
-            "The store could not do this: disk",
             "The source s could not be read: offline",
             "x is not offered: no signature",
+            "The store could not do this: disk",
         ]
     );
 }

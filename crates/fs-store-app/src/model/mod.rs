@@ -4,11 +4,14 @@
 //! the source list), `jobs` (the job of one package), `text` (the sentences the window shows).
 
 mod jobs;
+mod menu;
+mod open;
 mod sources;
 mod store;
 mod text;
 mod types;
 
 pub use jobs::{JobView, Ticket};
+pub use menu::{Command, Effect, is_quit_key};
 pub use store::StoreModel;
 pub use types::{Action, AvailableRow, Problem, View};

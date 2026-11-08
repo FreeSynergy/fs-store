@@ -6,13 +6,14 @@ use super::store::StoreModel;
 use super::types::Problem;
 
 impl StoreModel {
-    /// Adds the source typed in the field. An empty field does nothing.
+    /// Adds the source typed in the field. An empty field is told to the person.
     pub fn add_source(&mut self) {
         let url = self.new_source.trim().to_owned();
+        self.problems.clear();
         if url.is_empty() {
+            self.problems.push(Problem::EmptyAddress);
             return;
         }
-        self.problems.clear();
         match self.backend.add_source(&url) {
             Ok(_) => {
                 self.new_source.clear();

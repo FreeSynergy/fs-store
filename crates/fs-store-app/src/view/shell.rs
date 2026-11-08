@@ -10,12 +10,16 @@ use blinc_layout::div::div;
 use blinc_layout::prelude::text;
 use fs_components_app::{AppError, AppWidget, Element, Screen, Surface};
 
-use crate::model::{StoreModel, View};
+use crate::launcher::Launcher;
+
+use crate::model::{StoreModel, View, is_quit_key};
 use crate::words;
 
 use super::available::available;
 use super::installed::installed;
 use super::job::job_bar;
+use super::menu::{install_menus, quit};
+use super::pages::{about, settings};
 use super::sources::sources;
 
 /// The model, shared between the window and the worker of a job.
@@ -32,34 +36,51 @@ pub(super) fn rebuild() {
     }
 }
 
-/// The window: three screens over `model`.
+/// The id of the screen of a view.
+pub(super) fn screen_id(view: View) -> &'static str {
+    match view {
+        View::Available => "available",
+        View::Installed => "installed",
+        View::Sources => "sources",
+        View::Settings => "settings",
+        View::About => "about",
+    }
+}
+
+/// The window: the screens and the menu over `model`; programs are opened with `launcher`.
 ///
 /// # Errors
 /// [`AppError`] if the shell cannot be made.
-pub fn store_app(model: &Shared) -> Result<AppWidget, AppError> {
-    let screen = |id: &str, label: &str, view| {
+pub fn store_app(model: &Shared, launcher: &Arc<dyn Launcher>) -> Result<AppWidget, AppError> {
+    let screen = |label: &str, view| {
         Screen::new(
-            id,
+            screen_id(view),
             label,
             Arc::new(StoreSurface {
                 model: Arc::clone(model),
+                launcher: Arc::clone(launcher),
                 view,
             }),
         )
     };
-    AppWidget::new(
+    let app = AppWidget::new(
         words::TITLE,
         vec![
-            screen("available", words::VIEW_AVAILABLE, View::Available),
-            screen("installed", words::VIEW_INSTALLED, View::Installed),
-            screen("sources", words::VIEW_SOURCES, View::Sources),
+            screen(words::VIEW_AVAILABLE, View::Available),
+            screen(words::VIEW_INSTALLED, View::Installed),
+            screen(words::VIEW_SOURCES, View::Sources),
+            screen(words::VIEW_SETTINGS, View::Settings),
+            screen(words::VIEW_ABOUT, View::About),
         ],
-    )
+    )?;
+    install_menus(&app, model)?;
+    Ok(app)
 }
 
-/// One of the three views as a surface.
+/// One of the views as a surface.
 struct StoreSurface {
     model: Shared,
+    launcher: Arc<dyn Launcher>,
     view: View,
 }
 
@@ -72,6 +93,14 @@ impl Surface for StoreSurface {
             .flex_col()
             .w(width)
             .h(height)
+            .on_key_down({
+                let shared = Arc::clone(&self.model);
+                move |ctx| {
+                    if is_quit_key(ctx.key_code, ctx.ctrl) {
+                        quit(&shared);
+                    }
+                }
+            })
             .child(job_bar(&model));
         for line in model.problem_lines() {
             page = page.child(div().class("fs-store-problem").child(text(line)));
@@ -79,7 +108,9 @@ impl Surface for StoreSurface {
         let body = match self.view {
             View::Sources => sources(&model, &self.model),
             View::Available => available(&model, &self.model),
-            View::Installed => installed(&model),
+            View::Installed => installed(&model, &self.model, &self.launcher),
+            View::Settings => settings(),
+            View::About => about(),
         };
         Box::new(page.child(body))
     }
