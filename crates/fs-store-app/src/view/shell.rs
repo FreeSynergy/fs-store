@@ -133,7 +133,7 @@ const STYLES: &str = r"
 .fs-store-empty { padding: var(--space-4); color: var(--text-secondary); }
 .fs-card { display: flex; flex-direction: column; padding: 12px; border-width: 1px; border-color: var(--border); border-radius: 8px; background: var(--surface); }
 .fs-card-rest { }
-.fs-card-hover { background: var(--surface-hover); border-color: var(--text-secondary); }
+.fs-card:hover { background: var(--surface-hover); border-color: var(--text-secondary); }
 .fs-card-selected { border-color: var(--primary); border-width: 2px; }
 .fs-card-head { display: flex; flex-direction: row; align-items: center; gap: 12px; }
 .fs-card-badge { color: var(--primary); font-size: var(--text-sm); font-weight: 600; }

@@ -188,8 +188,6 @@ fn working(what: Working) -> Div {
 pub(super) fn card(card: &Card, busy: bool, shared: &Shared, launcher: &Arc<dyn Launcher>) -> Div {
     let state_class = if card.selected {
         "fs-card-selected"
-    } else if card.hovered {
-        "fs-card-hover"
     } else {
         "fs-card-rest"
     };
@@ -198,8 +196,6 @@ pub(super) fn card(card: &Card, busy: bool, shared: &Shared, launcher: &Arc<dyn 
         Some(what) => working(what),
         None => actions(card, busy, shared, launcher),
     };
-    let (enter, leave) = (Arc::clone(shared), Arc::clone(shared));
-    let (enter_name, leave_name) = (card.name.clone(), card.name.clone());
     div()
         .class("fs-card")
         .class(state_class)
@@ -208,14 +204,4 @@ pub(super) fn card(card: &Card, busy: bool, shared: &Shared, launcher: &Arc<dyn 
         .gap(3.0)
         .child(head(card, shared))
         .child(foot)
-        .on_hover_enter(move |_| {
-            if locked(&enter).hover(&enter_name) {
-                rebuild();
-            }
-        })
-        .on_hover_leave(move |_| {
-            if locked(&leave).unhover(&leave_name) {
-                rebuild();
-            }
-        })
 }
