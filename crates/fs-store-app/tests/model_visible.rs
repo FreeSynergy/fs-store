@@ -119,6 +119,7 @@ fn menu_commands() {
     assert_eq!(m.command(Command::Sources), Effect::Show(View::Sources));
     assert_eq!(m.command(Command::Settings), Effect::Show(View::Settings));
     assert_eq!(m.command(Command::About), Effect::Show(View::About));
+    assert_eq!(m.command(Command::Help), Effect::Help);
     assert_eq!(m.command(Command::Quit), Effect::Quit);
     assert_eq!(Command::from_id("quit"), Some(Command::Quit));
     assert_eq!(Command::from_id("x"), None);
@@ -248,4 +249,20 @@ fn open_failure_and_missing_command_are_visible() {
     m.open("tasks", None, &launcher(&[], false));
     assert_eq!(m.problems().len(), 1);
     assert!(m.problem_lines()[0].contains("tasks"));
+}
+
+#[test]
+fn help_goes_to_the_page_of_the_current_view_in_the_persons_language() {
+    use fs_store_app::model::{help_url, is_help_key};
+    assert_eq!(
+        help_url(View::Cards, "en_US.UTF-8"),
+        "https://freesynergy.github.io/fs-documentation/help/store/programs/"
+    );
+    assert_eq!(
+        help_url(View::Settings, "de_DE.UTF-8"),
+        "https://freesynergy.github.io/fs-documentation/de/help/store/settings/"
+    );
+    assert!(help_url(View::Sources, "").ends_with("/help/store/sources/"));
+    assert!(help_url(View::About, "fr").ends_with("/help/store/about/"));
+    assert!(is_help_key(112) && !is_help_key(81));
 }

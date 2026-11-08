@@ -12,13 +12,13 @@ use fs_components_app::{AppError, AppWidget, Element, Screen, Surface};
 
 use crate::launcher::Launcher;
 
-use crate::model::{StoreModel, View, is_quit_key};
+use crate::model::{StoreModel, View, is_help_key, is_quit_key};
 use crate::words;
 
 use super::admin::admin;
 use super::cards::cards;
 use super::job::job_bar;
-use super::menu::{install_menus, quit};
+use super::menu::{install_menus, open_help, quit};
 use super::pages::about;
 
 /// The model, shared between the window and the worker of a job.
@@ -54,7 +54,7 @@ pub fn store_app(model: &Shared, launcher: &Arc<dyn Launcher>) -> Result<AppWidg
         }),
     );
     let app = AppWidget::new(title, vec![screen])?;
-    install_menus(&app, model)?;
+    install_menus(&app, model, launcher)?;
     Ok(app)
 }
 
@@ -76,9 +76,12 @@ impl Surface for StoreSurface {
             .h(height)
             .on_key_down({
                 let shared = Arc::clone(&self.model);
+                let launcher = Arc::clone(&self.launcher);
                 move |ctx| {
                     if is_quit_key(ctx.key_code, ctx.ctrl) {
                         quit(&shared);
+                    } else if is_help_key(ctx.key_code) {
+                        open_help(&shared, &launcher);
                     }
                 }
             });

@@ -16,16 +16,19 @@ pub enum Command {
     Settings,
     /// Show the About page.
     About,
+    /// Open the help page of the current view in the browser (F1).
+    Help,
 }
 
 impl Command {
     /// All entries.
-    pub const ALL: [Command; 5] = [
+    pub const ALL: [Command; 6] = [
         Command::Cards,
         Command::Sources,
         Command::Settings,
         Command::Quit,
         Command::About,
+        Command::Help,
     ];
 
     /// Stable id of the entry (what the menu hands back).
@@ -34,6 +37,7 @@ impl Command {
         match self {
             Command::Cards => "cards",
             Command::Quit => "quit",
+            Command::Help => "help",
             Command::Sources => "sources",
             Command::Settings => "settings",
             Command::About => "about",
@@ -54,8 +58,36 @@ pub enum Effect {
     Show(View),
     /// Close the window.
     Quit,
+    /// Open the help page of the current view; the view opens it and tells a problem if that fails.
+    Help,
     /// Nothing (a problem was told instead).
     Nothing,
+}
+
+/// DOM code of the key F1.
+const KEY_F1: u32 = 112;
+
+/// True for F1.
+#[must_use]
+pub fn is_help_key(key_code: u32) -> bool {
+    key_code == KEY_F1
+}
+
+/// The help page of a view (ADR 0065; addresses in `fs-documentation` `todo/help-addresses.md`, never renamed).
+/// `lang` is the person's language (`de...` gets the German pages, everything else English).
+#[must_use]
+pub fn help_url(view: View, lang: &str) -> String {
+    let page = match view {
+        View::Cards => "programs",
+        View::Sources => "sources",
+        View::Settings => "settings",
+        View::About => "about",
+    };
+    let german = lang.to_ascii_lowercase().starts_with("de");
+    format!(
+        "https://freesynergy.github.io/fs-documentation/{}help/store/{page}/",
+        if german { "de/" } else { "" }
+    )
 }
 
 /// DOM code of the key Q.
@@ -68,6 +100,11 @@ pub fn is_quit_key(key_code: u32, ctrl: bool) -> bool {
 }
 
 impl StoreModel {
+    /// Tells a problem that has no other place (for example the help page could not be opened).
+    pub fn report_failure(&mut self, detail: &str) {
+        self.problems.push(Problem::Backend(detail.to_owned()));
+    }
+
     /// Carries out a menu entry. Quitting while a job runs is refused, and told.
     pub fn command(&mut self, command: Command) -> Effect {
         match command {
@@ -75,6 +112,7 @@ impl StoreModel {
             Command::Sources => Effect::Show(View::Sources),
             Command::Settings => Effect::Show(View::Settings),
             Command::About => Effect::Show(View::About),
+            Command::Help => Effect::Help,
             Command::Quit => match self.busy_name() {
                 Some(name) => {
                     self.problems = vec![Problem::Busy(name)];

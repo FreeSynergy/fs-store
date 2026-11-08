@@ -34,6 +34,8 @@ pub const MENU_SOURCES: &str = "Sources";
 pub const MENU_SETTINGS: &str = "Settings";
 /// Menu entry: about.
 pub const MENU_ABOUT: &str = "About";
+/// Menu entry that opens the help page of the current view (F1).
+pub const MENU_HELP_PAGE: &str = "Help (F1)";
 
 /// About: name and version. Placeholder: `{version}`.
 pub const ABOUT_NAME: &str = "FreeSynergy.Store {version}";
