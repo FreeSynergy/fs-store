@@ -195,10 +195,12 @@ fn reinstalling_the_same_version_with_a_broken_archive_keeps_the_working_install
 
 #[test]
 fn a_relative_root_still_gives_working_links() {
-    let tmp = tempfile::tempdir().unwrap();
+    // Below the current directory, so a relative path exists on every system (on Windows the temp folder may be on another drive).
+    let cwd = std::env::current_dir().unwrap();
+    let tmp = tempfile::tempdir_in(&cwd).unwrap();
     let a1 = archive(tmp.path(), "one", "v1");
     let link = tmp.path().join("root");
-    let rel = pathdiff(&link);
+    let rel = link.strip_prefix(&cwd).unwrap().to_owned();
     run_update(
         &Update {
             package: &verified("tasks", Version::new(1, 0, 0)),
@@ -212,14 +214,4 @@ fn a_relative_root_still_gives_working_links() {
         fs::read_to_string(link.join("current/tasks/bin/prog")).unwrap(),
         "v1"
     );
-}
-
-fn pathdiff(abs: &Path) -> std::path::PathBuf {
-    // relative to the current directory of the test process
-    let cwd = std::env::current_dir().unwrap();
-    let mut up = std::path::PathBuf::new();
-    for _ in cwd.components().skip(1) {
-        up.push("..");
-    }
-    up.join(abs.strip_prefix("/").unwrap())
 }
