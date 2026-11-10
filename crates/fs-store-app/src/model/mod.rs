@@ -20,7 +20,7 @@ pub use cards::{
     Buttons, Card, CardState, OpenWidth, Placeholder, Working, buttons_for, columns, placeholder,
 };
 pub use cards_ui::CardsUi;
-pub use jobs::{JobView, Ticket};
+pub use jobs::{JobView, Ticket, UpdateRow};
 pub use menu::{Command, Effect, help_url, is_help_key, is_quit_key};
 pub use store::StoreModel;
 pub use types::{Action, AvailableRow, Problem, View};

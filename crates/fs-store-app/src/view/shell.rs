@@ -17,7 +17,7 @@ use crate::words;
 
 use super::admin::admin;
 use super::cards::cards;
-use super::job::job_bar;
+use super::job::job_list;
 use super::menu::{install_menus, open_help, quit};
 use super::pages::about;
 
@@ -85,8 +85,8 @@ impl Surface for StoreSurface {
                     }
                 }
             });
-        if model.jobs().len() == 1 {
-            page = page.child(job_bar(&model));
+        if !model.jobs().is_empty() {
+            page = page.child(job_list(&model, &self.model));
         }
         if view != View::Cards {
             let back = Arc::clone(&self.model);
@@ -98,12 +98,6 @@ impl Surface for StoreSurface {
                     },
                 ),
             ));
-        }
-        if view == View::Cards && model.badge() > 0 {
-            page = page.child(div().class("fs-store-job").child(text(words::fill(
-                words::UPDATES_BANNER,
-                &[("n", &model.badge().to_string())],
-            ))));
         }
         for line in model.problem_lines() {
             page = page.child(div().class("fs-store-problem").child(text(line)));

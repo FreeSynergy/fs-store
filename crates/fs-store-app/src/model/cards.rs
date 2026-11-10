@@ -67,6 +67,8 @@ pub struct Placeholder {
 pub struct Card {
     /// Name (shown, and the key of every command).
     pub name: String,
+    /// The name a person reads (`FreeSynergy.People`); never `fs-...`.
+    pub title: String,
     /// Kind, when a source offers it.
     pub kind: Option<Kind>,
     /// Where it is.
@@ -244,6 +246,7 @@ impl StoreModel {
         };
         Card {
             name: name.to_owned(),
+            title: self.title(name),
             kind: row.map(|r| r.package.kind),
             state,
             offered: row.map(|r| r.package.version),
@@ -261,7 +264,7 @@ impl StoreModel {
                 .iter()
                 .find(|j| j.name == name)
                 .and_then(|j| j.error.as_ref())
-                .map(|e| super::text::job_failed_line(name, e)),
+                .map(|e| super::text::job_failed_line(&self.title(name), e)),
             buttons: buttons_for(state),
             placeholder: placeholder(name),
             icon: self.backend.icon_path(name),

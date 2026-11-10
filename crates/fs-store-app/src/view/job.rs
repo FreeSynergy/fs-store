@@ -1,50 +1,44 @@
 //! Pattern: Observer (the worker thread reports each phase to the model, and the window is asked to draw
-//! again). The job bar shows the phases of the job the model holds.
+//! again). The job list shows every job the model holds.
 
 use std::sync::Arc;
 
+use blinc_cn::components::button::ButtonVariant;
 use blinc_layout::div::{Div, div};
 use blinc_layout::prelude::text;
 
-use crate::backend::{JobError, JobKind, Phase, StoreBackend};
+use crate::backend::{JobError, JobKind, StoreBackend};
 use crate::model::StoreModel;
 use crate::words;
 
-use super::shell::{Shared, locked, rebuild};
+use super::shell::{Shared, button, locked, rebuild};
 
-/// The six phases in a row; the one the job is in stands out. After a failure, `Failed` is told too.
-pub(super) fn job_bar(model: &StoreModel) -> Div {
-    let mut bar = div().class("fs-store-job").child(text(model.job_line()));
-    if let Some(job) = model.job() {
-        let mut marks = div().class("fs-store-phases");
-        for phase in [
-            Phase::Pending,
-            Phase::Verified,
-            Phase::Installing,
-            if job.error.is_some() {
-                if job.error == Some(JobError::RollbackFailed) {
-                    Phase::Failed
-                } else {
-                    Phase::RolledBack
-                }
-            } else {
-                Phase::Installed
-            },
-        ] {
-            let mut mark = div().child(text(words::phase_name(phase)).class("fs-store-phase"));
-            if job.phase == phase {
-                mark = mark.class("fs-store-phase-now");
-            }
-            if job.history.contains(&phase) {
-                marks = marks.child(mark);
-            } else {
-                marks = marks
-                    .child(div().child(text(words::phase_name(phase)).class("fs-store-phase")));
-            }
-        }
-        bar = bar.child(marks);
+/// The job list: one line per job of the queue, all at once; the finished ones can be cleared.
+pub(super) fn job_list(model: &StoreModel, shared: &Shared) -> Div {
+    let clear = Arc::clone(shared);
+    let mut list = div()
+        .class("fs-store-job")
+        .child(text(words::JOBS_HEADING).bold());
+    for line in model.job_lines() {
+        list = list.child(text(line));
     }
-    bar
+    if model.jobs().iter().any(crate::model::JobView::is_finished) {
+        list = list.child(
+            div().child(
+                button(
+                    "clear-jobs",
+                    words::BUTTON_CLEAR_JOBS,
+                    ButtonVariant::Ghost,
+                    true,
+                )
+                .on_click(move |_| {
+                    locked(&clear).clear_finished_jobs();
+                    rebuild();
+                }),
+            ),
+        );
+    }
+    list
 }
 
 /// Puts the job of `name` into the queue; its download starts at once, next to the others.

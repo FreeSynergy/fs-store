@@ -155,7 +155,7 @@ fn repository_opens_the_homepage_and_failures_are_visible() {
     );
     m.open_repository("fs-theme", &ok);
     assert_eq!(m.problems(), [Problem::NoHomepage("fs-theme".into())]);
-    assert!(m.problem_lines()[0].contains("fs-theme"));
+    assert!(m.problem_lines()[0].contains("FreeSynergy.Theme"));
     m.open_repository("fs-tasks", &opener(true));
     assert!(matches!(m.problems(), [Problem::RepositoryFailed { .. }]));
     assert!(m.problem_lines()[0].contains("no opener"));

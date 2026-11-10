@@ -49,7 +49,7 @@ fn unreadable_and_skipped_are_told() {
         m.problem_lines(),
         [
             "The source s could not be read: offline",
-            "x is not offered: no signature",
+            "X is not offered: no signature",
             "The store could not do this: disk",
         ]
     );

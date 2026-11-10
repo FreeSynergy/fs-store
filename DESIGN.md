@@ -316,3 +316,15 @@ generated test keys); TOML source list (`fs-store-sources`); `words.rs`. 27 test
 installers, self-replacement of the executable, GUI/CLI, the capnp file, a `Command` trait (comes with remove),
 key expiry checks and subkey rules in `fs-store-pgp` (provisional: a valid signature by the primary key or a public
 subkey of a non-revoked trusted key counts), translation of `words.rs`, atomic write of the source file.
+
+## Start page, job list, display names (Q3, 2026-11-10)
+
+- Updates live on the start page (block "Updates" above the cards, with "Update all"), not in a menu entry: `StoreModel::update_rows`.
+- Installing runs in the background (queue above); every job is one line of the job list (`job_lines`), nothing else is
+  blocked; only an uninstall disables the buttons. Finished jobs go with "Clear finished".
+- Display name: ONE function, `fs_store_core::display_name(id, title)` (`names.rs`): the catalog `<name>` wins, else
+  `fs-people` becomes `FreeSynergy.People`. `StoreModel::title` is what every window and sentence uses; `fs-...` stays
+  for repository, package and command only.
+- ADR 0066: the new view code (job list, update block) is the smallest possible and moves to `fs-components` with
+  the rest of the render code (Thread R); no new Component was built here. Missing Components to ask for: a job list
+  and an update list.

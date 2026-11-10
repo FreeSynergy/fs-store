@@ -9,6 +9,8 @@ use fs_store_core::{Format, Kind, PackageName, Version};
 pub struct CatalogEntry {
     /// `AppStream` component id.
     pub name: PackageName,
+    /// The name to show (`<name>`, e.g. `FreeSynergy.People`); empty when the entry has none.
+    pub title: String,
     /// Kind (`fs:kind`, default program).
     pub kind: Kind,
     /// Newest release that has an artifact.
@@ -214,6 +216,7 @@ fn entry(c: roxmltree::Node) -> Result<CatalogEntry, (String, String)> {
     let exes = collect_native(art, "exe");
     Ok(CatalogEntry {
         name,
+        title: text(c, "name").unwrap_or_default().to_owned(),
         kind,
         version,
         format,

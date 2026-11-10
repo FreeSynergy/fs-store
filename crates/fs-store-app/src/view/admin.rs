@@ -64,7 +64,7 @@ fn programs_section(model: &StoreModel, shared: &Shared) -> Div {
                 .child(
                     div()
                         .class("fs-store-cell")
-                        .child(text(program.name.clone())),
+                        .child(text(model.title(&program.name))),
                 )
                 .child(pair),
         );

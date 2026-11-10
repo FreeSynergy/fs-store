@@ -51,14 +51,10 @@ pub fn install_label(mode: InstallMode) -> &'static str {
 
 /// "name: from -> to".
 #[must_use]
-pub fn update_line(update: &Update) -> String {
+pub fn update_line(update: &Update, title: &str) -> String {
     words::fill(
         words::UPDATE_LINE,
-        &[
-            ("name", &update.name),
-            ("from", &update.from),
-            ("to", &update.to),
-        ],
+        &[("name", title), ("from", &update.from), ("to", &update.to)],
     )
 }
 

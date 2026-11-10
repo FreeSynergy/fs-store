@@ -97,7 +97,7 @@ fn head(card: &Card, shared: &Shared) -> Div {
         .flex_grow()
         .min_w(0.0)
         .gap(0.5)
-        .child(text(card.name.clone()).bold().no_wrap())
+        .child(text(card.title.clone()).bold().no_wrap())
         .child(text(card.version_line()).class("fs-store-sub").no_wrap());
     if card.is_new {
         names = names.child(text(words::MARK_NEW).class("fs-card-badge"));
@@ -175,7 +175,7 @@ fn confirm(card: &Card, shared: &Shared) -> Div {
         .gap(1.5)
         .child(text(words::fill(
             words::UNINSTALL_ASK,
-            &[("name", &card.name)],
+            &[("name", &card.title)],
         )))
         .child(
             div()

@@ -25,6 +25,8 @@ pub struct SourceRow {
 pub struct PackageRow {
     /// Name (`AppStream` component id).
     pub name: String,
+    /// The name to show (`FreeSynergy.People`), as the catalog gives it; empty when it has none.
+    pub title: String,
     /// Kind.
     pub kind: Kind,
     /// Offered version.

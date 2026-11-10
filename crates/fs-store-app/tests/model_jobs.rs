@@ -27,7 +27,7 @@ fn install_flow_goes_through_all_phases() {
     assert!(!m.is_busy());
     assert_eq!(m.installed().len(), 1);
     assert_eq!(action_of(&m, "fs-theme"), Some(Action::UpToDate));
-    assert_eq!(m.job_line(), "fs-theme 1.0.0 is installed.");
+    assert_eq!(m.job_line(), "FreeSynergy.Theme 1.0.0 is installed.");
     assert_eq!(f.state.lock().unwrap().runs[0].0, JobKind::Install);
 }
 
@@ -80,10 +80,13 @@ fn failed_job_is_shown_as_failed_then_rolled_back() {
     );
     assert_eq!(job.phase, Phase::RolledBack);
     assert!(m.installed().is_empty());
-    assert_eq!(m.job_line(), "fs-theme: the previous state is back.");
+    assert_eq!(
+        m.job_line(),
+        "FreeSynergy.Theme: the previous state is back."
+    );
     assert_eq!(
         m.problem_lines(),
-        ["fs-theme was not installed: its signature could not be verified."]
+        ["FreeSynergy.Theme was not installed: its signature could not be verified."]
     );
     assert!(!m.is_busy());
 }

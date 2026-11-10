@@ -190,6 +190,7 @@ impl StoreBackend for EngineBackend {
                         .packages
                         .extend(catalog.entries.into_iter().map(|e| PackageRow {
                             name: e.name.as_str().to_owned(),
+                            title: e.title,
                             kind: e.kind,
                             version: e.version,
                             source: source.id.0.clone(),

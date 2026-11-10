@@ -230,6 +230,14 @@ pub const CHECK_FAILED: &str = "Looking for updates did not work: {detail}";
 pub const UPDATE_LINE: &str = "{name}: {from} -> {to}";
 /// Line above the cards when updates are known. Placeholder: `{n}`.
 pub const UPDATES_BANNER: &str = "{n} update(s) found. Press Update on the cards.";
+/// Heading of the update block on the start page.
+pub const UPDATES_HEADING: &str = "Updates";
+/// Heading of the job list.
+pub const JOBS_HEADING: &str = "Jobs";
+/// Clears the finished jobs from the job list.
+pub const BUTTON_CLEAR_JOBS: &str = "Clear finished";
+/// A program in the update block whose update is queued or running.
+pub const UPDATE_QUEUED: &str = "in the queue";
 /// Mark on a program that is new in the available list.
 pub const MARK_NEW: &str = "New";
 

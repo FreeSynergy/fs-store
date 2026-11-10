@@ -207,3 +207,12 @@ fn a_windows_file_is_not_offered_on_linux() {
         assert_eq!(e.exes, []);
     }
 }
+
+#[test]
+fn the_display_name_is_read_from_the_name_tag() {
+    let xml = r#"<components version="1.0"><component><id>fs-a</id><name> FreeSynergy.A </name><releases><release version="1.0.0"><artifacts><artifact type="binary"><location>l</location><checksum type="sha256">1</checksum></artifact></artifacts></release></releases><custom><value key="fs:signature">s</value></custom></component></components>"#;
+    assert_eq!(
+        parse_catalog(xml).unwrap().entries[0].title,
+        "FreeSynergy.A"
+    );
+}

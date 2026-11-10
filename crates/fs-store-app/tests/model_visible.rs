@@ -25,7 +25,10 @@ fn failed_job_gives_a_message_with_the_reason() {
     let f = fake(Vec::new(), Some(JobError::Other("disk full".into())));
     let mut m = model(&f);
     m.run_job("fs-theme");
-    assert_eq!(m.problem_lines(), ["fs-theme was not installed: disk full"]);
+    assert_eq!(
+        m.problem_lines(),
+        ["FreeSynergy.Theme was not installed: disk full"]
+    );
     assert!(matches!(m.problems()[0], Problem::JobFailed { .. }));
 }
 

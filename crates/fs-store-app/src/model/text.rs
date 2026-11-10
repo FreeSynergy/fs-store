@@ -14,8 +14,23 @@ impl StoreModel {
             return words::NO_JOB.to_owned();
         };
         let version = job.version.map(|v| v.to_string()).unwrap_or_default();
-        let values = [("name", job.name.as_str()), ("version", version.as_str())];
+        let title = self.title(&job.name);
+        let values = [("name", title.as_str()), ("version", version.as_str())];
         words::fill(words::job_phase(job.phase), &values)
+    }
+
+    /// The job list: one line for every job of the queue, in the order they were started.
+    #[must_use]
+    pub fn job_lines(&self) -> Vec<String> {
+        self.jobs
+            .iter()
+            .map(|job| {
+                let version = job.version.map(|v| v.to_string()).unwrap_or_default();
+                let title = self.title(&job.name);
+                let values = [("name", title.as_str()), ("version", version.as_str())];
+                words::fill(words::job_phase(job.phase), &values)
+            })
+            .collect()
     }
 
     /// Lines about where the installed package `name` is: how, which version, commands, folder, source.
@@ -70,12 +85,15 @@ impl StoreModel {
                     words::SOURCE_UNREADABLE,
                     &[("source", source), ("detail", detail)],
                 ),
-                Problem::Skipped { id, reason } => {
-                    words::fill(words::ENTRY_SKIPPED, &[("id", id), ("reason", reason)])
+                Problem::Skipped { id, reason } => words::fill(
+                    words::ENTRY_SKIPPED,
+                    &[("id", &self.title(id)), ("reason", reason)],
+                ),
+                Problem::Busy(name) => words::fill(words::JOB_BUSY, &[("name", &self.title(name))]),
+                Problem::JobFailed { name, error } => job_failed_line(&self.title(name), error),
+                Problem::NothingToDo(name) => {
+                    words::fill(words::NOTHING_TO_DO, &[("name", &self.title(name))])
                 }
-                Problem::Busy(name) => words::fill(words::JOB_BUSY, &[("name", name)]),
-                Problem::JobFailed { name, error } => job_failed_line(name, error),
-                Problem::NothingToDo(name) => words::fill(words::NOTHING_TO_DO, &[("name", name)]),
                 Problem::LaunchFailed { command, detail } if command.is_empty() => {
                     words::fill(words::OPEN_NO_COMMAND, &[("detail", detail)])
                 }
@@ -85,9 +103,11 @@ impl StoreModel {
                 ),
                 Problem::UninstallFailed { name, detail } => words::fill(
                     words::UNINSTALL_FAILED,
-                    &[("name", name), ("detail", detail)],
+                    &[("name", &self.title(name)), ("detail", detail)],
                 ),
-                Problem::NoHomepage(name) => words::fill(words::NO_HOMEPAGE, &[("name", name)]),
+                Problem::NoHomepage(name) => {
+                    words::fill(words::NO_HOMEPAGE, &[("name", &self.title(name))])
+                }
                 Problem::RepositoryFailed { url, detail } => words::fill(
                     words::REPOSITORY_FAILED,
                     &[("url", url), ("detail", detail)],

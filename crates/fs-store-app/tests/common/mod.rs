@@ -34,6 +34,7 @@ pub fn v(a: u64, b: u64, c: u64) -> Version {
 pub fn package(name: &str, version: Version) -> PackageRow {
     PackageRow {
         name: name.to_owned(),
+        title: String::new(),
         kind: Kind::Program,
         version,
         source: "freesynergy".to_owned(),

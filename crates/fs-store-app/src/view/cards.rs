@@ -7,7 +7,7 @@ use blinc_layout::div::{Div, div};
 use blinc_layout::prelude::text;
 
 use crate::launcher::Launcher;
-use crate::model::{Card, StoreModel, columns};
+use crate::model::{Card, StoreModel, UpdateRow, columns};
 use crate::words;
 
 use super::card::{CARD_W, card};
@@ -30,7 +30,7 @@ fn panel(selected: &Card, model: &StoreModel, shared: &Shared) -> Div {
         .flex_shrink_0()
         .flex_col()
         .gap(2.0)
-        .child(text(selected.name.clone()).size(20.0).bold())
+        .child(text(selected.title.clone()).size(20.0).bold())
         .child(text(selected.version_line()).class("fs-store-sub"))
         .child(text(selected.description_text()));
     let lines = model.detail_lines(&selected.name);
@@ -54,6 +54,28 @@ fn panel(selected: &Card, model: &StoreModel, shared: &Shared) -> Div {
     )
 }
 
+/// The "Updates" block of the start page: one line per program with a newer version.
+fn updates_block(rows: &[UpdateRow]) -> Div {
+    let mut block = div()
+        .class("fs-store-job")
+        .child(text(words::UPDATES_HEADING).bold());
+    for row in rows {
+        let mut line = words::fill(
+            words::UPDATE_LINE,
+            &[
+                ("name", &row.title),
+                ("from", &row.from.to_string()),
+                ("to", &row.to.to_string()),
+            ],
+        );
+        if row.queued {
+            line = format!("{line} ({})", words::UPDATE_QUEUED);
+        }
+        block = block.child(text(line));
+    }
+    block
+}
+
 /// The page of cards for a window `width` pixels wide.
 pub(super) fn cards(
     model: &StoreModel,
@@ -69,7 +91,7 @@ pub(super) fn cards(
             "refresh",
             words::BUTTON_REFRESH,
             ButtonVariant::Ghost,
-            !model.is_busy(),
+            !model.is_removing(),
         )
         .on_click(move |_| {
             locked(&refresh).refresh();
@@ -87,6 +109,16 @@ pub(super) fn cards(
             .on_click(move |_| start_all_updates(&all_updates)),
         );
     }
+    let rows = model.update_rows();
+    let top = if rows.is_empty() {
+        top
+    } else {
+        div()
+            .flex_col()
+            .w_full()
+            .child(top)
+            .child(updates_block(&rows))
+    };
     let all = model.cards();
     if all.is_empty() {
         return div().flex_col().w_full().child(top).child(
