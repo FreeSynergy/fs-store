@@ -143,8 +143,10 @@ fn nothing_is_installed_before_every_download_is_done() {
     assert!(!tmp.path().join("root").exists());
 }
 
+#[cfg(unix)] // the rpm test below asks `pkexec`
 #[derive(Default)]
 struct Calls(std::sync::Arc<std::sync::Mutex<Vec<Vec<String>>>>);
+#[cfg(unix)]
 impl fs_store_engine::Commander for Calls {
     fn run(&mut self, program: &str, args: &[&str]) -> Result<(), String> {
         let mut line = vec![program.to_owned()];
@@ -154,6 +156,7 @@ impl fs_store_engine::Commander for Calls {
     }
 }
 
+#[cfg(unix)]
 fn rpm_component(name: &str, files: &[(&str, &[u8])]) -> String {
     let mut arts = String::new();
     for (n, (file, bytes)) in files.iter().enumerate() {
