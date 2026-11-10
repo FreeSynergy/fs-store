@@ -121,22 +121,6 @@ fn text<'a>(n: roxmltree::Node<'a, 'a>, tag: &str) -> Option<&'a str> {
         .map(str::trim)
 }
 
-/// The `<name>` without `xml:lang` (the default one); only if there is none, the first translated one.
-fn plain_name(c: roxmltree::Node) -> String {
-    let mut names = c.children().filter(|n| n.has_tag_name("name"));
-    let first = names.clone().next();
-    names
-        .find(|n| {
-            n.attribute(("http://www.w3.org/XML/1998/namespace", "lang"))
-                .is_none()
-        })
-        .or(first)
-        .and_then(|n| n.text())
-        .map(str::trim)
-        .unwrap_or_default()
-        .to_owned()
-}
-
 /// `platform` like `x86_64-linux-gnu`: the architecture must be ours and the system the one this store runs on
 /// (`linux`, `windows`).
 fn fits_this_machine(platform: &str) -> bool {
@@ -232,7 +216,7 @@ fn entry(c: roxmltree::Node) -> Result<CatalogEntry, (String, String)> {
     let exes = collect_native(art, "exe");
     Ok(CatalogEntry {
         name,
-        title: plain_name(c),
+        title: crate::title::plain_name(c),
         kind,
         version,
         format,

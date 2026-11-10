@@ -3,7 +3,6 @@
 use crate::backend::JobError;
 use crate::words;
 
-use super::jobs::JobState;
 use super::store::StoreModel;
 use super::types::Problem;
 
@@ -28,12 +27,7 @@ impl StoreModel {
             .iter()
             .map(|job| {
                 let title = self.title(&job.name);
-                let state = match job.state() {
-                    JobState::Waiting => words::JOB_WAITING,
-                    JobState::Running => words::JOB_RUNNING,
-                    JobState::Done => words::JOB_DONE,
-                    JobState::Failed => words::JOB_FAILED,
-                };
+                let state = words::job_state(job.state());
                 let what = if let Some(error) = &job.error {
                     job_failed_line(&title, error)
                 } else {
