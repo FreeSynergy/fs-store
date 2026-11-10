@@ -77,6 +77,12 @@ impl SystemPackages for WindowsSystem {
         let place = format!("_?={}", dir.display());
         let (program, args) = Uac.wrap(&uninstaller.to_string_lossy(), &["/S", &place]);
         let args: Vec<&str> = args.iter().map(String::as_str).collect();
+        commander.run(&program, &args)?;
+        // Run in place, it cannot delete itself nor the folder it sits in: that is left for us to do (the folder is the one
+        // made from the plain name above, below the program folder).
+        let folder = dir.to_string_lossy();
+        let (program, args) = Uac.wrap("cmd.exe", &["/C", "rmdir", "/S", "/Q", &folder]);
+        let args: Vec<&str> = args.iter().map(String::as_str).collect();
         commander.run(&program, &args)
     }
 }
