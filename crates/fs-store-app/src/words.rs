@@ -230,17 +230,7 @@ pub const CHECK_FAILED: &str = "Looking for updates did not work: {detail}";
 pub const UPDATE_LINE: &str = "{name}: {from} -> {to}";
 /// Heading of the update block on the start page.
 pub const UPDATES_HEADING: &str = "Updates";
-/// The state of a job in the job list.
-#[must_use]
-pub fn job_state(state: crate::model::JobState) -> &'static str {
-    use crate::model::JobState;
-    match state {
-        JobState::Waiting => "Waiting",
-        JobState::Running => "Running",
-        JobState::Done => "Done",
-        JobState::Failed => "Failed",
-    }
-}
+pub use crate::words_job::job_state;
 /// Heading of the job list.
 pub const JOBS_HEADING: &str = "Jobs";
 /// Clears the finished jobs from the job list.
