@@ -41,6 +41,8 @@ pub fn default_root() -> PathBuf {
 pub struct LocalStore {
     root: PathBuf,
     rpm: RpmLookup,
+    /// What the system package manager is called in answers (deb on Debian and Ubuntu, else rpm).
+    native: Format,
 }
 
 impl LocalStore {
@@ -50,6 +52,7 @@ impl LocalStore {
         Self {
             root: root.into(),
             rpm: rpm_version,
+            native: native_format(),
         }
     }
 
@@ -63,6 +66,7 @@ impl LocalStore {
     #[must_use]
     pub fn with_rpm_lookup(mut self, lookup: RpmLookup) -> Self {
         self.rpm = lookup;
+        self.native = Format::Rpm; // the lookup stands in for rpm
         self
     }
 
@@ -116,7 +120,7 @@ impl StoreView for LocalStore {
                     name: e.name.clone(),
                     kind: Kind::Program,
                     format: if by_rpm.is_some() {
-                        native_format()
+                        self.native
                     } else {
                         Format::TarGz
                     },

@@ -79,14 +79,20 @@ fn details_list_only_what_exists() {
     reg.set_facets("tasks", vec!["tasks-board".into(), "tasks-gone".into()]);
     reg.save().unwrap();
     fs::write(bin.join("tasks-board"), "").unwrap();
-    let d = details(&root, &bin, &no_rpm, "tasks");
+    let d = details(&root, &bin, &no_rpm, InstallKind::Rpm, "tasks");
     assert_eq!(d.kinds, [InstallKind::Archive]);
     assert_eq!(d.source.as_deref(), Some("https://example.org/s"));
     assert_eq!(d.facets, ["tasks-board", "tasks-gone"]);
     let names: Vec<_> = d.commands.iter().map(|c| c.0.as_str()).collect();
     assert_eq!(names, ["tasks", "tasks-board"]);
     assert!(d.folder.unwrap().ends_with("packages/tasks/0.6.0"));
-    let rpm_only = details(&root, &bin, &|_| Some(v(1, 0, 0)), "unknown");
+    let rpm_only = details(
+        &root,
+        &bin,
+        &|_| Some(v(1, 0, 0)),
+        InstallKind::Rpm,
+        "unknown",
+    );
     assert_eq!(rpm_only.kinds, [InstallKind::Rpm]);
     assert!(rpm_only.folder.is_none());
     let _ = fs::remove_dir_all(&root);

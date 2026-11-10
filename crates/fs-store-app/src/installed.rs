@@ -53,11 +53,23 @@ pub fn detect(
         .collect()
 }
 
-/// Where the package `name` is, as far as that can be found out.
+/// The kind of install the package manager of this machine does: deb on Debian and Ubuntu, else rpm.
+#[must_use]
+pub fn native_kind() -> InstallKind {
+    if fs_store_engine::detect_system() == fs_store_engine::System::Deb {
+        InstallKind::Deb
+    } else {
+        InstallKind::Rpm
+    }
+}
+
+/// Where the package `name` is, as far as that can be found out. `rpm` asks the package manager for a version and
+/// `native_kind` names it when it knows the package.
 pub fn details(
     root: &Path,
     bin_dir: &Path,
     rpm: &dyn Fn(&str) -> Option<Version>,
+    native_kind: InstallKind,
     name: &str,
 ) -> InstalledDetails {
     let mut out = InstalledDetails::default();
@@ -70,13 +82,7 @@ pub fn details(
     }
     let from_rpm = rpm(name).is_some();
     if from_rpm {
-        out.kinds.push(
-            if fs_store_engine::detect_system() == fs_store_engine::System::Deb {
-                InstallKind::Deb
-            } else {
-                InstallKind::Rpm
-            },
-        );
+        out.kinds.push(native_kind);
     }
     let mut commands: Vec<String> = vec![name.to_owned()];
     if let Some(entry) = Registry::load(&root.join("installed.toml"))

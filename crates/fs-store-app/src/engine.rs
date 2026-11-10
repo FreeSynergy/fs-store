@@ -234,6 +234,7 @@ impl StoreBackend for EngineBackend {
             &self.root,
             &fs_store_engine::default_bin_dir(),
             &fs_store_engine::native_installed_version,
+            crate::installed::native_kind(),
             name,
         )
     }
