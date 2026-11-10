@@ -13,8 +13,16 @@ use crate::view::{Offers, PackageInfo, SourceInfo, StoreView};
 /// Version of a package as the system package manager knows it.
 type RpmLookup = fn(&str) -> Option<String>;
 
+/// The format the package manager of this system installs (the system's own answer was found, so it is one of them).
+fn native_format() -> Format {
+    match fs_store_engine::detect_system() {
+        fs_store_engine::System::Deb => Format::Deb,
+        _ => Format::Rpm,
+    }
+}
+
 fn rpm_version(name: &str) -> Option<String> {
-    fs_store_engine::rpm_installed_version(name).map(|v| v.to_string())
+    fs_store_engine::native_installed_version(name).map(|v| v.to_string())
 }
 
 /// The root of the store: `$FS_STORE_ROOT`, else `~/.local/share/fs-store` (as the commands use it).
@@ -108,7 +116,7 @@ impl StoreView for LocalStore {
                     name: e.name.clone(),
                     kind: Kind::Program,
                     format: if by_rpm.is_some() {
-                        Format::Rpm
+                        native_format()
                     } else {
                         Format::TarGz
                     },

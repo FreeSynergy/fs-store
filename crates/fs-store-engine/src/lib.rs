@@ -3,10 +3,12 @@
 #![deny(missing_docs)]
 
 mod batch;
+mod deb;
 mod facets;
 mod icons;
 mod links;
 mod mode;
+mod native;
 pub mod net;
 mod prepare;
 mod proc;
@@ -17,10 +19,15 @@ pub mod service;
 mod targz;
 
 pub use batch::{CommitObserver, Observer};
+pub use deb::{Deb, remove_deb, remove_native};
 pub use facets::{default_apps_dir, ensure_own_menu_entry, link_facets, unlink_facets};
 pub use icons::store_icon;
 pub use links::{default_bin_dir, link_programs, unlink_programs};
-pub use mode::{own_exe, preferred_format, restart, rpm_installed_version, without_deleted_suffix};
+pub use mode::{
+    System, deb_installed_version, detect_system, format_for, native_installed_version, own_exe,
+    preferred_format, restart, rpm_installed_version, system_from_os_release,
+    without_deleted_suffix,
+};
 pub use prepare::{Downloaded, Plan, Prepared};
 pub use proc::ProcRunningCheck;
 pub use remove::{RemoveError, remove};

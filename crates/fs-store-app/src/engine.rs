@@ -131,7 +131,7 @@ impl EngineBackend {
     pub(crate) fn installed_version(&self, name: &str) -> Option<Version> {
         let known = crate::installed::detect(
             &self.root,
-            &fs_store_engine::rpm_installed_version,
+            &fs_store_engine::native_installed_version,
             &[name.to_owned()],
         );
         known
@@ -216,7 +216,7 @@ impl StoreBackend for EngineBackend {
             .clone();
         Ok(crate::installed::detect(
             &self.root,
-            &fs_store_engine::rpm_installed_version,
+            &fs_store_engine::native_installed_version,
             &candidates,
         ))
     }
@@ -233,7 +233,7 @@ impl StoreBackend for EngineBackend {
         crate::installed::details(
             &self.root,
             &fs_store_engine::default_bin_dir(),
-            &fs_store_engine::rpm_installed_version,
+            &fs_store_engine::native_installed_version,
             name,
         )
     }

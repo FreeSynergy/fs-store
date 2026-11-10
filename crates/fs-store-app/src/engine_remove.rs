@@ -6,11 +6,11 @@ use std::path::Path;
 use fs_store_engine::{ProcRunningCheck, SystemCommander};
 use fs_store_sources::Registry;
 
-/// rpm: `pkexec dnf remove`; else the unpacked package is deleted. Then the commands are unlinked and the
+/// rpm or deb: `pkexec dnf remove` / `pkexec apt-get remove`; else the unpacked package is deleted. Then the commands are unlinked and the
 /// register forgets the program. The data of the person is never removed.
 pub(crate) fn uninstall(root: &Path, name: &str) -> Result<(), String> {
-    if fs_store_engine::rpm_installed_version(name).is_some() {
-        fs_store_engine::remove_rpm(name, &mut SystemCommander)
+    if fs_store_engine::native_installed_version(name).is_some() {
+        fs_store_engine::remove_native(name, &mut SystemCommander)
             .map_err(|e| format!("{name}: {e}"))?;
     } else {
         let running = ProcRunningCheck::new(root);

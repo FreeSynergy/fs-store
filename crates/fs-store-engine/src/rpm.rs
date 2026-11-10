@@ -3,12 +3,12 @@
 //! The person confirms root themselves: `pkexec` asks for it, we never see a password.
 
 use std::fs;
-use std::io::Write;
-use std::os::unix::fs::OpenOptionsExt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use fs_store_core::{Format, InstallError, InstallStrategy, VerifiedPackage, Version};
+
+use crate::native::{names, write_private};
 
 /// Runs a program with arguments; `Err` carries what went wrong (exit status and stderr).
 pub trait Commander {
@@ -67,42 +67,10 @@ impl<C: Commander> InstallStrategy for Rpm<C> {
 
     fn install(&mut self, package: &VerifiedPackage) -> Result<(), InstallError> {
         let p = package.package();
-        let io = |e: std::io::Error| InstallError(e.to_string());
-        fs::create_dir_all(&self.dir).map_err(io)?;
-        fs::set_permissions(
-            &self.dir,
-            std::os::unix::fs::PermissionsExt::from_mode(0o700),
-        )
-        .map_err(io)?;
-        // Names nobody can guess, created exclusively and never through a link: nothing to swap after the check.
-        let mut paths = Vec::new();
-        let mut written = Ok(());
-        for (n, bytes) in self.files.iter().enumerate() {
-            let file = self.dir.join(format!(
-                "{}-{}-{}-{n}.rpm",
-                p.name.as_str(),
-                p.version,
-                std::process::id()
-            ));
-            let _ = fs::remove_file(&file);
-            let one = fs::OpenOptions::new()
-                .write(true)
-                .create_new(true)
-                .mode(0o600)
-                .custom_flags(0x2_0000) // O_NOFOLLOW
-                .open(&file)
-                .and_then(|mut f| f.write_all(bytes));
-            paths.push(file);
-            if let Err(e) = one {
-                written = Err(e);
-                break;
-            }
-        }
-        let result = written.map_err(|e| e.to_string()).and_then(|()| {
-            let names: Vec<String> = paths
-                .iter()
-                .map(|f| f.to_string_lossy().into_owned())
-                .collect();
+        let stem = format!("{}-{}", p.name.as_str(), p.version);
+        let (paths, written) = write_private(&self.dir, &stem, "rpm", &self.files);
+        let result = written.and_then(|()| {
+            let names = names(&paths);
             // A local rpm needs no fresh repository metadata (measured 2026-11-08: a refresh of all repositories is what
             // makes `dnf install` slow); dnf still downloads metadata when there is none.
             let mut args = vec!["dnf", "install", "-y", "--setopt=metadata_expire=never"];

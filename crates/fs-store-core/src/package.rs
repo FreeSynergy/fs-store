@@ -25,6 +25,10 @@ pub enum Format {
     AppImage,
     /// tar.gz archive.
     TarGz,
+    /// deb, installed through apt (Debian, Ubuntu).
+    Deb,
+    /// Windows `-setup.exe`. Offered on Windows; the store has no installer for it yet (`Unsupported`).
+    Exe,
 }
 
 /// Name of a package (an `AppStream` id): 1 to 128 of `A-Z a-z 0-9 . _ -`, not starting with `.` or `-`, so it is

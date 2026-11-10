@@ -70,7 +70,13 @@ pub fn details(
     }
     let from_rpm = rpm(name).is_some();
     if from_rpm {
-        out.kinds.push(InstallKind::Rpm);
+        out.kinds.push(
+            if fs_store_engine::detect_system() == fs_store_engine::System::Deb {
+                InstallKind::Deb
+            } else {
+                InstallKind::Rpm
+            },
+        );
     }
     let mut commands: Vec<String> = vec![name.to_owned()];
     if let Some(entry) = Registry::load(&root.join("installed.toml"))

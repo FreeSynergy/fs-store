@@ -119,6 +119,7 @@ pub const JOB_BUSY: &str = "{name} is being installed. Wait until it is done.";
 pub fn install_kind(kind: crate::backend::InstallKind) -> &'static str {
     match kind {
         crate::backend::InstallKind::Rpm => "rpm",
+        crate::backend::InstallKind::Deb => "deb",
         crate::backend::InstallKind::Archive => "tar.gz",
     }
 }

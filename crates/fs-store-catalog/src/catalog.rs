@@ -23,6 +23,10 @@ pub struct CatalogEntry {
     pub signature_url: String,
     /// The rpm files of the same release (`fs-format="rpm"` artifacts for this machine); empty when there are none.
     pub rpms: Vec<RpmFile>,
+    /// The deb files of the same release (`fs-format="deb"`, platform fits this machine); empty when there are none.
+    pub debs: Vec<RpmFile>,
+    /// The Windows setup files of the same release (`fs-format="exe"`, platform fits this machine); empty when none.
+    pub exes: Vec<RpmFile>,
     /// The icon, when the component has a remote icon with a hash (an icon without a hash is not used).
     pub icon: Option<Icon>,
     /// A longer description (`<description>` text, tags dropped); the one-line `<summary>` when there is none.
@@ -33,7 +37,8 @@ pub struct CatalogEntry {
     pub facets: Vec<String>,
 }
 
-/// One rpm file of a release (a program may come as several rpms, e.g. app and server).
+/// One native package file of a release (rpm, deb or exe; a program may come as several, e.g. app and server).
+/// The name `RpmFile` is older than deb and exe and stays so callers keep compiling.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RpmFile {
     /// Download address.
@@ -114,10 +119,14 @@ fn text<'a>(n: roxmltree::Node<'a, 'a>, tag: &str) -> Option<&'a str> {
         .map(str::trim)
 }
 
-/// `platform` like `x86_64-linux-gnu`: the architecture must be ours and the system Linux.
+/// `platform` like `x86_64-linux-gnu`: the architecture must be ours and the system the one this store runs on
+/// (`linux`, `windows`).
 fn fits_this_machine(platform: &str) -> bool {
-    platform.starts_with(std::env::consts::ARCH) && platform.contains("linux")
+    platform.starts_with(std::env::consts::ARCH) && platform.contains(std::env::consts::OS)
 }
+
+/// The native package formats a release may carry next to its main artifact.
+const NATIVE: [&str; 3] = ["rpm", "deb", "exe"];
 
 fn entry(c: roxmltree::Node) -> Result<CatalogEntry, (String, String)> {
     let id = text(c, "id").unwrap_or_default().to_owned();
@@ -141,7 +150,9 @@ fn entry(c: roxmltree::Node) -> Result<CatalogEntry, (String, String)> {
         let Some(art) = r.descendants().find(|n| {
             n.has_tag_name("artifact")
                 && n.attribute("type") != Some("source")
-                && n.attribute("fs-format") != Some("rpm")
+                && !n
+                    .attribute("fs-format")
+                    .is_some_and(|f| NATIVE.contains(&f))
                 && n.attribute("platform").is_none_or(fits_this_machine)
         }) else {
             continue;
@@ -184,6 +195,8 @@ fn entry(c: roxmltree::Node) -> Result<CatalogEntry, (String, String)> {
     let format = match custom("fs:format").as_deref() {
         None | Some("tar.gz") => Format::TarGz,
         Some("rpm") => Format::Rpm,
+        Some("deb") => Format::Deb,
+        Some("exe") => Format::Exe,
         Some("flatpak") => Format::Flatpak,
         Some("appimage") => Format::AppImage,
         Some(other) => return Err(fail(&format!("unknown fs:format `{other}`"))),
@@ -196,7 +209,9 @@ fn entry(c: roxmltree::Node) -> Result<CatalogEntry, (String, String)> {
                 .collect()
         })
         .unwrap_or_default();
-    let rpms = collect_rpms(art);
+    let rpms = collect_native(art, "rpm");
+    let debs = collect_native(art, "deb");
+    let exes = collect_native(art, "exe");
     Ok(CatalogEntry {
         name,
         kind,
@@ -206,6 +221,8 @@ fn entry(c: roxmltree::Node) -> Result<CatalogEntry, (String, String)> {
         sha256,
         signature_url,
         rpms,
+        debs,
+        exes,
         icon: icon(c),
         description: Some(description(c))
             .filter(|d| !d.is_empty())
@@ -215,14 +232,15 @@ fn entry(c: roxmltree::Node) -> Result<CatalogEntry, (String, String)> {
     })
 }
 
-/// The rpm artifacts next to `art` in the same release that fit this machine and carry a signature address.
-fn collect_rpms(art: roxmltree::Node) -> Vec<RpmFile> {
+/// The artifacts of `format` (`fs-format`) next to `art` in the same release that fit this machine and carry a
+/// signature address.
+fn collect_native(art: roxmltree::Node, format: &str) -> Vec<RpmFile> {
     art.parent()
         .into_iter()
         .flat_map(|artifacts| artifacts.children())
         .filter(|n| {
             n.has_tag_name("artifact")
-                && n.attribute("fs-format") == Some("rpm")
+                && n.attribute("fs-format") == Some(format)
                 && n.attribute("platform").is_none_or(fits_this_machine)
         })
         .filter_map(|n| {

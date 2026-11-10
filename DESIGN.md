@@ -40,7 +40,7 @@ Standard: **AppStream collection metadata, XML** (freedesktop). Reasons: it is t
 already use, it has `<releases>`, `<artifacts>` with `<location>` and `<checksum>`, and it allows extensions through
 `<custom><value key="fs:...">`; the DEP-11 YAML variant is the same data for Debian and adds nothing for us. A source
 is a Git repo with `catalog.xml` and `catalog.xml.asc` (detached OpenPGP signature over the catalog). Extension keys:
-`fs:kind` (program, frontend, component, theme; default program), `fs:format` (tar.gz, rpm, flatpak, appimage; default
+`fs:kind` (program, frontend, component, theme; default program), `fs:format` (tar.gz, rpm, deb, exe, flatpak, appimage; default
 tar.gz), `fs:signature` (URL of the detached signature of the release file), `fs:facets` (ADR 0061, comma separated
 facet ids of a program; each facet is its own component with a logo, installing it installs the program). A component
 without `fs:signature`, without sha256, or with a version that is not `major.minor.patch` is **reported as skipped,
@@ -179,6 +179,27 @@ no rpm offered it falls back to the `tar.gz`. Commands (ADR 0063): only `fs-<nam
 `-app`/`-server`; `fs-<name>` links to `<name>` or `<name>-app` (in the package or in `/usr/bin`), and the menu entry "FreeSynergy.<Name>"
 runs it. The store makes its own menu entry at the first start of the window. Open (named): the shipped `fs-tasks-app` stores in memory by
 default (`--store`): a program from the store must never lose data by default (Thread G/R); the server is not started by anything yet; icons.
+
+## The package of the system (Thread D, 2026-11-10)
+Rule (user, 2026-11-09): the store knows the system and offers the matching package: rpm, deb or exe; what it cannot do says
+`Unsupported` out loud. Pattern: Strategy selection (`System` picks the format; `Rpm` and `Deb` are `InstallStrategy`
+implementations over the same `Commander`, sharing the file handling in `native.rs` as a Template method).
+- **System:** `detect_system()` reads `ID`/`ID_LIKE` of `/etc/os-release` (debian, ubuntu -> `Deb`; fedora, rhel, centos, suse ->
+  `Rpm`; anything else `Other`); on Windows (`cfg!(windows)`) it is `Windows`.
+- **Format:** `format_for(system, owned)`: `Rpm`/`Deb` when the store itself belongs to an installed package of that system
+  (`rpm -qf` or `dpkg -S`), else `TarGz` (a store unpacked by hand brings tar.gz, as before); `Windows` -> `Exe`.
+- **Catalog:** artifacts next to the main file with `fs-format="rpm"`, `"deb"` or `"exe"`, a `platform` that fits this machine
+  (`<arch>-...<os>...`) and `fs-signature`. They never become the main file. `CatalogEntry` has `rpms`, `debs`, `exes`.
+- **Install:** all deb of a batch go into ONE `pkexec apt-get install -y <files>` (like rpm and dnf). Checked by hand in a
+  `debian:13` container: apt installs a 0600 file from a 0700 directory of another user, `dpkg-query` reports `ii |1.2.3`,
+  `apt-get remove` takes it away. `native_installed_version` asks rpm or dpkg by system; `remove_native` removes accordingly.
+- **Fallback:** a deb system whose release has no deb gets the `tar.gz` (it works). A release with a different main
+  format than tar.gz/rpm/deb (flatpak, appimage) stays `Unsupported(format)` as before.
+- **Unsupported (explicit):** on Windows `plan` answers `Unsupported(Exe)` ("the Windows setup.exe cannot be installed by the store
+  yet"): there is no installer for it, and `fs-store` itself does not build for Windows (`std::os::unix` in the installers). The
+  catalog and the choice are tested; running the setup.exe is not built. Open: Windows store, `Msi`/zip as alternatives.
+- **Contract:** `store.capnp` `PackageFormat` got `deb @4` and `exe @5` (fs-interfaces, branch `thread-d-ifaces`).
+- **Not tested here:** `pkexec` with a real person's password (as for rpm); Ubuntu apt (only Debian 13 by hand).
 
 ## Look for updates, tell the person (2026-11-08, user wish after the rc.9 test)
 `settings.toml`: `check` = off | start | daily (default) | hourly, `install` = ask (default) | auto, `notify` = on (default).

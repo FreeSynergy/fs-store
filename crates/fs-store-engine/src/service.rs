@@ -59,7 +59,8 @@ pub struct Installer<'a> {
     pub fetch: &'a dyn Fetch,
     /// Running check.
     pub running: &'a dyn RunningCheck,
-    /// Which format to prefer when a release has several (the store's own install mode, [`crate::preferred_format`]).
+    /// Which format to prefer when a release has several (the store's own install mode, [`crate::preferred_format`]):
+    /// `Rpm` or `Deb` for the package of this system, `Exe` on Windows (answered with `Unsupported`), else `TarGz`.
     pub prefer: Format,
     /// Who may sign; `SignaturePolicy::default()` trusts only the FreeSynergy release key.
     pub policy: SignaturePolicy,
@@ -135,6 +136,9 @@ impl std::fmt::Display for InstallFailure {
                 f.write_str("the catalog offers an older version than the installed one (refused)")
             }
             Self::NotOffered => f.write_str("not offered by this source"),
+            Self::Unsupported(Format::Exe) => f.write_str(
+                "Unsupported: the Windows setup.exe cannot be installed by the store yet (the store itself does not run on Windows)",
+            ),
             Self::Unsupported(format) => write!(f, "no installer for the format {format:?} yet"),
             Self::Checksum => {
                 f.write_str("the downloaded file does not match the checksum in the catalog")

@@ -37,7 +37,11 @@ fn dispatch(args: &[String]) -> Result<(), String> {
         Some("version" | "--version" | "-V") => {
             let mode = match fs_store_engine::preferred_format() {
                 fs_store_core::Format::Rpm => "installed by rpm: programs come as rpm",
-                _ => "not an rpm: programs come as tar.gz",
+                fs_store_core::Format::Deb => "installed by deb: programs come as deb",
+                fs_store_core::Format::Exe => {
+                    "Windows: programs come as setup.exe (Unsupported: the store cannot install it yet)"
+                }
+                _ => "not a system package: programs come as tar.gz",
             };
             println!("fs-store {} ({mode})", env!("CARGO_PKG_VERSION"));
             Ok(())

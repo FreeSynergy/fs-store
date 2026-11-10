@@ -24,6 +24,18 @@ impl Plan {
     pub fn name(&self) -> &str {
         self.entry.name.as_str()
     }
+
+    /// The format that will be installed: the package of this system, or the `tar.gz`.
+    #[must_use]
+    pub fn format(&self) -> Format {
+        self.format
+    }
+
+    /// The download addresses of the files that will be fetched.
+    #[must_use]
+    pub fn locations(&self) -> Vec<&str> {
+        self.wanted.iter().map(|(l, _, _)| l.as_str()).collect()
+    }
 }
 
 /// Downloaded files with their signatures, not checked yet.
@@ -78,22 +90,33 @@ impl Installer<'_> {
             .into_iter()
             .find(|e| e.name.as_str() == name)
             .ok_or(InstallFailure::NotOffered)?;
-        if !matches!(entry.format, Format::TarGz | Format::Rpm) {
+        // A Windows store is offered the setup.exe; there is no installer for it, and that is said, not hidden.
+        if self.prefer == Format::Exe {
+            return Err(InstallFailure::Unsupported(Format::Exe));
+        }
+        if !matches!(entry.format, Format::TarGz | Format::Rpm | Format::Deb) {
             return Err(InstallFailure::Unsupported(entry.format));
         }
         if previous.is_some_and(|p| entry.version < p) {
             return Err(InstallFailure::Downgrade);
         }
-        // rpm when the store itself came as rpm and the release has rpm files; else the `tar.gz`.
-        let (format, wanted) = if self.prefer == Format::Rpm && !entry.rpms.is_empty() {
-            let all = entry.rpms.iter().map(|r| {
+        // The package of this system when the store itself came that way and the release has such files
+        // (rpm on Fedora, deb on Debian and Ubuntu); else the main file, normally the `tar.gz`.
+        let native = match self.prefer {
+            Format::Rpm => Some((Format::Rpm, &entry.rpms)),
+            Format::Deb => Some((Format::Deb, &entry.debs)),
+            _ => None,
+        }
+        .filter(|(_, files)| !files.is_empty());
+        let (format, wanted) = if let Some((format, files)) = native {
+            let all = files.iter().map(|r| {
                 (
                     r.location.clone(),
                     r.signature_url.clone(),
                     r.sha256.clone(),
                 )
             });
-            (Format::Rpm, all.collect())
+            (format, all.collect())
         } else {
             (
                 entry.format,

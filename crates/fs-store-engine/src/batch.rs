@@ -1,5 +1,5 @@
 //! Many installs as one batch. Pattern: Unit of Work (all downloads first, in parallel; one commit for the batch)
-//! over the Command-like `Plan`. All rpm of a batch go into ONE `pkexec dnf install`, so the person types the
+//! over the Command-like `Plan`. All rpm of a batch go into ONE `pkexec dnf install` (all deb into ONE `pkexec apt-get install`), so the person types the
 //! password once; tar.gz packages are unpacked one after the other. A package whose download failed does not
 //! stop the others.
 
@@ -10,7 +10,7 @@ use fs_store_core::{
 use crate::prepare::Plan;
 use crate::service::{InstallFailure, Installer, timing};
 use crate::{
-    Commander, Prepared, Rpm, SystemCommander, TarGz, find_servers, program_of, start_server,
+    Commander, Deb, Prepared, Rpm, SystemCommander, TarGz, find_servers, program_of, start_server,
     stop_servers,
 };
 use std::time::Duration;
@@ -113,17 +113,25 @@ impl Installer<'_> {
         let (rpm, rest): (Vec<_>, Vec<_>) = prepared
             .into_iter()
             .partition(|p| p.verified.package().format == Format::Rpm);
-        // A program that runs is never replaced, also not inside a batch.
-        let (rpm, running): (Vec<_>, Vec<_>) = rpm
+        let (deb, rest): (Vec<_>, Vec<_>) = rest
             .into_iter()
-            .partition(|p| !self.running.is_running(p.name()));
-        for p in running {
-            results.push((
-                p.name().to_owned(),
-                Err(InstallFailure::Update(UpdateError::Running)),
-            ));
-        }
+            .partition(|p| p.verified.package().format == Format::Deb);
+        // A program that runs is never replaced, also not inside a batch.
+        let mut idle = |group: Vec<Prepared>| {
+            let (idle, running): (Vec<_>, Vec<_>) = group
+                .into_iter()
+                .partition(|p| !self.running.is_running(p.name()));
+            for p in running {
+                results.push((
+                    p.name().to_owned(),
+                    Err(InstallFailure::Update(UpdateError::Running)),
+                ));
+            }
+            idle
+        };
+        let (rpm, deb) = (idle(rpm), idle(deb));
         results.extend(self.commit_rpm_with(rpm, observe, SystemCommander));
+        results.extend(self.commit_deb_with(deb, observe, SystemCommander));
         for p in rest {
             let name = p.name().to_owned();
             observe(&name, InstallState::Installing);
@@ -159,32 +167,59 @@ impl Installer<'_> {
         observe: CommitObserver<'_>,
         commander: C,
     ) -> Vec<(String, Result<Version, InstallFailure>)> {
-        let Some(first) = group.first().map(|p| p.verified.clone()) else {
-            return Vec::new();
-        };
-        for p in &group {
-            observe(p.name(), InstallState::Installing);
-        }
-        let names: Vec<(String, Version)> = group
-            .iter()
-            .map(|p| (p.name().to_owned(), p.version()))
-            .collect();
-        let files = group.into_iter().flat_map(|p| p.files).collect();
-        let mut strategy = Rpm::new(&self.root.join("rpm"), files, commander);
-        let t = std::time::Instant::now();
-        let outcome = strategy.install(&first);
-        timing("install", "rpm batch", t);
-        names
-            .into_iter()
-            .map(|(name, version)| {
-                let r = match &outcome {
-                    Ok(()) => Ok(version),
-                    Err(InstallError(cause)) => Err(InstallFailure::Update(
-                        UpdateError::RolledBack(InstallError(cause.clone())),
-                    )),
-                };
-                (name, r)
-            })
-            .collect()
+        let dir = self.root.join("rpm");
+        commit_native(group, observe, "rpm batch", |files| {
+            Box::new(Rpm::new(&dir, files, commander))
+        })
     }
+
+    /// The same for deb: one `pkexec apt-get install` for all deb files of all packages.
+    pub fn commit_deb_with<C: Commander>(
+        &self,
+        group: Vec<Prepared>,
+        observe: CommitObserver<'_>,
+        commander: C,
+    ) -> Vec<(String, Result<Version, InstallFailure>)> {
+        let dir = self.root.join("deb");
+        commit_native(group, observe, "deb batch", |files| {
+            Box::new(Deb::new(&dir, files, commander))
+        })
+    }
+}
+
+/// Pattern: Template method for the native formats. One strategy installs the files of the whole group; its answer
+/// is the answer of every package in it.
+fn commit_native<'a>(
+    group: Vec<Prepared>,
+    observe: CommitObserver<'_>,
+    label: &str,
+    strategy: impl FnOnce(Vec<Vec<u8>>) -> Box<dyn InstallStrategy + 'a>,
+) -> Vec<(String, Result<Version, InstallFailure>)> {
+    let Some(first) = group.first().map(|p| p.verified.clone()) else {
+        return Vec::new();
+    };
+    for p in &group {
+        observe(p.name(), InstallState::Installing);
+    }
+    let names: Vec<(String, Version)> = group
+        .iter()
+        .map(|p| (p.name().to_owned(), p.version()))
+        .collect();
+    let files = group.into_iter().flat_map(|p| p.files).collect();
+    let mut strategy = strategy(files);
+    let t = std::time::Instant::now();
+    let outcome = strategy.install(&first);
+    timing("install", label, t);
+    names
+        .into_iter()
+        .map(|(name, version)| {
+            let r = match &outcome {
+                Ok(()) => Ok(version),
+                Err(InstallError(cause)) => Err(InstallFailure::Update(UpdateError::RolledBack(
+                    InstallError(cause.clone()),
+                ))),
+            };
+            (name, r)
+        })
+        .collect()
 }

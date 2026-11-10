@@ -45,6 +45,8 @@ pub(crate) fn write_packages(
             Format::Rpm => PackageFormat::Rpm,
             Format::Flatpak => PackageFormat::Flatpak,
             Format::AppImage => PackageFormat::AppImage,
+            Format::Deb => PackageFormat::Deb,
+            Format::Exe => PackageFormat::Exe,
         });
         b.set_source(p.source.as_str());
         let mut facets = b.init_facets(count(p.facets.len()));

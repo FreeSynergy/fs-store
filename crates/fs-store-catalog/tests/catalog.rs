@@ -174,3 +174,36 @@ fn the_summary_stands_in_when_there_is_no_description() {
         "One line."
     );
 }
+
+#[test]
+fn deb_and_exe_artifacts_are_collected_by_platform_and_never_become_the_primary_file() {
+    let os = std::env::consts::OS;
+    let arch = std::env::consts::ARCH;
+    let xml = format!(
+        r#"<components version="1.0"><component><id>t</id><releases><release version="1.0.0"><artifacts>
+ <artifact type="binary" platform="{arch}-{os}"><location>tgz</location><checksum type="sha256">1</checksum></artifact>
+ <artifact type="binary" platform="{arch}-{os}" fs-format="deb" fs-signature="a.asc"><location>app.deb</location><checksum type="sha256">2</checksum></artifact>
+ <artifact type="binary" platform="{arch}-{os}" fs-format="exe" fs-signature="s.asc"><location>setup.exe</location><checksum type="sha256">3</checksum></artifact>
+ <artifact type="binary" platform="{arch}-other" fs-format="deb" fs-signature="b.asc"><location>other.deb</location><checksum type="sha256">4</checksum></artifact>
+ <artifact type="binary" platform="{arch}-{os}" fs-format="deb"><location>unsigned.deb</location><checksum type="sha256">5</checksum></artifact>
+ </artifacts></release></releases><custom><value key="fs:signature">tgz.asc</value></custom></component></components>"#
+    );
+    let e = &parse_catalog(&xml).unwrap().entries[0];
+    assert_eq!(e.location, "tgz");
+    let debs: Vec<_> = e.debs.iter().map(|r| r.location.as_str()).collect();
+    let exes: Vec<_> = e.exes.iter().map(|r| r.location.as_str()).collect();
+    assert_eq!(debs, ["app.deb"]); // not for another system, not unsigned
+    assert_eq!(exes, ["setup.exe"]); // this machine's platform says so; on Linux the platform of a Windows file does not
+}
+
+#[test]
+fn a_windows_file_is_not_offered_on_linux() {
+    let xml = r#"<components version="1.0"><component><id>t</id><releases><release version="1.0.0"><artifacts>
+ <artifact type="binary" platform="x86_64-linux-gnu"><location>tgz</location><checksum type="sha256">1</checksum></artifact>
+ <artifact type="binary" platform="x86_64-windows-msvc" fs-format="exe" fs-signature="s.asc"><location>setup.exe</location><checksum type="sha256">3</checksum></artifact>
+ </artifacts></release></releases><custom><value key="fs:signature">tgz.asc</value></custom></component></components>"#;
+    let e = &parse_catalog(xml).unwrap().entries[0];
+    if std::env::consts::OS == "linux" {
+        assert!(e.exes.is_empty());
+    }
+}

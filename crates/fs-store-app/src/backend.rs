@@ -51,6 +51,8 @@ pub struct InstalledRow {
 pub enum InstallKind {
     /// Installed by the system package manager (rpm).
     Rpm,
+    /// Installed by the system package manager (deb).
+    Deb,
     /// Unpacked by the store below its own folder (tar.gz).
     Archive,
 }
