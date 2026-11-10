@@ -340,3 +340,15 @@ file cannot change `argv[0]`, so a Windows facet command sets the variable `FS_C
 **Known limits on Windows:** a program without a window cannot be asked to end in order (`taskkill` without `/F` is refused for it), so
 an update of a program whose background server runs says so and waits for the person instead of ending it by force; every setup
 asks for its own UAC prompt (a batch is not one prompt); a Windows facet cannot choose by `argv[0]`.
+
+**Result on the Windows runner (windows-2022, `.github/workflows/windows.yml`):** fmt, clippy (pedantic, all features), all tests of the
+workspace, the coding rules, and a real installation: the gate builds a probe setup with the NSIS script of `fs-release`, the `Exe`
+strategy installs it through `Start-Process -Verb RunAs` and `/S`, the version is read back from the registry, the uninstaller removes it
+(`crates/fs-store-engine/tests/windows_setup.rs`). The Windows transport of the server is in `fs-interfaces` (named pipe behind its
+`Endpoint` trait); until that is tagged `fs-store-server` points at its branch `win-port` (a tag needs the owner's approval).
+**Open on Windows:** (1) the store updating itself: the setup cannot replace the running `fs-store.exe` (Windows locks it); a helper that
+waits for the end of the window and then runs the setup is needed; (2) one UAC prompt per setup, not one per batch; (3) the facet of a
+command is chosen by `argv[0]` on Linux, on Windows the launcher sets `FS_COMMAND`, which no program reads yet; (4) a background server
+without a window cannot be asked to end in order (needs a stop request the program itself understands); (5) a setup run by an
+administrator account other than the person's cannot read the private download folder; (6) no code signature until SignPath (ADR 0051),
+SmartScreen shows a warning.
