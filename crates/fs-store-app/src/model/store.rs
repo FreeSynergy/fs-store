@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::backend::{
-    BackendError, InstalledDetails, InstalledRow, PackageRow, SourceRow, StoreBackend,
+    BackendError, InstalledDetails, InstalledRow, Listing, PackageRow, SourceRow, StoreBackend,
 };
 
 use crate::updates::{NoUpdates, UpdateService};
@@ -12,6 +12,7 @@ use fs_store_sources::{Findings, Settings};
 
 use super::admin::AdminState;
 use super::cards_ui::CardsUi;
+use super::fetch::{Fetched, Installed, fetch, fetch_installed};
 use super::jobs::JobView;
 use super::types::{Action, AvailableRow, Problem, View};
 use super::updates::CheckState;
@@ -161,18 +162,27 @@ impl StoreModel {
         text.clone_into(&mut self.new_source);
     }
 
-    /// Reads sources, installed and available packages again. Problems of the last read are replaced.
+    /// Reads sources, installed and available packages again, on this thread. Problems of the last read are
+    /// replaced, except a failed job (it stays until the person acts). A window reads with [`fetch`] outside the
+    /// lock and then calls [`StoreModel::apply_fetched`].
     pub fn refresh(&mut self) {
-        self.problems.clear();
-        self.read_sources();
-        self.read_available();
-        self.read_installed();
+        let fetched = fetch(self.backend.as_ref());
+        self.apply_fetched(fetched);
+    }
+
+    /// Takes what [`fetch`] read: the slow part (catalogs) is done by then, so this only swaps data.
+    pub fn apply_fetched(&mut self, fetched: Fetched) {
+        self.problems
+            .retain(|p| matches!(p, Problem::JobFailed { .. }));
+        self.apply_sources(fetched.sources);
+        self.apply_listing(fetched.listing);
+        self.apply_installed(fetched.installed);
         self.merge();
         self.load_updates();
     }
 
-    fn read_sources(&mut self) {
-        match self.backend.sources() {
+    fn apply_sources(&mut self, result: Result<Vec<SourceRow>, BackendError>) {
+        match result {
             Ok(list) => self.sources = list,
             Err(e) => self.report(&e),
         }
@@ -180,29 +190,23 @@ impl StoreModel {
 
     /// Reads what is installed; one row per name (the newest version if a backend names it twice).
     pub(super) fn read_installed(&mut self) {
-        match self.backend.installed() {
-            Ok(list) => {
-                let mut rows: Vec<InstalledRow> = Vec::new();
-                for row in list {
-                    match rows.iter_mut().find(|r| r.name == row.name) {
-                        Some(known) if known.version < row.version => known.version = row.version,
-                        Some(_) => {}
-                        None => rows.push(row),
-                    }
-                }
-                self.details = rows
-                    .iter()
-                    .map(|r| (r.name.clone(), self.backend.details(&r.name)))
-                    .collect();
+        let result = fetch_installed(self.backend.as_ref());
+        self.apply_installed(result);
+    }
+
+    fn apply_installed(&mut self, result: Installed) {
+        match result {
+            Ok((rows, details)) => {
+                self.details = details;
                 self.installed = rows;
             }
             Err(e) => self.report(&e),
         }
     }
 
-    /// Reads the offers of the enabled sources; what could not be read or is not offered becomes problems.
-    pub(super) fn read_available(&mut self) {
-        let listing = match self.backend.available() {
+    /// Takes the offers of the enabled sources; what could not be read or is not offered becomes problems.
+    fn apply_listing(&mut self, result: Result<Listing, BackendError>) {
+        let listing = match result {
             Ok(listing) => listing,
             Err(e) => {
                 self.offers.clear();

@@ -6,6 +6,7 @@
 use fs_store_core::Version;
 
 use crate::backend::{JobError, JobKind, Phase, Prepared};
+use crate::words;
 
 use super::store::StoreModel;
 use super::types::{Action, Problem};
@@ -28,6 +29,17 @@ pub struct JobView {
 }
 
 impl JobView {
+    /// The state of the job for the job list.
+    #[must_use]
+    pub fn state(&self) -> JobState {
+        match self.phase {
+            Phase::Pending | Phase::Verified => JobState::Waiting,
+            Phase::Installing => JobState::Running,
+            Phase::Installed => JobState::Done,
+            Phase::Failed | Phase::RolledBack => JobState::Failed,
+        }
+    }
+
     /// True once nothing more will happen.
     #[must_use]
     pub fn is_finished(&self) -> bool {
@@ -36,6 +48,19 @@ impl JobView {
             Phase::Installed | Phase::RolledBack | Phase::Failed
         )
     }
+}
+
+/// Where a job is, in four words for the job list.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum JobState {
+    /// Queued or downloaded, not installing yet.
+    Waiting,
+    /// Installing now.
+    Running,
+    /// Installed.
+    Done,
+    /// Failed (and rolled back).
+    Failed,
 }
 
 /// What a worker needs to run the job it was given.
@@ -188,6 +213,16 @@ impl StoreModel {
     pub fn committed(&mut self, results: Vec<(String, Result<Version, JobError>)>) {
         for (name, result) in results {
             self.end_job(&name, result);
+        }
+        // A job that was handed to the installer and got no answer must not stay "running" for ever.
+        let lost: Vec<String> = self
+            .jobs
+            .iter()
+            .filter(|j| j.phase == Phase::Installing)
+            .map(|j| j.name.clone())
+            .collect();
+        for name in lost {
+            self.fail_job(&name, JobError::Other(words::JOB_PANICKED.to_owned()));
         }
         self.read_installed();
         self.merge();

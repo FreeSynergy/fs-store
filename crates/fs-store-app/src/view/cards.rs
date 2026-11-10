@@ -7,11 +7,11 @@ use blinc_layout::div::{Div, div};
 use blinc_layout::prelude::text;
 
 use crate::launcher::Launcher;
-use crate::model::{Card, StoreModel, UpdateRow, columns};
+use crate::model::{Card, StoreModel, columns};
 use crate::words;
 
 use super::card::{CARD_W, card};
-use super::job::start_all_updates;
+use super::job::{start_all_updates, start_refresh};
 use super::shell::{Shared, button, locked, rebuild};
 
 /// Space between cards and around the page, in pixels.
@@ -55,22 +55,11 @@ fn panel(selected: &Card, model: &StoreModel, shared: &Shared) -> Div {
 }
 
 /// The "Updates" block of the start page: one line per program with a newer version.
-fn updates_block(rows: &[UpdateRow]) -> Div {
+fn updates_block(lines: Vec<String>) -> Div {
     let mut block = div()
         .class("fs-store-job")
         .child(text(words::UPDATES_HEADING).bold());
-    for row in rows {
-        let mut line = words::fill(
-            words::UPDATE_LINE,
-            &[
-                ("name", &row.title),
-                ("from", &row.from.to_string()),
-                ("to", &row.to.to_string()),
-            ],
-        );
-        if row.queued {
-            line = format!("{line} ({})", words::UPDATE_QUEUED);
-        }
+    for line in lines {
         block = block.child(text(line));
     }
     block
@@ -93,10 +82,7 @@ pub(super) fn cards(
             ButtonVariant::Ghost,
             !model.is_removing(),
         )
-        .on_click(move |_| {
-            locked(&refresh).refresh();
-            rebuild();
-        }),
+        .on_click(move |_| start_refresh(&refresh)),
     );
     if waiting > 0 {
         top = top.child(
@@ -109,7 +95,7 @@ pub(super) fn cards(
             .on_click(move |_| start_all_updates(&all_updates)),
         );
     }
-    let rows = model.update_rows();
+    let rows = model.update_lines();
     let top = if rows.is_empty() {
         top
     } else {
@@ -117,7 +103,7 @@ pub(super) fn cards(
             .flex_col()
             .w_full()
             .child(top)
-            .child(updates_block(&rows))
+            .child(updates_block(rows))
     };
     let all = model.cards();
     if all.is_empty() {

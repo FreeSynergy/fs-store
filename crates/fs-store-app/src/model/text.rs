@@ -3,6 +3,7 @@
 use crate::backend::JobError;
 use crate::words;
 
+use super::jobs::JobState;
 use super::store::StoreModel;
 use super::types::Problem;
 
@@ -19,16 +20,28 @@ impl StoreModel {
         words::fill(words::job_phase(job.phase), &values)
     }
 
-    /// The job list: one line for every job of the queue, in the order they were started.
+    /// The job list: one line per job of the queue, in the order they were started: its state (Waiting, Running,
+    /// Done, Failed) and what it says; a failed job says why.
     #[must_use]
     pub fn job_lines(&self) -> Vec<String> {
         self.jobs
             .iter()
             .map(|job| {
-                let version = job.version.map(|v| v.to_string()).unwrap_or_default();
                 let title = self.title(&job.name);
-                let values = [("name", title.as_str()), ("version", version.as_str())];
-                words::fill(words::job_phase(job.phase), &values)
+                let state = match job.state() {
+                    JobState::Waiting => words::JOB_WAITING,
+                    JobState::Running => words::JOB_RUNNING,
+                    JobState::Done => words::JOB_DONE,
+                    JobState::Failed => words::JOB_FAILED,
+                };
+                let what = if let Some(error) = &job.error {
+                    job_failed_line(&title, error)
+                } else {
+                    let version = job.version.map(|v| v.to_string()).unwrap_or_default();
+                    let values = [("name", title.as_str()), ("version", version.as_str())];
+                    words::fill(words::job_phase(job.phase), &values)
+                };
+                format!("{state}: {what}")
             })
             .collect()
     }

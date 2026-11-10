@@ -6,6 +6,7 @@
 mod admin;
 mod cards;
 mod cards_ui;
+mod fetch;
 mod jobs;
 mod menu;
 mod open;
@@ -21,10 +22,11 @@ pub use cards::{
     Buttons, Card, CardState, OpenWidth, Placeholder, Working, buttons_for, columns, placeholder,
 };
 pub use cards_ui::CardsUi;
-pub use jobs::{JobView, Ticket};
+pub use fetch::{Fetched, fetch};
+pub use jobs::{JobState, JobView, Ticket};
 pub use menu::{Command, Effect, help_url, is_help_key, is_quit_key};
 pub use store::StoreModel;
 pub use titles::UpdateRow;
 pub use types::{Action, AvailableRow, Problem, View};
-pub use update_text::{check_label, format_time, install_label, update_line};
+pub use update_text::{check_label, format_time, install_label};
 pub use updates::{CheckState, check_due};

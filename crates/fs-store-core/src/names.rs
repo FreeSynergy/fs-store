@@ -4,31 +4,35 @@
 
 /// The name a person reads for the package `id`.
 ///
-/// `title` is the name the catalog gives (the `AppStream` `<name>`); when there is one it is used as it is. Without
-/// it the name is derived: a leading `fs-` becomes `FreeSynergy.`, and each word of the rest starts with a capital
-/// (`fs-people` is `FreeSynergy.People`, `fs-file-manager` is `FreeSynergy.FileManager`). A program of somebody
-/// else keeps its own name with a capital (`kanidm` is `Kanidm`).
+/// `title` is the name the catalog gives (the `AppStream` `<name>`). It is used as it is, unless it is empty or
+/// still starts with `fs-` (any case): then the name is derived like for a missing title. Derived: a leading
+/// `fs-` becomes `FreeSynergy.` and each word of the rest starts with a capital, joined (`fs-people` is
+/// `FreeSynergy.People`, `fs-file-manager` is `FreeSynergy.FileManager`). A program of somebody else keeps its
+/// own words, only the first letter is a capital (`gnome-text-editor` is `Gnome-text-editor`, `kanidm` is `Kanidm`).
 #[must_use]
 pub fn display_name(id: &str, title: Option<&str>) -> String {
-    if let Some(title) = title.map(str::trim).filter(|t| !t.is_empty()) {
+    if let Some(title) = title
+        .map(str::trim)
+        .filter(|t| !t.is_empty() && !has_fs_prefix(t))
+    {
         return title.to_owned();
     }
-    let (own, rest) = match id.strip_prefix("fs-") {
-        Some(rest) => (true, rest),
-        None => (false, id),
-    };
-    let words: String = rest
-        .split(['-', '_'])
-        .filter(|w| !w.is_empty())
-        .map(capital)
-        .collect();
-    if own && !words.is_empty() {
-        format!("FreeSynergy.{words}")
-    } else if words.is_empty() {
-        id.to_owned()
-    } else {
-        words
+    if has_fs_prefix(id) {
+        let words: String = id[3..]
+            .split(['-', '_'])
+            .filter(|w| !w.is_empty())
+            .map(capital)
+            .collect();
+        if words.is_empty() {
+            return id.to_owned();
+        }
+        return format!("FreeSynergy.{words}");
     }
+    capital(id)
+}
+
+fn has_fs_prefix(text: &str) -> bool {
+    text.get(..3).is_some_and(|p| p.eq_ignore_ascii_case("fs-"))
 }
 
 fn capital(word: &str) -> String {

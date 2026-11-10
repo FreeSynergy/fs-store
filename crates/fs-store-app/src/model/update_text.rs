@@ -1,6 +1,6 @@
 //! Pattern: none (pure functions from the update state to sentences; the sentences are in `words`).
 
-use fs_store_sources::{CheckEvery, InstallMode, Update};
+use fs_store_sources::{CheckEvery, InstallMode};
 
 use crate::words;
 
@@ -47,15 +47,6 @@ pub fn install_label(mode: InstallMode) -> &'static str {
         InstallMode::Ask => words::INSTALL_ASK,
         InstallMode::Auto => words::INSTALL_AUTO,
     }
-}
-
-/// "name: from -> to".
-#[must_use]
-pub fn update_line(update: &Update, title: &str) -> String {
-    words::fill(
-        words::UPDATE_LINE,
-        &[("name", title), ("from", &update.from), ("to", &update.to)],
-    )
 }
 
 impl StoreModel {

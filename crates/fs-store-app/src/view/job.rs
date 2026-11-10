@@ -41,6 +41,18 @@ pub(super) fn job_list(model: &StoreModel, shared: &Shared) -> Div {
     list
 }
 
+/// "Refresh": the catalogs are read on a worker thread, outside the lock of the model, so the window and the
+/// jobs stay alive; then the result is swapped in.
+pub(super) fn start_refresh(shared: &Shared) {
+    let backend = locked(shared).backend();
+    let shared = Arc::clone(shared);
+    std::thread::spawn(move || {
+        let fetched = crate::model::fetch(backend.as_ref());
+        locked(&shared).apply_fetched(fetched);
+        rebuild();
+    });
+}
+
 /// Puts the job of `name` into the queue; its download starts at once, next to the others.
 pub(super) fn start_job(shared: &Shared, name: &str) {
     let (backend, kind, name) = {

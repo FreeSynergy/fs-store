@@ -216,3 +216,12 @@ fn the_display_name_is_read_from_the_name_tag() {
         "FreeSynergy.A"
     );
 }
+
+#[test]
+fn the_name_without_a_language_wins() {
+    let xml = r#"<components version="1.0"><component><id>fs-a</id><name xml:lang="de">Anders</name><name>FreeSynergy.A</name><releases><release version="1.0.0"><artifacts><artifact type="binary"><location>l</location><checksum type="sha256">1</checksum></artifact></artifacts></release></releases><custom><value key="fs:signature">s</value></custom></component></components>"#;
+    assert_eq!(
+        parse_catalog(xml).unwrap().entries[0].title,
+        "FreeSynergy.A"
+    );
+}

@@ -108,13 +108,31 @@ pub(crate) fn background(root: &Path, extra: Option<&String>) -> Result<(), Stri
     Ok(())
 }
 
-fn tell(f: &Findings) {
+/// The lines of the notification: the display name of every program, never its `fs-` id.
+#[must_use]
+pub fn notification_lines(f: &Findings) -> Vec<String> {
     let mut lines: Vec<String> = f
         .update
         .iter()
-        .map(|u| format!("{} {} -> {}", u.name, u.from, u.to))
+        .map(|u| {
+            format!(
+                "{} {} -> {}",
+                fs_store_core::display_name(&u.name, None),
+                u.from,
+                u.to
+            )
+        })
         .collect();
-    lines.extend(f.new.iter().map(|n| format!("New: {}", n.name)));
+    lines.extend(
+        f.new
+            .iter()
+            .map(|n| format!("New: {}", fs_store_core::display_name(&n.name, None))),
+    );
+    lines
+}
+
+fn tell(f: &Findings) {
+    let lines = notification_lines(f);
     let _ = Command::new("notify-send")
         .args([
             "--app-name=FreeSynergy.Store",

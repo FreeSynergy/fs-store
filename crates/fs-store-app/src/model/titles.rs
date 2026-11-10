@@ -2,6 +2,8 @@
 
 use fs_store_core::Version;
 
+use crate::words;
+
 use super::store::StoreModel;
 use super::types::Action;
 
@@ -25,15 +27,42 @@ impl StoreModel {
     /// [`fs_store_core::display_name`]). Every sentence and window uses this, never the id.
     #[must_use]
     pub fn title(&self, id: &str) -> String {
+        // The offer the cards show (the newest version of the name), else any offer of it.
         let given = self
-            .offers
+            .available
             .iter()
+            .map(|r| &r.package)
+            .chain(self.offers.iter())
             .find(|p| p.name == id)
             .map(|p| p.title.as_str());
         fs_store_core::display_name(id, given)
     }
 
-    /// The programs with an update waiting, in the order of the cards: the "Updates" block of the start page.
+    /// One line per update for the "Updates" block, from [`StoreModel::update_rows`]: "name: from -> to", and
+    /// that it is queued when it is.
+    #[must_use]
+    pub fn update_lines(&self) -> Vec<String> {
+        self.update_rows()
+            .iter()
+            .map(|row| {
+                let line = words::fill(
+                    words::UPDATE_LINE,
+                    &[
+                        ("name", &row.title),
+                        ("from", &row.from.to_string()),
+                        ("to", &row.to.to_string()),
+                    ],
+                );
+                if row.queued {
+                    format!("{line} ({})", words::UPDATE_QUEUED)
+                } else {
+                    line
+                }
+            })
+            .collect()
+    }
+
+    /// The programs with an update waiting, sorted by name: the "Updates" block of the start page.
     #[must_use]
     pub fn update_rows(&self) -> Vec<UpdateRow> {
         let mut rows: Vec<UpdateRow> = self

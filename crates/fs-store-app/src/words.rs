@@ -228,10 +228,16 @@ pub const CHECK_DONE: &str = "Done looking for updates.";
 pub const CHECK_FAILED: &str = "Looking for updates did not work: {detail}";
 /// Updates page: line of an update. Placeholders: `{name}`, `{from}`, `{to}`.
 pub const UPDATE_LINE: &str = "{name}: {from} -> {to}";
-/// Line above the cards when updates are known. Placeholder: `{n}`.
-pub const UPDATES_BANNER: &str = "{n} update(s) found. Press Update on the cards.";
 /// Heading of the update block on the start page.
 pub const UPDATES_HEADING: &str = "Updates";
+/// State of a job in the job list.
+pub const JOB_WAITING: &str = "Waiting";
+/// State of a job in the job list.
+pub const JOB_RUNNING: &str = "Running";
+/// State of a job in the job list.
+pub const JOB_DONE: &str = "Done";
+/// State of a job in the job list.
+pub const JOB_FAILED: &str = "Failed";
 /// Heading of the job list.
 pub const JOBS_HEADING: &str = "Jobs";
 /// Clears the finished jobs from the job list.
