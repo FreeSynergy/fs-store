@@ -97,6 +97,10 @@ impl Installer<'_> {
         if !matches!(entry.format, Format::TarGz | Format::Rpm | Format::Deb) {
             return Err(InstallFailure::Unsupported(entry.format));
         }
+        // A main file that is a deb is for apt only; handing it to a store of another kind would run the wrong tool.
+        if entry.format == Format::Deb && self.prefer != Format::Deb {
+            return Err(InstallFailure::Unsupported(Format::Deb));
+        }
         if previous.is_some_and(|p| entry.version < p) {
             return Err(InstallFailure::Downgrade);
         }

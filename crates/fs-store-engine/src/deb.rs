@@ -1,5 +1,5 @@
 //! Pattern: Strategy (`InstallStrategy` for `deb`, through `apt-get`), with the same `Commander` as `Rpm`, so tests need
-//! neither root nor apt. Shares the steps with `Rpm` through `crate::native` (Template method).
+//! neither root nor apt. Shares the file writing with `Rpm` through the helpers in `crate::native`.
 //! The person confirms root themselves: `pkexec` asks for it, we never see a password.
 
 use std::fs;
@@ -42,8 +42,9 @@ impl<C: Commander> InstallStrategy for Deb<C> {
         let (paths, written) = write_private(&self.dir, &stem, "deb", &self.files);
         let result = written.and_then(|()| {
             let names = names(&paths);
-            // apt-get treats an argument that contains a `/` as a file; the paths are absolute.
-            let mut args = vec!["apt-get", "install", "-y"];
+            // apt-get treats an argument that contains a `/` as a file; `write_private` makes the paths absolute.
+            // `--no-remove`: unlike dnf, apt would otherwise take conflicting packages away without asking.
+            let mut args = vec!["apt-get", "install", "-y", "--no-remove"];
             args.extend(names.iter().map(String::as_str));
             self.commander.run("pkexec", &args)
         });

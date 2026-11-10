@@ -28,7 +28,7 @@ pub fn without_deleted_suffix(path: &Path) -> PathBuf {
 /// The package system of the machine the store runs on (Strategy selection: it decides which native package is offered).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum System {
-    /// Fedora, RHEL, openSUSE and relatives: rpm through dnf.
+    /// Fedora, RHEL and relatives that bring `dnf`: rpm through dnf (openSUSE has rpm but `zypper`: `Other`).
     Rpm,
     /// Debian, Ubuntu and relatives: deb through apt.
     Deb,
@@ -58,7 +58,7 @@ pub fn system_from_os_release(text: &str) -> System {
     let any = |names: &[&str]| words.iter().any(|w| names.contains(&w.as_str()));
     if any(&["debian", "ubuntu"]) {
         System::Deb
-    } else if any(&["fedora", "rhel", "centos", "suse", "opensuse"]) {
+    } else if any(&["fedora", "rhel", "centos", "rocky", "almalinux"]) {
         System::Rpm
     } else {
         System::Other

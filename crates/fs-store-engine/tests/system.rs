@@ -90,13 +90,15 @@ fn os_release_names_the_package_system() {
     let debian = "PRETTY_NAME=\"Debian GNU/Linux 13 (trixie)\"\nID=debian\n";
     let mint = "ID=linuxmint\nID_LIKE=\"ubuntu debian\"\n";
     let fedora = "ID=fedora\nVERSION_ID=45\n";
+    let rocky = "ID=\"rocky\"\nID_LIKE=\"rhel centos fedora\"\n";
     let suse = "ID=\"opensuse-leap\"\nID_LIKE=\"suse opensuse\"\n";
     let arch = "ID=arch\n";
     assert_eq!(system_from_os_release(ubuntu), System::Deb);
     assert_eq!(system_from_os_release(debian), System::Deb);
     assert_eq!(system_from_os_release(mint), System::Deb);
     assert_eq!(system_from_os_release(fedora), System::Rpm);
-    assert_eq!(system_from_os_release(suse), System::Rpm);
+    assert_eq!(system_from_os_release(rocky), System::Rpm);
+    assert_eq!(system_from_os_release(suse), System::Other); // zypper, not dnf
     assert_eq!(system_from_os_release(arch), System::Other);
     assert_eq!(system_from_os_release(""), System::Other);
 }
@@ -174,6 +176,27 @@ fn all_deb_of_a_batch_go_to_one_pkexec_apt_call() {
     assert!(done.iter().all(|(_, r)| r.is_ok()));
     let seen = seen.lock().unwrap();
     assert_eq!(seen.len(), 1);
-    assert_eq!(seen[0][..4], ["pkexec", "apt-get", "install", "-y"]);
-    assert!(seen[0][4].ends_with(".deb"));
+    assert_eq!(
+        seen[0][..5],
+        ["pkexec", "apt-get", "install", "-y", "--no-remove"]
+    );
+    assert!(seen[0][5].ends_with(".deb"));
+}
+
+#[test]
+fn a_main_file_that_is_a_deb_is_not_given_to_a_store_of_another_kind() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cat = catalog("app", &[]).replace(
+        r#"<custom>"#,
+        r#"<custom><value key="fs:format">deb</value>"#,
+    );
+    let fetch = served();
+    let other =
+        installer(tmp.path(), &fetch, Format::TarGz).plan(cat.as_bytes(), b"good", "app", None);
+    assert!(matches!(
+        other,
+        Err(InstallFailure::Unsupported(Format::Deb))
+    ));
+    let deb = installer(tmp.path(), &fetch, Format::Deb).plan(cat.as_bytes(), b"good", "app", None);
+    assert_eq!(deb.unwrap().format(), Format::Deb);
 }

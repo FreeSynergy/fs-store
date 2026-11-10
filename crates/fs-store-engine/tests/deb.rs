@@ -48,7 +48,7 @@ fn apt_gets_the_verified_bytes_through_pkexec_and_the_file_is_removed_afterwards
     drop(s);
     let (prog, args, file) = &fake.calls[0];
     assert_eq!(prog, "pkexec");
-    assert_eq!(&args[..3], ["apt-get", "install", "-y"]);
+    assert_eq!(&args[..4], ["apt-get", "install", "-y", "--no-remove"]);
     assert_eq!(file.as_deref(), Some(&b"DEBBYTES"[..]));
     assert_eq!(fs::read_dir(tmp.path().join("deb")).unwrap().count(), 0);
 }
@@ -99,8 +99,8 @@ fn several_debs_go_to_one_apt_call() {
     drop(s);
     assert_eq!(fake.calls.len(), 1);
     let args = &fake.calls[0].1;
-    assert_eq!(&args[..3], ["apt-get", "install", "-y"]);
-    assert_eq!(args.len(), 5); // apt-get install -y and two files
+    assert_eq!(&args[..4], ["apt-get", "install", "-y", "--no-remove"]);
+    assert_eq!(args.len(), 6); // apt-get install -y --no-remove and two files
     assert_eq!(fs::read_dir(tmp.path().join("deb")).unwrap().count(), 0);
 }
 

@@ -184,13 +184,13 @@ default (`--store`): a program from the store must never lose data by default (T
 Rule (user, 2026-11-09): the store knows the system and offers the matching package: rpm, deb or exe; what it cannot do says
 `Unsupported` out loud. Pattern: Strategy selection (`System` picks the format; `Rpm` and `Deb` are `InstallStrategy`
 implementations over the same `Commander`, sharing the file handling in `native.rs` as a Template method).
-- **System:** `detect_system()` reads `ID`/`ID_LIKE` of `/etc/os-release` (debian, ubuntu -> `Deb`; fedora, rhel, centos, suse ->
-  `Rpm`; anything else `Other`); on Windows (`cfg!(windows)`) it is `Windows`.
+- **System:** `detect_system()` reads `ID`/`ID_LIKE` of `/etc/os-release` (debian, ubuntu -> `Deb`; fedora, rhel, centos, rocky, almalinux ->
+  `Rpm`, the dnf families; anything else `Other`, also openSUSE: it has rpm but `zypper`, no installer for it); on Windows (`cfg!(windows)`) it is `Windows`.
 - **Format:** `format_for(system, owned)`: `Rpm`/`Deb` when the store itself belongs to an installed package of that system
   (`rpm -qf` or `dpkg -S`), else `TarGz` (a store unpacked by hand brings tar.gz, as before); `Windows` -> `Exe`.
 - **Catalog:** artifacts next to the main file with `fs-format="rpm"`, `"deb"` or `"exe"`, a `platform` that fits this machine
   (`<arch>-...<os>...`) and `fs-signature`. They never become the main file. `CatalogEntry` has `rpms`, `debs`, `exes`.
-- **Install:** all deb of a batch go into ONE `pkexec apt-get install -y <files>` (like rpm and dnf). Checked by hand in a
+- **Install:** all deb of a batch go into ONE `pkexec apt-get install -y --no-remove <files>` (like rpm and dnf; `--no-remove` because apt, unlike dnf, would otherwise remove conflicting packages without asking). Checked by hand in a
   `debian:13` container: apt installs a 0600 file from a 0700 directory of another user, `dpkg-query` reports `ii |1.2.3`,
   `apt-get remove` takes it away. `native_installed_version` asks rpm or dpkg by system; `remove_native` removes accordingly.
 - **Fallback:** a deb system whose release has no deb gets the `tar.gz` (it works). A release with a different main
@@ -198,6 +198,7 @@ implementations over the same `Commander`, sharing the file handling in `native.
 - **Unsupported (explicit):** on Windows `plan` answers `Unsupported(Exe)` ("the Windows setup.exe cannot be installed by the store
   yet"): there is no installer for it, and `fs-store` itself does not build for Windows (`std::os::unix` in the installers). The
   catalog and the choice are tested; running the setup.exe is not built. Open: Windows store, `Msi`/zip as alternatives.
+- A main file (`fs:format`) that is a deb is `Unsupported(Deb)` for a store that is not a deb store. A release with only exe files has no main file and is `NotOffered` on Windows (open with the Windows store).
 - **Contract:** `store.capnp` `PackageFormat` got `deb @4` and `exe @5` (fs-interfaces, branch `thread-d-ifaces`).
 - **Not tested here:** `pkexec` with a real person's password (as for rpm); Ubuntu apt (only Debian 13 by hand).
 

@@ -1,5 +1,5 @@
-//! Pattern: Template method (the shared steps of the native installers `Rpm` and `Deb`: write the verified bytes into a
-//! private directory, hand the files to the system's package manager through `pkexec`, delete them again).
+//! Pattern: none - two plain helper functions that the Strategies `Rpm` and `Deb` share (write the verified bytes into a
+//! private directory; the command that hands them to the package manager stays in each Strategy).
 //! The person confirms root themselves: `pkexec` asks for it, we never see a password.
 
 use std::fs;
@@ -17,6 +17,8 @@ pub(crate) fn write_private(
     files: &[Vec<u8>],
 ) -> (Vec<PathBuf>, Result<(), String>) {
     let mut paths = Vec::new();
+    // Absolute, so the package manager reads a path (a name with a `/` is a file to apt) and no relative root confuses it.
+    let dir = &std::path::absolute(dir).unwrap_or_else(|_| dir.to_owned());
     let prepared = fs::create_dir_all(dir).and_then(|()| {
         fs::set_permissions(dir, std::os::unix::fs::PermissionsExt::from_mode(0o700))
     });
