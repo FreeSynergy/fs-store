@@ -26,6 +26,9 @@ pub trait Paths: Send + Sync {
     fn config_dir(&self) -> PathBuf;
     /// Where the system package manager puts the program of `package`: `/usr/bin`, or the program folder of the setup.
     fn native_program_dirs(&self, package: &str) -> Vec<PathBuf>;
+    /// The folder only this package lives in when the system gives each one its own (the program folder of a Windows
+    /// setup); `None` where packages share folders (`/usr/bin`).
+    fn own_program_dir(&self, package: &str) -> Option<PathBuf>;
     /// The file name of the program `command` (`fs-tasks`, or `fs-tasks.exe`).
     fn program_file_name(&self, command: &str) -> String;
     /// The file names a command may have on the person's path, in the order the system tries them.

@@ -35,12 +35,13 @@ impl ProcRunningCheck {
 impl RunningCheck for ProcRunningCheck {
     fn is_running(&self, name: &str) -> bool {
         let platform = current();
-        let base = self.root.join("packages").join(name);
+        let mut bases = vec![self.root.join("packages").join(name)];
+        bases.extend(platform.paths.own_program_dir(name));
         platform.processes.mine().iter().any(|p| {
             p.pid != self.ignore
                 && p.exe
                     .as_ref()
-                    .is_some_and(|exe| platform.paths.is_below(exe, &base))
+                    .is_some_and(|exe| bases.iter().any(|base| platform.paths.is_below(exe, base)))
         })
     }
 }

@@ -58,6 +58,10 @@ impl Paths for LinuxPaths {
         vec![PathBuf::from("/usr/bin")]
     }
 
+    fn own_program_dir(&self, _package: &str) -> Option<PathBuf> {
+        None
+    }
+
     fn program_file_name(&self, command: &str) -> String {
         command.to_owned()
     }

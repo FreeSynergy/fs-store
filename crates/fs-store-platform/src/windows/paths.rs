@@ -68,6 +68,10 @@ impl Paths for WindowsPaths {
         vec![self.var("ProgramFiles").join(display_name(package))]
     }
 
+    fn own_program_dir(&self, package: &str) -> Option<PathBuf> {
+        self.native_program_dirs(package).pop()
+    }
+
     fn program_file_name(&self, command: &str) -> String {
         format!("{command}.exe")
     }
