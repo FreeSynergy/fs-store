@@ -200,6 +200,7 @@ implementations over the same `Commander`, sharing the file handling in `native.
   catalog and the choice are tested; running the setup.exe is not built. Open: Windows store, `Msi`/zip as alternatives.
 - A main file (`fs:format`) that is a deb is `Unsupported(Deb)` for a store that is not a deb store. A release with only exe files has no main file and is `NotOffered` on Windows (open with the Windows store).
 - **Contract:** `store.capnp` `PackageFormat` got `deb @4` and `exe @5` (fs-interfaces, tag v0.0.3).
+- **v0.0.9 (R5 findings of v0.0.8):** (1) no exe/zip for the store is intended and now written down: the engine is Unix-only (symlinks, `/proc`, file modes), so `windows-targets` stays empty and a Windows store would be `Unsupported`; (2) the deb binary differed from tar.gz/rpm because `cargo deb` stripped an already stripped file (same BuildID, 256 bytes fewer): fs-release now calls `cargo deb --no-strip`; (3) `fs-catalog/scripts/gen_catalog.py` now writes rpm, deb and exe artifacts (x86_64 and aarch64).
 - **Not tested here:** `pkexec` with a real person's password (as for rpm); Ubuntu apt (only Debian 13 by hand).
 
 ## Look for updates, tell the person (2026-11-08, user wish after the rc.9 test)
