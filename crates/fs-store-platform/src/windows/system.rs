@@ -87,12 +87,26 @@ impl SystemPackages for WindowsSystem {
     }
 }
 
+/// `Start-Process -ArgumentList` joins the arguments with spaces and does not quote them, so an argument with a space (a path
+/// below `C:\Program Files`) is quoted here. The NSIS option `_?=<dir>` is the exception: it takes the rest of the line as it is.
+fn for_command_line(arg: &str) -> String {
+    if arg.contains(' ') && !arg.starts_with("_?=") {
+        format!("\"{arg}\"")
+    } else {
+        arg.to_owned()
+    }
+}
+
 /// Administrator rights through a UAC prompt (`Start-Process -Verb RunAs`); the exit code of the program is passed on.
 pub(super) struct Uac;
 
 impl Elevation for Uac {
     fn wrap(&self, program: &str, args: &[&str]) -> (String, Vec<String>) {
-        let list = args.iter().map(|a| quote(a)).collect::<Vec<_>>().join(",");
+        let list = args
+            .iter()
+            .map(|a| quote(&for_command_line(a)))
+            .collect::<Vec<_>>()
+            .join(",");
         let with_args = if list.is_empty() {
             String::new()
         } else {
@@ -131,5 +145,14 @@ mod tests {
         let (program, args) = Uac.wrap("C:\\a b\\setup.exe", &["/S", "it's"]);
         assert_eq!(program, "powershell");
         assert!(args[3].contains("'C:\\a b\\setup.exe' -ArgumentList '/S','it''s'"));
+        let (_, spaced) = Uac.wrap(
+            "cmd.exe",
+            &["/C", "C:\\Program Files\\X", "_?=C:\\Program Files\\X"],
+        );
+        assert!(
+            spaced[3].contains("'\"C:\\Program Files\\X\"','_?=C:\\Program Files\\X'"),
+            "{}",
+            spaced[3]
+        );
     }
 }
