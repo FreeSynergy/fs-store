@@ -204,6 +204,6 @@ fn a_windows_file_is_not_offered_on_linux() {
  </artifacts></release></releases><custom><value key="fs:signature">tgz.asc</value></custom></component></components>"#;
     let e = &parse_catalog(xml).unwrap().entries[0];
     if std::env::consts::OS == "linux" {
-        assert!(e.exes.is_empty());
+        assert_eq!(e.exes, []);
     }
 }
