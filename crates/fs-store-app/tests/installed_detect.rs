@@ -1,7 +1,7 @@
 //! Tests of the detection of installed packages: register, `current/` links and rpm together.
 
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use fs_store_app::backend::InstallKind;
 use fs_store_app::installed::{details, detect};
@@ -21,8 +21,8 @@ fn temp(tag: &str) -> PathBuf {
 }
 
 /// `current/<name>` points at the folder `target`, the way the store makes it on this system.
-fn symlink(target: PathBuf, link: PathBuf) -> std::io::Result<()> {
-    current().pointers.point(&link, &target)
+fn symlink(target: &Path, link: &Path) -> std::io::Result<()> {
+    current().pointers.point(link, target)
 }
 
 fn no_rpm(_: &str) -> Option<Version> {
@@ -36,8 +36,8 @@ fn all_three_places_are_combined_once_per_name() {
     fs::create_dir_all(root.join("packages/linked/1.0.0")).unwrap();
     fs::create_dir_all(root.join("current")).unwrap();
     symlink(
-        root.join("packages/linked/1.0.0"),
-        root.join("current/linked"),
+        &root.join("packages/linked/1.0.0"),
+        &root.join("current/linked"),
     )
     .unwrap();
     // registered only, and also linked with an older version
@@ -46,7 +46,11 @@ fn all_three_places_are_combined_once_per_name() {
     reg.record("regonly", "0.3.0", "https://example.org/s");
     reg.save().unwrap();
     fs::create_dir_all(root.join("packages/both/1.5.0")).unwrap();
-    symlink(root.join("packages/both/1.5.0"), root.join("current/both")).unwrap();
+    symlink(
+        &root.join("packages/both/1.5.0"),
+        &root.join("current/both"),
+    )
+    .unwrap();
     let rpm = |n: &str| (n == "fromrpm").then(|| v(3, 0, 0));
     let rows = detect(
         &root,
@@ -74,8 +78,8 @@ fn details_list_only_what_exists() {
     fs::create_dir_all(root.join("packages/tasks/0.6.0")).unwrap();
     fs::create_dir_all(root.join("current")).unwrap();
     symlink(
-        root.join("packages/tasks/0.6.0"),
-        root.join("current/tasks"),
+        &root.join("packages/tasks/0.6.0"),
+        &root.join("current/tasks"),
     )
     .unwrap();
     let command = |name: &str| current().commands.command_path(&bin, name);

@@ -18,7 +18,8 @@ fs-store-catalog = { path = "../fs-store-catalog" }
 fs-store-engine = { path = "../fs-store-engine" }
 fs-store-pgp = { path = "../fs-store-pgp" }
 fs-store-sources = { path = "../fs-store-sources" }
-fs-interfaces = { git = "https://github.com/FreeSynergy/fs-interfaces", tag = "v0.0.3", features = ["rpc"] }
+# The Windows transport is on the branch `win-port` until it is tagged (a tag needs the owner's approval); then this is a tag again.
+fs-interfaces = { git = "https://github.com/FreeSynergy/fs-interfaces", branch = "win-port", features = ["rpc"] }
 capnp = "0.27"
 capnp-rpc = "0.27"
 tokio = { version = "1", features = ["rt"] }
