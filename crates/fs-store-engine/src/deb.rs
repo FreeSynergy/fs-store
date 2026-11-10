@@ -40,7 +40,7 @@ impl<C: Commander> InstallStrategy for Deb<C> {
     fn install(&mut self, package: &VerifiedPackage) -> Result<(), InstallError> {
         let p = package.package();
         let stem = format!("{}-{}", p.name.as_str(), p.version);
-        let (paths, written) = write_private(&self.dir, &stem, "deb", &self.files);
+        let (paths, held, written) = write_private(&self.dir, &stem, "deb", &self.files);
         let result = written.and_then(|()| {
             let names = names(&paths);
             // apt-get treats an argument that contains a `/` as a file; `write_private` makes the paths absolute.
@@ -49,6 +49,7 @@ impl<C: Commander> InstallStrategy for Deb<C> {
             args.extend(names.iter().map(String::as_str));
             run_elevated(&mut self.commander, "apt-get", &args)
         });
+        drop(held);
         for f in &paths {
             let _ = fs::remove_file(f);
         }

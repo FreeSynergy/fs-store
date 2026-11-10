@@ -36,3 +36,16 @@ fn elevation_runs_the_program_through_the_system_prompt() {
     assert_ne!(program.len(), 0);
     assert!(args.iter().any(|a| a.contains("tool")));
 }
+
+/// A prompt that is refused, or a program that is not there, must come back as a failure and never as success.
+#[cfg(windows)]
+#[test]
+fn an_elevated_run_that_cannot_start_is_a_failure() {
+    let (program, args) = current().elevation.wrap("C:\\no\\such\\setup.exe", &["/S"]);
+    let args: Vec<&str> = args.iter().map(String::as_str).collect();
+    assert!(
+        fs_store_platform::SystemCommander
+            .run(&program, &args)
+            .is_err()
+    );
+}

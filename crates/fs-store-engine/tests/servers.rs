@@ -26,7 +26,7 @@ fn only_the_serve_command_of_that_package_is_a_server() {
 fn start(name: &str) -> (tempfile::TempDir, std::process::Child) {
     let dir = tempfile::tempdir().unwrap();
     let program = common::server_copy(dir.path(), name);
-    let child = Command::new(program).arg("serve").spawn().unwrap();
+    let child = common::spawn(Command::new(program).arg("serve"));
     std::thread::sleep(Duration::from_millis(300));
     (dir, child)
 }

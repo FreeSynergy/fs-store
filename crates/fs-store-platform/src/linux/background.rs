@@ -38,7 +38,11 @@ fn systemctl(args: &[&str]) -> Result<String, String> {
 
 impl Background for Systemd {
     fn timer_enable(&self, exe: &Path, every: Every) -> Result<String, String> {
-        let dir = current().paths.config_dir().join("systemd/user");
+        let config = current().paths.config_dir();
+        if config.starts_with(".config") || config.as_os_str().is_empty() {
+            return Err("HOME is not set".to_owned());
+        }
+        let dir = config.join("systemd/user");
         let every = if every == Every::Hourly { "1h" } else { "1d" };
         let (service, timer) = unit_files(&exe.to_string_lossy(), every);
         std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;

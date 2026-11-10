@@ -69,3 +69,17 @@ pub fn make_program(dir: &Path, name: &str) -> std::path::PathBuf {
     fs::set_permissions(&file, std::os::unix::fs::PermissionsExt::from_mode(0o755)).unwrap();
     file
 }
+
+/// Starts the command; a program file that a parallel test has just copied may still be open for writing in that test's
+/// thread ("text file busy", error 26), which passes in a moment.
+pub fn spawn(command: &mut std::process::Command) -> std::process::Child {
+    for _ in 0..50 {
+        match command.spawn() {
+            Err(e) if e.raw_os_error() == Some(26) => {
+                std::thread::sleep(std::time::Duration::from_millis(20));
+            }
+            other => return other.unwrap(),
+        }
+    }
+    command.spawn().unwrap()
+}

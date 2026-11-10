@@ -60,13 +60,19 @@ impl Processes for TableProcesses {
     fn request_stop(&self, pid: u32) -> Result<(), String> {
         // A program with a window gets a close request. One without a window cannot be asked: it stays, and the caller
         // finds out by waiting; nothing is ever ended by force.
-        Command::new("taskkill")
+        let status = Command::new("taskkill")
             .args(["/PID", &pid.to_string()])
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .status()
-            .map(drop)
-            .map_err(|e| format!("taskkill: {e}"))
+            .map_err(|e| format!("taskkill: {e}"))?;
+        if status.success() {
+            Ok(())
+        } else {
+            Err(format!(
+                "process {pid} cannot be asked to end in order (it has no window)"
+            ))
+        }
     }
 
     fn spawn_detached(&self, program: &Path, args: &[String]) -> io::Result<()> {
@@ -81,7 +87,13 @@ impl Processes for TableProcesses {
     }
 
     fn open_url(&self, url: &str) -> Result<(), String> {
-        // `explorer.exe <address>` opens the default browser.
+        // `explorer.exe <address>` opens the default browser; it splits its command line at commas and takes more than web
+        // addresses, so only a plain http(s) address is passed.
+        if !(url.starts_with("https://") || url.starts_with("http://"))
+            || url.contains([',', '"', ' ', '\r', '\n'])
+        {
+            return Err(format!("not a plain web address: {url}"));
+        }
         self.spawn_detached(Path::new("explorer.exe"), &[url.to_owned()])
             .map_err(|e| e.to_string())
     }

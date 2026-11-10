@@ -111,7 +111,7 @@ fn proc_check_sees_a_running_program_and_ignores_the_caller() {
     let dir = tmp.path().join("packages/tasks/1.0.0");
     fs::create_dir_all(&dir).unwrap();
     let prog = common::server_copy(&dir, "sleeper");
-    let mut child = Command::new(&prog).spawn().unwrap();
+    let mut child = common::spawn(&mut Command::new(&prog));
     std::thread::sleep(std::time::Duration::from_millis(300));
     assert!(ProcRunningCheck::new(tmp.path()).is_running("tasks"));
     assert!(!ProcRunningCheck::ignoring(tmp.path(), child.id()).is_running("tasks"));

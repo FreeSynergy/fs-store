@@ -71,6 +71,11 @@ impl SystemPackages for WindowsSystem {
         if fs_store_core::PackageName::new(name).is_none_or(|n| n.as_str() != name) {
             return Err(format!("`{name}` is not a plain package name"));
         }
+        if !self.program_files.is_absolute() {
+            return Err(
+                "the program folder of Windows is not known (%ProgramFiles% is empty)".to_owned(),
+            );
+        }
         let dir = self.dir_of(name);
         let uninstaller = dir.join("uninstall.exe");
         // `_?=<dir>` makes the NSIS uninstaller wait until it is done instead of copying itself and returning at once.
@@ -112,8 +117,11 @@ impl Elevation for Uac {
         } else {
             format!(" -ArgumentList {list}")
         };
+        // A refused prompt or a missing program raises an error: without `Stop` the script would go on and end with 0, which
+        // reads as success.
         let script = format!(
-            "$p = Start-Process -FilePath {}{with_args} -Verb RunAs -Wait -PassThru; exit $p.ExitCode",
+            "$ErrorActionPreference = 'Stop'; try {{ $p = Start-Process -FilePath {}{with_args} -Verb RunAs -Wait -PassThru; \
+             if ($null -eq $p) {{ exit 1 }}; exit $p.ExitCode }} catch {{ [Console]::Error.WriteLine($_.Exception.Message); exit 1 }}",
             quote(program)
         );
         (
@@ -145,6 +153,7 @@ mod tests {
         let (program, args) = Uac.wrap("C:\\a b\\setup.exe", &["/S", "it's"]);
         assert_eq!(program, "powershell");
         assert!(args[3].contains("'C:\\a b\\setup.exe' -ArgumentList '/S','it''s'"));
+        assert!(args[3].contains("$ErrorActionPreference = 'Stop'") && args[3].contains("catch"));
         let (_, spaced) = Uac.wrap(
             "cmd.exe",
             &["/C", "C:\\Program Files\\X", "_?=C:\\Program Files\\X"],

@@ -64,6 +64,13 @@ impl Processes for ProcProcesses {
     fn spawn_detached(&self, program: &Path, args: &[String]) -> io::Result<()> {
         // `setsid -f`: an own session, so the program outlives the store and its terminal. Without `setsid`, a plain child
         // in its own process group that nobody waits for.
+        // `setsid -f` answers success even when the program is not there; a path that does not exist is said so here.
+        if program.components().count() > 1 && !program.exists() {
+            return Err(io::Error::new(
+                io::ErrorKind::NotFound,
+                format!("{} does not exist", program.display()),
+            ));
+        }
         let mut setsid = Command::new("setsid");
         setsid.arg("-f").arg(program).args(args);
         match detached(setsid).status() {

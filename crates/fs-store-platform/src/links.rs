@@ -56,8 +56,10 @@ pub struct MenuEntry {
     pub comment: Option<String>,
     /// What Linux writes as `Exec` (a command on the path, or a file).
     pub exec: String,
-    /// The program file, which Windows starts.
+    /// The file Windows starts (a program, or the launcher of a facet).
     pub program: PathBuf,
+    /// The executable whose icon Windows shows (`program` itself for a program).
+    pub program_icon: PathBuf,
     /// Icon file (`png`); Windows uses the icon of the program instead.
     pub icon: Option<PathBuf>,
     /// Freedesktop categories (`Office;`); Windows has none.

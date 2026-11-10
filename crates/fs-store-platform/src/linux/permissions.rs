@@ -25,14 +25,15 @@ impl Permissions for UnixPermissions {
         fs::set_permissions(dir, fs::Permissions::from_mode(0o700))
     }
 
-    fn create_private_file(&self, path: &Path, bytes: &[u8]) -> io::Result<()> {
+    fn create_private_file(&self, path: &Path, bytes: &[u8]) -> io::Result<Box<dyn Send>> {
         fs::OpenOptions::new()
             .write(true)
             .create_new(true)
             .mode(0o600)
             .custom_flags(O_NOFOLLOW)
             .open(path)
-            .and_then(|mut f| f.write_all(bytes))
+            .and_then(|mut f| f.write_all(bytes))?;
+        Ok(Box::new(()))
     }
 
     fn is_elevated(&self) -> bool {

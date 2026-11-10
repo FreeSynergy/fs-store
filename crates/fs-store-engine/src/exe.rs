@@ -38,12 +38,13 @@ impl<C: Commander> InstallStrategy for Exe<C> {
     fn install(&mut self, package: &VerifiedPackage) -> Result<(), InstallError> {
         let p = package.package();
         let stem = format!("{}-{}", p.name.as_str(), p.version);
-        let (paths, written) = write_private(&self.dir, &stem, "exe", &self.files);
+        let (paths, held, written) = write_private(&self.dir, &stem, "exe", &self.files);
         let result = written.and_then(|()| {
             names(&paths)
                 .iter()
                 .try_for_each(|file| run_elevated(&mut self.commander, file, &["/S"]))
         });
+        drop(held);
         for f in &paths {
             let _ = fs::remove_file(f);
         }

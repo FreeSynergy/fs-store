@@ -96,7 +96,14 @@ pub fn link_facets(
                     title,
                     comment: None,
                     exec: command.to_owned(),
-                    program: target.clone(),
+                    // A facet starts through its own command, which tells the program the name it was called by (Windows
+                    // cannot change `argv[0]`); the program itself starts directly.
+                    program: if command == package {
+                        target.clone()
+                    } else {
+                        platform.commands.command_path(bin_dir, command)
+                    },
+                    program_icon: target.clone(),
                     icon: icon_for(root, command, package),
                     categories: "Office;".to_owned(),
                 },
@@ -160,6 +167,7 @@ pub fn ensure_own_menu_entry(apps_dir: &Path) -> io::Result<bool> {
             title: title.to_owned(),
             comment: Some("Install, update and extend FreeSynergy programs".to_owned()),
             exec: exe.display().to_string(),
+            program_icon: exe.clone(),
             program: exe,
             icon: None,
             categories: "System;PackageManager;".to_owned(),

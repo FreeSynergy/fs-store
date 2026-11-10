@@ -42,14 +42,15 @@ impl MenuEntries for Shortcuts {
             .as_ref()
             .map_or_else(|| MARK.to_owned(), |c| format!("{MARK}: {c}"));
         let script = "$s = (New-Object -ComObject WScript.Shell).CreateShortcut($env:FS_LNK); \
-            $s.TargetPath = $env:FS_TARGET; $s.Description = $env:FS_DESC; \
-            $s.IconLocation = $env:FS_TARGET + ',0'; $s.Save()";
+            $s.TargetPath = $env:FS_TARGET; $s.Description = $env:FS_DESC; $s.WindowStyle = 7; \
+            $s.IconLocation = $env:FS_ICON + ',0'; $s.Save()";
         let envs = [
             (
                 "FS_LNK",
                 file(dir, &entry.title).to_string_lossy().into_owned(),
             ),
             ("FS_TARGET", entry.program.to_string_lossy().into_owned()),
+            ("FS_ICON", entry.program_icon.to_string_lossy().into_owned()),
             ("FS_DESC", description),
         ];
         let envs: Vec<(&str, &str)> = envs.iter().map(|(k, v)| (*k, v.as_str())).collect();

@@ -24,7 +24,8 @@ fn main() -> ExitCode {
 /// True when this process runs as root. The store works in the person's own folders and asks for root itself (`pkexec`)
 /// only for an rpm; started as root it would read and write `/root/.local/share/fs-store`, a second, different store.
 fn is_root() -> bool {
-    fs_store_platform::current().permissions.is_elevated()
+    // Windows: an administrator with the prompt switched off runs everything elevated; refusing that would lock them out.
+    cfg!(unix) && fs_store_platform::current().permissions.is_elevated()
 }
 
 fn dispatch(args: &[String]) -> Result<(), String> {

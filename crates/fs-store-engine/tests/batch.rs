@@ -222,10 +222,7 @@ fn all_rpm_of_a_batch_go_to_one_pkexec_call() {
 fn a_background_server_does_not_block_the_update() {
     let tmp = tempfile::tempdir().unwrap();
     let program = common::server_copy(tmp.path(), "fs-blockedname");
-    let mut server = std::process::Command::new(program)
-        .arg("serve")
-        .spawn()
-        .unwrap();
+    let mut server = common::spawn(std::process::Command::new(program).arg("serve"));
     std::thread::sleep(std::time::Duration::from_millis(300));
     let tgz = tarball("a");
     let catalog = format!(

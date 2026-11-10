@@ -1,7 +1,8 @@
 //! The parts of the store that differ between Linux and Windows. Every part is a trait with two implementations,
 //! `linux` (Unix) and `windows`; [`current`] hands out the ones of the machine this runs on (ADR 0043).
 //! Parts: installation (`SystemPackages`, `Elevation`, `Commander`), paths (`Paths`), links instead of symlinks
-//! (`Pointers`, `Commands`, `MenuEntries`), process information instead of `/proc` (`Processes`), rights (`Permissions`).
+//! (`Pointers`, `Commands`, `MenuEntries`), process information instead of `/proc` (`Processes`), rights (`Permissions`),
+//! the timer of the background check and the notices (`Background`).
 #![deny(missing_docs)]
 
 mod background;

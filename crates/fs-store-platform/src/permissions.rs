@@ -13,10 +13,13 @@ pub trait Permissions: Send + Sync {
     /// `io::Error` when the folder cannot be made or restricted.
     fn create_private_dir(&self, dir: &Path) -> io::Result<()>;
     /// Creates a new file for this person alone, never through a link and never over an existing file, and writes `bytes`.
+    /// The answer is a guard: while it lives, nobody can change or replace the file (Windows: it stays open for reading and
+    /// refuses other writers and deleters, so what was checked is what an elevated setup then starts). On Unix the folder
+    /// of mode 0700 is what keeps others out and the guard holds nothing.
     ///
     /// # Errors
     /// `io::Error` (also when the file exists already).
-    fn create_private_file(&self, path: &Path, bytes: &[u8]) -> io::Result<()>;
+    fn create_private_file(&self, path: &Path, bytes: &[u8]) -> io::Result<Box<dyn Send>>;
     /// True when this process runs with the rights of the administrator (root).
     fn is_elevated(&self) -> bool;
 }

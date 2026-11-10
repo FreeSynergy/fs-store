@@ -40,7 +40,7 @@ impl<C: Commander> InstallStrategy for Rpm<C> {
     fn install(&mut self, package: &VerifiedPackage) -> Result<(), InstallError> {
         let p = package.package();
         let stem = format!("{}-{}", p.name.as_str(), p.version);
-        let (paths, written) = write_private(&self.dir, &stem, "rpm", &self.files);
+        let (paths, held, written) = write_private(&self.dir, &stem, "rpm", &self.files);
         let result = written.and_then(|()| {
             let names = names(&paths);
             // A local rpm needs no fresh repository metadata (measured 2026-11-08: a refresh of all repositories is what
@@ -49,6 +49,7 @@ impl<C: Commander> InstallStrategy for Rpm<C> {
             args.extend(names.iter().map(String::as_str));
             run_elevated(&mut self.commander, "dnf", &args)
         });
+        drop(held);
         for f in &paths {
             let _ = fs::remove_file(f);
         }

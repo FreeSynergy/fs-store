@@ -53,7 +53,48 @@ fn an_executable_is_a_program_file_not_a_folder_or_a_text() {
 }
 
 #[test]
-fn the_test_does_not_run_with_the_rights_of_the_administrator() {
-    // The store refuses to run elevated; the runners of the gate do not either (root in a container is the exception).
-    let _ = current().permissions.is_elevated();
+fn a_private_folder_is_for_this_person_alone() {
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = tmp.path().join("private");
+    current().permissions.create_private_dir(&dir).unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        assert_eq!(
+            fs::metadata(&dir).unwrap().permissions().mode() & 0o777,
+            0o700
+        );
+    }
+    #[cfg(windows)]
+    {
+        let out = std::process::Command::new("icacls")
+            .arg(&dir)
+            .output()
+            .unwrap();
+        let text = String::from_utf8_lossy(&out.stdout);
+        for others in ["Everyone", "BUILTIN\\Users", "Authenticated Users"] {
+            assert!(
+                !text.contains(others),
+                "{others} may use the folder: {text}"
+            );
+        }
+    }
+}
+
+/// While the guard lives nobody can replace or delete the file (Windows); an elevated setup starts what was written.
+#[cfg(windows)]
+#[test]
+fn a_written_file_cannot_be_swapped_while_the_guard_lives() {
+    let tmp = tempfile::tempdir().unwrap();
+    let file = tmp.path().join("setup.exe");
+    let guard = current()
+        .permissions
+        .create_private_file(&file, b"one")
+        .unwrap();
+    assert!(fs::write(&file, b"two").is_err());
+    assert!(fs::remove_file(&file).is_err());
+    assert!(fs::rename(&file, tmp.path().join("other.exe")).is_err());
+    assert_eq!(fs::read(&file).unwrap(), b"one");
+    drop(guard);
+    fs::remove_file(&file).unwrap();
 }
