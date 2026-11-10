@@ -74,8 +74,7 @@ pub fn detect_system() -> System {
             System::Windows
         } else {
             std::fs::read_to_string("/etc/os-release")
-                .map(|t| system_from_os_release(&t))
-                .unwrap_or(System::Other)
+                .map_or(System::Other, |t| system_from_os_release(&t))
         }
     })
 }
