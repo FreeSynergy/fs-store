@@ -29,3 +29,14 @@ jobs:
       - run: cargo clippy --workspace --all-targets --all-features -- -D warnings -W clippy::pedantic
       - run: cargo test --workspace --all-features --no-fail-fast
       - uses: FreeSynergy/fs-release/actions/rust-rules@main
+      # The real installation on the runner: a setup.exe built the way fs-release builds it (same NSIS script) is installed
+      # through the `Exe` strategy, read from the registry and removed through its uninstaller.
+      - name: Build a probe setup (NSIS, the script of fs-release)
+        run: |
+          choco install nsis -y --no-progress
+          New-Item -ItemType Directory probe-stage | Out-Null
+          Set-Content probe-stage\probe.txt hi
+          Invoke-WebRequest https://raw.githubusercontent.com/FreeSynergy/fs-release/main/actions/package-windows/installer.nsi -OutFile installer.nsi
+          & "C:\Program Files (x86)\NSIS\makensis.exe" /V2 /DNAME=FreeSynergy.Probe /DVERSION=1.2.3 "/DSTAGE=$PWD\probe-stage" "/DOUT=$PWD\probe-setup.exe" installer.nsi
+          "FS_PROBE_SETUP=$PWD\probe-setup.exe" >> $env:GITHUB_ENV
+      - run: cargo test -p fs-store-engine --test windows_setup -- --nocapture
