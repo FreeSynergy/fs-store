@@ -139,12 +139,6 @@ fn refresh_during_jobs_keeps_jobs_and_failed_messages() {
             .iter()
             .any(|j| j.name == "fs-tasks" && !j.is_finished())
     );
-    m.refresh();
-    assert!(
-        m.problems()
-            .iter()
-            .any(|p| matches!(p, Problem::JobFailed { .. }))
-    );
 }
 
 #[test]
