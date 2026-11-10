@@ -199,7 +199,7 @@ implementations over the same `Commander`, sharing the file handling in `native.
   yet"): there is no installer for it, and `fs-store` itself does not build for Windows (`std::os::unix` in the installers). The
   catalog and the choice are tested; running the setup.exe is not built. Open: Windows store, `Msi`/zip as alternatives.
 - A main file (`fs:format`) that is a deb is `Unsupported(Deb)` for a store that is not a deb store. A release with only exe files has no main file and is `NotOffered` on Windows (open with the Windows store).
-- **Contract:** `store.capnp` `PackageFormat` got `deb @4` and `exe @5` (fs-interfaces, branch `thread-d-ifaces`).
+- **Contract:** `store.capnp` `PackageFormat` got `deb @4` and `exe @5` (fs-interfaces, tag v0.0.3).
 - **Not tested here:** `pkexec` with a real person's password (as for rpm); Ubuntu apt (only Debian 13 by hand).
 
 ## Look for updates, tell the person (2026-11-08, user wish after the rc.9 test)
