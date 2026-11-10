@@ -1,0 +1,15 @@
+# The same gate as check.yml, on the Windows runner of fs-release (windows-2022): fmt, clippy (pedantic), tests, coding rules.
+# The Windows parts of fs-store-platform are built and tested here, never cross-built (ADR 0043, port decision of the sprint).
+name: windows
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    uses: FreeSynergy/fs-release/.github/workflows/check.yml@main
+    with:
+      runs-on: windows-2022

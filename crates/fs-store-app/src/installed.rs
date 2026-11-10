@@ -14,7 +14,9 @@ use crate::backend::{InstallKind, InstalledDetails, InstalledRow};
 /// The version `current/<name>` points to.
 #[must_use]
 pub fn linked_version(root: &Path, name: &str) -> Option<Version> {
-    let target = fs::read_link(root.join("current").join(name)).ok()?;
+    let target = fs_store_platform::current()
+        .pointers
+        .pointer_target(&root.join("current").join(name))?;
     Version::parse(target.file_name()?.to_str()?)
 }
 
@@ -100,18 +102,32 @@ pub fn details(
                 .filter(|n| !n.starts_with('.')),
         );
     }
+    let platform = fs_store_platform::current();
     let mut seen = BTreeSet::new();
     for command in commands {
+        let command = platform.paths.command_name(&command);
         if !seen.insert(command.clone()) {
             continue;
         }
-        let places = [Some(bin_dir), from_rpm.then_some(Path::new("/usr/bin"))];
-        if let Some(path) = places
-            .into_iter()
-            .flatten()
-            .map(|dir| dir.join(&command))
-            .find(|p| fs::symlink_metadata(p).is_ok())
-        {
+        let ours = platform
+            .commands
+            .command_exists(bin_dir, &command)
+            .then(|| platform.commands.command_path(bin_dir, &command));
+        let system = || {
+            from_rpm
+                .then(|| platform.paths.native_program_dirs(name))
+                .into_iter()
+                .flatten()
+                .flat_map(|dir| {
+                    platform
+                        .paths
+                        .command_files(&command)
+                        .into_iter()
+                        .map(move |f| dir.join(f))
+                })
+                .find(|p| fs::symlink_metadata(p).is_ok())
+        };
+        if let Some(path) = ours.or_else(system) {
             out.commands.push((command, path.display().to_string()));
         }
     }

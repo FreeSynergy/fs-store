@@ -1,0 +1,17 @@
+[package]
+name = "fs-store-platform"
+description = "FreeSynergy.Store: the parts that differ between Linux and Windows, each behind a trait"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+fs-store-core = { path = "../fs-store-core" }
+
+[target.'cfg(windows)'.dependencies]
+junction = "1"
+sysinfo = { version = "0.37", default-features = false, features = ["system", "user"] }
+
+[dev-dependencies]
+tempfile = "3"

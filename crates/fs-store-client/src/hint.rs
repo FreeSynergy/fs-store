@@ -26,16 +26,10 @@ impl UpdateHint {
     }
 }
 
-/// The store's folder: `FS_STORE_ROOT`, else `~/.local/share/fs-store` (as for the store itself).
+/// The store's folder: `FS_STORE_ROOT`, else the folder of this system (as for the store itself).
 #[must_use]
 pub fn store_root() -> PathBuf {
-    std::env::var_os("FS_STORE_ROOT").map_or_else(
-        || {
-            PathBuf::from(std::env::var_os("HOME").unwrap_or_default())
-                .join(".local/share/fs-store")
-        },
-        PathBuf::from,
-    )
+    fs_store_platform::current().paths.store_root()
 }
 
 /// Is there an update for `program`? `None` when there is none, the person switched hints off, or the store has

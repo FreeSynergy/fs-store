@@ -19,8 +19,8 @@ enum Archive {
 
 /// Installs a downloaded `tar.gz` under `root`.
 ///
-/// Layout: `root/packages/<name>/<version>/` holds the files, `root/current/<name>` is a symlink to the active
-/// version. Switching is one atomic rename of a new symlink; old versions stay for the rollback. An archive is
+/// Layout: `root/packages/<name>/<version>/` holds the files, `root/current/<name>` is a pointer (a symlink, on
+/// Windows a junction) to the active version. Switching is one rename of a new pointer; old versions stay for the rollback. An archive is
 /// unpacked into a fresh sibling directory and renamed into place, so a version that is installed is never
 /// touched again. Only plain files and directories are accepted: symlink and hard-link entries are refused.
 pub struct TarGz {
@@ -78,12 +78,9 @@ impl TarGz {
     }
 
     fn point_current(&self, name: &str, target: &Path) -> io::Result<()> {
-        let cur = self.root.join("current");
-        fs::create_dir_all(&cur)?;
-        let tmp = cur.join(format!(".{name}.new.{}", std::process::id()));
-        let _ = fs::remove_file(&tmp);
-        std::os::unix::fs::symlink(target, &tmp)?;
-        fs::rename(&tmp, cur.join(name))
+        fs_store_platform::current()
+            .pointers
+            .point(&self.root.join("current").join(name), target)
     }
 
     fn open(&self) -> io::Result<tar::Archive<GzDecoder<Box<dyn io::Read + '_>>>> {
@@ -196,21 +193,20 @@ impl InstallStrategy for TarGz {
 
     fn restore(&mut self, name: &str, previous: Option<Version>) -> Result<(), InstallError> {
         safe_name(name)?;
-        match previous {
-            Some(v) => {
-                let dir = self.dir(name, v);
-                if !dir.is_dir() {
-                    return Err(InstallError(format!(
-                        "previous version of `{name}` is gone"
-                    )));
-                }
-                self.point_current(name, &dir).map_err(|e| err(&e))
+        if let Some(v) = previous {
+            let dir = self.dir(name, v);
+            if !dir.is_dir() {
+                return Err(InstallError(format!(
+                    "previous version of `{name}` is gone"
+                )));
             }
-            None => match fs::remove_file(self.root.join("current").join(name)) {
-                Ok(()) => Ok(()),
-                Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(()),
-                Err(e) => Err(err(&e)),
-            },
+            return self.point_current(name, &dir).map_err(|e| err(&e));
         }
+        let pointers = &fs_store_platform::current().pointers;
+        let link = self.root.join("current").join(name);
+        if pointers.pointer_exists(&link) {
+            pointers.remove_pointer(&link).map_err(|e| err(&e))?;
+        }
+        Ok(())
     }
 }

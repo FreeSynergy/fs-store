@@ -136,9 +136,6 @@ impl std::fmt::Display for InstallFailure {
                 f.write_str("the catalog offers an older version than the installed one (refused)")
             }
             Self::NotOffered => f.write_str("not offered by this source"),
-            Self::Unsupported(Format::Exe) => f.write_str(
-                "Unsupported: the Windows setup.exe cannot be installed by the store yet (the store itself does not run on Windows)",
-            ),
             Self::Unsupported(format) => write!(f, "no installer for the format {format:?} yet"),
             Self::Checksum => {
                 f.write_str("the downloaded file does not match the checksum in the catalog")

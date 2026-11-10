@@ -16,9 +16,6 @@ pub struct Program {
     pub auto_update: bool,
 }
 
-/// The user timer that looks for updates by itself (systemd, `fs-store-update.timer`).
-const TIMER_UNIT: &str = "fs-store-update.timer";
-
 /// What the window needs for updates: the person's settings, what the last check found, and a way to check.
 pub trait UpdateService: Send + Sync {
     /// The settings (defaults when there is no file).
@@ -88,16 +85,10 @@ impl FileUpdates {
         Self { root }
     }
 
-    /// `FS_STORE_ROOT`, or `~/.local/share/fs-store`, like the commands.
+    /// `FS_STORE_ROOT`, or the store's folder of this system, like the commands.
     #[must_use]
     pub fn from_environment() -> Self {
-        Self::new(std::env::var_os("FS_STORE_ROOT").map_or_else(
-            || {
-                PathBuf::from(std::env::var_os("HOME").unwrap_or_default())
-                    .join(".local/share/fs-store")
-            },
-            PathBuf::from,
-        ))
+        Self::new(fs_store_platform::current().paths.store_root())
     }
 }
 
@@ -145,13 +136,7 @@ impl UpdateService for FileUpdates {
     }
 
     fn timer_enabled(&self) -> bool {
-        Command::new("systemctl")
-            .args(["--user", "is-enabled", TIMER_UNIT])
-            .stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .status()
-            .is_ok_and(|s| s.success())
+        fs_store_platform::current().background.timer_enabled()
     }
 
     fn timer_set(&self, on: bool) -> Result<String, String> {

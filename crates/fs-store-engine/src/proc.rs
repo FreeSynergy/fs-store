@@ -1,13 +1,14 @@
-//! Pattern: Strategy (`RunningCheck` for Linux, through `/proc`).
+//! Pattern: Strategy (`RunningCheck` through the platform's `Processes`: `/proc` on Linux, the process table on Windows).
 
-use std::fs;
 use std::path::{Path, PathBuf};
 
 use fs_store_core::RunningCheck;
+use fs_store_platform::current;
 
-/// Linux: a package is running when some process executes a file below `root/packages/<name>/`.
-/// The calling process itself is ignored, so the store can update itself: its own old files stay on disk
-/// (the switch is a symlink, nothing is overwritten) and the new version starts at the next launch.
+/// A package is running when some process of this person executes a file below `root/packages/<name>/` (or, for a
+/// package of the system, in the program folder the setup made). The calling process itself is ignored, so the store can
+/// update itself: its own old files stay on disk (the switch is a pointer, nothing is overwritten) and the new version
+/// starts at the next launch.
 #[derive(Debug)]
 pub struct ProcRunningCheck {
     root: PathBuf,
@@ -33,14 +34,13 @@ impl ProcRunningCheck {
 
 impl RunningCheck for ProcRunningCheck {
     fn is_running(&self, name: &str) -> bool {
+        let platform = current();
         let base = self.root.join("packages").join(name);
-        let Ok(procs) = fs::read_dir("/proc") else {
-            return false;
-        };
-        procs.flatten().any(|p| {
-            let own =
-                p.file_name().to_str().and_then(|n| n.parse::<u32>().ok()) == Some(self.ignore);
-            !own && fs::read_link(p.path().join("exe")).is_ok_and(|exe| exe.starts_with(&base))
+        platform.processes.mine().iter().any(|p| {
+            p.pid != self.ignore
+                && p.exe
+                    .as_ref()
+                    .is_some_and(|exe| platform.paths.is_below(exe, &base))
         })
     }
 }

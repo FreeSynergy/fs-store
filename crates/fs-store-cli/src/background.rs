@@ -3,7 +3,6 @@
 //! person chose so, installs the updates. Every way of telling is best effort and can be switched off.
 
 use std::path::Path;
-use std::process::Command;
 
 use fs_store_sources::{CheckEvery, Findings, InstallMode, Novelty, Registry, Settings, Update};
 
@@ -115,33 +114,13 @@ fn tell(f: &Findings) {
         .map(|u| format!("{} {} -> {}", u.name, u.from, u.to))
         .collect();
     lines.extend(f.new.iter().map(|n| format!("New: {}", n.name)));
-    let _ = Command::new("notify-send")
-        .args([
-            "--app-name=FreeSynergy.Store",
-            "--icon=system-software-update",
-            "FreeSynergy.Store",
-        ])
-        .arg(lines.join("\n"))
-        .status();
+    fs_store_platform::current()
+        .background
+        .notify(&lines.join("\n"));
 }
 
-/// Launcher badge (Unity `LauncherEntry` over D-Bus; KDE and some GNOME setups show it). Best effort.
 fn badge(count: usize) {
-    let _ = Command::new("gdbus")
-        .args([
-            "emit",
-            "--session",
-            "--object-path",
-            "/com/canonical/unity/launcherentry/1",
-            "--signal",
-            "com.canonical.Unity.LauncherEntry.Update",
-            "application://net.freesynergy.Store.desktop",
-        ])
-        .arg(format!(
-            "{{'count': <int64 {count}>, 'count-visible': <{}>}}",
-            count > 0
-        ))
-        .output();
+    fs_store_platform::current().background.badge(count);
 }
 
 /// `fs-store settings [check <off|start|daily|hourly> | install <ask|auto> | notify <on|off>]`.

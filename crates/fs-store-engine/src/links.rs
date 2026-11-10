@@ -1,83 +1,74 @@
-//! Pattern: none (two functions). Puts the programs of a package on the person's PATH, and takes them away again.
-//! A link points through `current/<name>/`, so an update changes what it runs without touching the link.
+//! Pattern: Facade over `Commands` of the platform (what a link is differs per system). Puts the programs of a package on
+//! the person's path, and takes them away again. A command runs through `current/<name>/`, so an update changes what it
+//! runs without touching the command.
 
 use std::fs;
 use std::io;
-use std::os::unix::fs::{PermissionsExt, symlink};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
-/// Where the commands of installed programs are linked: `FS_STORE_BIN`, else `~/.local/bin`.
+use fs_store_platform::current;
+
+/// Where the commands of installed programs are made: `FS_STORE_BIN`, else the platform's place.
 #[must_use]
-pub fn default_bin_dir() -> std::path::PathBuf {
-    std::env::var_os("FS_STORE_BIN").map_or_else(
-        || {
-            std::path::PathBuf::from(std::env::var_os("HOME").unwrap_or_default())
-                .join(".local/bin")
-        },
-        std::path::PathBuf::from,
-    )
+pub fn default_bin_dir() -> PathBuf {
+    current().paths.bin_dir()
 }
 
-/// Links every executable file at the top of `current/<name>/` into `bin_dir`. Returns the names linked.
-/// A name that exists and is not one of our links is left alone and reported in `skipped`.
+/// Makes a command for every executable file at the top of `current/<name>/` in `bin_dir`. Returns the names made.
+/// A name that exists and is not one of our commands is left alone and reported in `skipped`.
 ///
 /// # Errors
-/// `io::Error` when the directory cannot be read or a link cannot be made.
+/// `io::Error` when the directory cannot be read or a command cannot be made.
 pub fn link_programs(
     root: &Path,
     name: &str,
     bin_dir: &Path,
 ) -> io::Result<(Vec<String>, Vec<String>)> {
+    let platform = current();
     let pkg = root.join("current").join(name);
-    fs::create_dir_all(bin_dir)?;
     let (mut linked, mut skipped) = (Vec::new(), Vec::new());
     for entry in fs::read_dir(&pkg)? {
         let entry = entry?;
         let file = entry.file_name().to_string_lossy().into_owned();
-        let meta = fs::metadata(entry.path())?;
+        let command = platform.paths.command_name(&file);
         // `<name>-app` and `<name>-server` are reached through the one command `<name>` (see `link_facets`)
-        let plain = file == format!("{name}-app") || file == format!("{name}-server");
-        if !meta.is_file()
-            || meta.permissions().mode() & 0o111 == 0
-            || file.starts_with('.')
-            || plain
-        {
+        let plain = command == format!("{name}-app") || command == format!("{name}-server");
+        if !platform.permissions.is_executable(&entry.path()) || file.starts_with('.') || plain {
             continue;
         }
-        let link = bin_dir.join(&file);
-        let target = pkg.join(&file);
-        match fs::read_link(&link) {
-            Ok(old) if old.starts_with(root.join("current")) => fs::remove_file(&link)?,
-            Ok(_) => {
-                skipped.push(file);
+        match platform.commands.command_target(bin_dir, &command) {
+            Some(old) if platform.paths.is_below(&old, &root.join("current")) => {
+                platform.commands.remove_command(bin_dir, &command)?;
+            }
+            Some(_) => {
+                skipped.push(command);
                 continue;
             }
-            Err(_) if fs::symlink_metadata(&link).is_ok() => {
-                skipped.push(file);
+            None if platform.commands.command_exists(bin_dir, &command) => {
+                skipped.push(command);
                 continue;
             }
-            Err(_) => {}
+            None => {}
         }
-        symlink(&target, &link)?;
-        linked.push(file);
+        platform
+            .commands
+            .make_command(bin_dir, &command, &pkg.join(&file))?;
+        linked.push(command);
     }
     Ok((linked, skipped))
 }
 
-/// Removes the links in `bin_dir` that point into `current/<name>/`. Returns how many were removed.
+/// Removes the commands in `bin_dir` that run a program in `current/<name>/`. Returns how many were removed.
 ///
 /// # Errors
-/// `io::Error` when the directory cannot be read or a link cannot be removed.
+/// `io::Error` when a command cannot be removed.
 pub fn unlink_programs(root: &Path, name: &str, bin_dir: &Path) -> io::Result<usize> {
+    let platform = current();
     let pkg = root.join("current").join(name);
     let mut n = 0;
-    let Ok(dir) = fs::read_dir(bin_dir) else {
-        return Ok(0);
-    };
-    for entry in dir {
-        let path = entry?.path();
-        if fs::read_link(&path).is_ok_and(|t| t.starts_with(&pkg)) {
-            fs::remove_file(&path)?;
+    for (command, target) in platform.commands.commands(bin_dir) {
+        if platform.paths.is_below(&target, &pkg) {
+            platform.commands.remove_command(bin_dir, &command)?;
             n += 1;
         }
     }

@@ -4,40 +4,12 @@
 
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 use fs_store_core::{Format, InstallError, InstallStrategy, VerifiedPackage, Version};
 
-use crate::native::{names, write_private};
+use fs_store_platform::Commander;
 
-/// Runs a program with arguments; `Err` carries what went wrong (exit status and stderr).
-pub trait Commander {
-    /// # Errors
-    /// Text describing the failure.
-    fn run(&mut self, program: &str, args: &[&str]) -> Result<(), String>;
-}
-
-/// The real thing: starts the process and waits.
-#[derive(Debug, Default)]
-pub struct SystemCommander;
-
-impl Commander for SystemCommander {
-    fn run(&mut self, program: &str, args: &[&str]) -> Result<(), String> {
-        let out = Command::new(program)
-            .args(args)
-            .output()
-            .map_err(|e| format!("{program}: {e}"))?;
-        if out.status.success() {
-            Ok(())
-        } else {
-            Err(format!(
-                "{program} {}: {}",
-                out.status,
-                String::from_utf8_lossy(&out.stderr).trim()
-            ))
-        }
-    }
-}
+use crate::native::{names, run_elevated, write_private};
 
 /// Installs a verified rpm with `pkexec dnf install`. dnf works in one transaction, so a failed install has
 /// changed nothing and `restore` has nothing to undo; going back to an older rpm is the person's decision
@@ -49,7 +21,7 @@ pub struct Rpm<C: Commander> {
 }
 
 impl<C: Commander> Rpm<C> {
-    /// `dir` is a private directory for the file handed to dnf (created with mode 0700).
+    /// `dir` is a private directory for the file handed to dnf (a folder only this person can use).
     #[must_use]
     pub fn new(dir: &Path, files: Vec<Vec<u8>>, commander: C) -> Self {
         Self {
@@ -73,9 +45,9 @@ impl<C: Commander> InstallStrategy for Rpm<C> {
             let names = names(&paths);
             // A local rpm needs no fresh repository metadata (measured 2026-11-08: a refresh of all repositories is what
             // makes `dnf install` slow); dnf still downloads metadata when there is none.
-            let mut args = vec!["dnf", "install", "-y", "--setopt=metadata_expire=never"];
+            let mut args = vec!["install", "-y", "--setopt=metadata_expire=never"];
             args.extend(names.iter().map(String::as_str));
-            self.commander.run("pkexec", &args)
+            run_elevated(&mut self.commander, "dnf", &args)
         });
         for f in &paths {
             let _ = fs::remove_file(f);
@@ -86,16 +58,4 @@ impl<C: Commander> InstallStrategy for Rpm<C> {
     fn restore(&mut self, _name: &str, _previous: Option<Version>) -> Result<(), InstallError> {
         Ok(())
     }
-}
-
-/// Removes an installed rpm with `pkexec dnf remove -y <name>`; the person's data (`~/.local/share/...`) is never touched.
-/// `name` must be a plain package name.
-///
-/// # Errors
-/// A sentence when the name is not plain or `dnf` fails.
-pub fn remove_rpm<C: Commander>(name: &str, commander: &mut C) -> Result<(), String> {
-    if fs_store_core::PackageName::new(name).is_none_or(|n| n.as_str() != name) {
-        return Err(format!("`{name}` is not a plain package name"));
-    }
-    commander.run("pkexec", &["dnf", "remove", "-y", name])
 }

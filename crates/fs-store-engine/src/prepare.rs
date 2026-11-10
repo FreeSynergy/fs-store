@@ -90,11 +90,12 @@ impl Installer<'_> {
             .into_iter()
             .find(|e| e.name.as_str() == name)
             .ok_or(InstallFailure::NotOffered)?;
-        // A Windows store is offered the setup.exe; there is no installer for it, and that is said, not hidden.
+        // A Windows store installs the setup.exe of the release, nothing else: a tar.gz of Linux does not run there.
         if self.prefer == Format::Exe {
-            return Err(InstallFailure::Unsupported(Format::Exe));
-        }
-        if !matches!(entry.format, Format::TarGz | Format::Rpm | Format::Deb) {
+            if entry.exes.is_empty() {
+                return Err(InstallFailure::NotOffered);
+            }
+        } else if !matches!(entry.format, Format::TarGz | Format::Rpm | Format::Deb) {
             return Err(InstallFailure::Unsupported(entry.format));
         }
         // A main file that is a deb is for apt only; handing it to a store of another kind would run the wrong tool.
@@ -109,6 +110,7 @@ impl Installer<'_> {
         let native = match self.prefer {
             Format::Rpm => Some((Format::Rpm, &entry.rpms)),
             Format::Deb => Some((Format::Deb, &entry.debs)),
+            Format::Exe => Some((Format::Exe, &entry.exes)),
             _ => None,
         }
         .filter(|(_, files)| !files.is_empty());

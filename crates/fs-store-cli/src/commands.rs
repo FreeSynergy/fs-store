@@ -32,17 +32,13 @@ impl Fetch for AnyFetch {
 }
 
 pub(crate) fn root() -> PathBuf {
-    std::env::var_os("FS_STORE_ROOT").map_or_else(
-        || {
-            PathBuf::from(std::env::var_os("HOME").unwrap_or_default())
-                .join(".local/share/fs-store")
-        },
-        PathBuf::from,
-    )
+    fs_store_platform::current().paths.store_root()
 }
 
 pub(crate) fn installed(root: &Path, name: &str) -> Option<Version> {
-    let target = fs::read_link(root.join("current").join(name)).ok()?;
+    let target = fs_store_platform::current()
+        .pointers
+        .pointer_target(&root.join("current").join(name))?;
     Version::parse(target.file_name()?.to_str()?)
 }
 

@@ -33,7 +33,7 @@ impl RunningCheck for Idle {
         false
     }
 }
-#[derive(Default)]
+#[derive(Default, Clone)]
 struct Calls(std::sync::Arc<std::sync::Mutex<Vec<Vec<String>>>>);
 impl fs_store_engine::Commander for Calls {
     fn run(&mut self, program: &str, args: &[&str]) -> Result<(), String> {
@@ -145,20 +145,20 @@ fn a_deb_store_falls_back_to_the_tar_gz_when_the_release_has_no_deb() {
 }
 
 #[test]
-fn a_windows_store_is_told_unsupported_not_given_something_else() {
+fn a_windows_store_is_offered_the_setup_and_nothing_else() {
     let tmp = tempfile::tempdir().unwrap();
-    let cat = catalog("app", &BLOBS);
+    let fetch = served();
+    let with = catalog("app", &BLOBS);
+    let plan = installer(tmp.path(), &fetch, Format::Exe)
+        .plan(with.as_bytes(), b"good", "app", None)
+        .unwrap();
+    assert_eq!(plan.format(), Format::Exe);
+    assert_eq!(plan.locations(), ["https://x/app-setup.exe"]);
+    // A release without a setup is not offered at all: the tar.gz of Linux does not run there.
+    let without = catalog("app", &BLOBS[..2]);
     let r =
-        installer(tmp.path(), &served(), Format::Exe).plan(cat.as_bytes(), b"good", "app", None);
-    match r {
-        Err(e @ InstallFailure::Unsupported(Format::Exe)) => {
-            assert!(e.to_string().starts_with("Unsupported"), "{e}");
-        }
-        other => panic!(
-            "expected Unsupported(Exe), got {:?}",
-            other.map(|p| p.format())
-        ),
-    }
+        installer(tmp.path(), &fetch, Format::Exe).plan(without.as_bytes(), b"good", "app", None);
+    assert!(matches!(r, Err(InstallFailure::NotOffered)));
 }
 
 #[test]
@@ -200,4 +200,32 @@ fn a_main_file_that_is_a_deb_is_not_given_to_a_store_of_another_kind() {
     ));
     let deb = installer(tmp.path(), &fetch, Format::Deb).plan(cat.as_bytes(), b"good", "app", None);
     assert_eq!(deb.unwrap().format(), Format::Deb);
+}
+
+#[test]
+fn each_setup_runs_elevated_with_the_silent_flag_and_the_file_is_gone_afterwards() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cat = catalog("app", &BLOBS);
+    let fetch = served();
+    let i = installer(tmp.path(), &fetch, Format::Exe);
+    let plan = i.plan(cat.as_bytes(), b"good", "app", None).unwrap();
+    let ready: Vec<_> = i
+        .prepare_all(vec![plan], &|_, _| {})
+        .into_iter()
+        .map(|(_, r)| r.unwrap())
+        .collect();
+    let calls = Calls::default();
+    let seen = std::sync::Arc::clone(&calls.0);
+    let done = i.commit_exe_with(ready, &|_, _| {}, calls);
+    assert!(done.iter().all(|(_, r)| r.is_ok()));
+    let seen = seen.lock().unwrap();
+    assert_eq!(seen.len(), 1);
+    let line = seen[0].join(" ");
+    assert!(line.contains(".exe") && line.contains("/S"), "{line}");
+    assert_eq!(
+        std::fs::read_dir(tmp.path().join("root/exe"))
+            .unwrap()
+            .count(),
+        0
+    );
 }

@@ -9,6 +9,7 @@ repository.workspace = true
 rust-version = "1.89"
 
 [dependencies]
+fs-store-platform = { path = "../fs-store-platform" }
 fs-store-sources = { path = "../fs-store-sources" }
 
 [dev-dependencies]

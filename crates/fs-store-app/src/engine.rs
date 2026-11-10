@@ -48,16 +48,10 @@ impl EngineBackend {
         }
     }
 
-    /// `FS_STORE_ROOT`, or `~/.local/share/fs-store`, like the CLI.
+    /// `FS_STORE_ROOT`, or the store's folder of this system, like the CLI.
     #[must_use]
     pub fn from_environment() -> Self {
-        Self::new(std::env::var_os("FS_STORE_ROOT").map_or_else(
-            || {
-                PathBuf::from(std::env::var_os("HOME").unwrap_or_default())
-                    .join(".local/share/fs-store")
-            },
-            PathBuf::from,
-        ))
+        Self::new(fs_store_platform::current().paths.store_root())
     }
 
     pub(crate) fn root(&self) -> &std::path::Path {

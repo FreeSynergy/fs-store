@@ -25,16 +25,10 @@ fn rpm_version(name: &str) -> Option<String> {
     fs_store_engine::native_installed_version(name).map(|v| v.to_string())
 }
 
-/// The root of the store: `$FS_STORE_ROOT`, else `~/.local/share/fs-store` (as the commands use it).
+/// The root of the store: `$FS_STORE_ROOT`, else the folder of this system (as the commands use it).
 #[must_use]
 pub fn default_root() -> PathBuf {
-    std::env::var_os("FS_STORE_ROOT").map_or_else(
-        || {
-            PathBuf::from(std::env::var_os("HOME").unwrap_or_default())
-                .join(".local/share/fs-store")
-        },
-        PathBuf::from,
-    )
+    fs_store_platform::current().paths.store_root()
 }
 
 /// The store as the files of this machine tell it.

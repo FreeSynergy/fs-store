@@ -150,71 +150,23 @@ pub(crate) fn auto(root: &Path, name: &str, mode: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// The two systemd user unit files that run `fs-store update --all` every day and a little after login.
-#[must_use]
-pub(crate) fn unit_files(exe: &str, every: &str) -> (String, String) {
-    let service = format!(
-        "[Unit]\nDescription=FreeSynergy.Store: update installed programs\n\n[Service]\nType=oneshot\nExecStart={exe} background\n"
-    );
-    let timer = format!(
-        "[Unit]\nDescription=FreeSynergy.Store: look for updates\n\n[Timer]\nOnBootSec=5min\nOnUnitActiveSec={every}\nRandomizedDelaySec=30min\nPersistent=true\n\n[Install]\nWantedBy=timers.target\n"
-    );
-    (service, timer)
-}
-
-/// `fs-store timer enable|disable|status`: the user timer that updates by itself.
+/// `fs-store timer enable|disable|status`: the timer of this system that updates by itself.
 pub(crate) fn timer(rest: &[String]) -> Result<(), String> {
-    let home = std::env::var_os("HOME").ok_or("HOME is not set")?;
-    let dir = Path::new(&home).join(".config/systemd/user");
-    let run = |args: &[&str]| -> Result<(), String> {
-        let out = std::process::Command::new("systemctl")
-            .arg("--user")
-            .args(args)
-            .output()
-            .map_err(|e| format!("systemctl: {e}"))?;
-        print!("{}", String::from_utf8_lossy(&out.stdout));
-        if out.status.success() {
-            Ok(())
-        } else {
-            Err(String::from_utf8_lossy(&out.stderr).trim().to_owned())
-        }
-    };
-    match rest.first().map(String::as_str) {
+    let background = &fs_store_platform::current().background;
+    let said = match rest.first().map(String::as_str) {
         Some("enable") => {
             let exe = fs_store_engine::own_exe().map_err(|e| e.to_string())?;
             let every = match fs_store_sources::Settings::load(&root().join("settings.toml")).map(|s| s.check) {
-                Ok(fs_store_sources::CheckEvery::Hourly) => "1h",
-                Ok(fs_store_sources::CheckEvery::Daily) => "1d",
+                Ok(fs_store_sources::CheckEvery::Hourly) => fs_store_platform::Every::Hourly,
+                Ok(fs_store_sources::CheckEvery::Daily) => fs_store_platform::Every::Daily,
                 _ => return Err("settings say: check only at start or never; the timer is not needed (fs-store settings check daily|hourly)".into()),
             };
-            let (service, timer) = unit_files(&exe.to_string_lossy(), every);
-            std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
-            std::fs::write(dir.join("fs-store-update.service"), service)
-                .map_err(|e| e.to_string())?;
-            std::fs::write(dir.join("fs-store-update.timer"), timer).map_err(|e| e.to_string())?;
-            run(&["daemon-reload"])?;
-            run(&["enable", "--now", "fs-store-update.timer"])
+            background.timer_enable(&exe, every)?
         }
-        Some("disable") => {
-            run(&["disable", "--now", "fs-store-update.timer"])?;
-            for f in ["fs-store-update.service", "fs-store-update.timer"] {
-                let _ = std::fs::remove_file(dir.join(f));
-            }
-            run(&["daemon-reload"])
-        }
-        Some("status") => run(&["status", "fs-store-update.timer", "--no-pager"]),
-        _ => Err("usage: fs-store timer enable|disable|status".into()),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::unit_files;
-
-    #[test]
-    fn units_run_the_update_command_of_this_binary() {
-        let (service, timer) = unit_files("/home/u/.local/bin/fs-store", "1d");
-        assert!(service.contains("ExecStart=/home/u/.local/bin/fs-store background"));
-        assert!(timer.contains("OnUnitActiveSec=1d") && timer.contains("WantedBy=timers.target"));
-    }
+        Some("disable") => background.timer_disable()?,
+        Some("status") => background.timer_status()?,
+        _ => return Err("usage: fs-store timer enable|disable|status".into()),
+    };
+    print!("{said}");
+    Ok(())
 }

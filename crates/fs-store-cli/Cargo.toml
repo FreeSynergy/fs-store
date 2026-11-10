@@ -9,6 +9,7 @@ repository.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+fs-store-platform = { path = "../fs-store-platform" }
 fs-store-core = { path = "../fs-store-core" }
 fs-store-catalog = { path = "../fs-store-catalog" }
 fs-store-engine = { path = "../fs-store-engine" }

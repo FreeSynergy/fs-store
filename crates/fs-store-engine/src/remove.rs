@@ -28,17 +28,32 @@ pub fn remove(root: &Path, name: &str, running: &dyn RunningCheck) -> Result<(),
         return Err(RemoveError::BadName);
     }
     let link = root.join("current").join(name);
-    if fs::symlink_metadata(&link).is_err() {
+    let pointers = &fs_store_platform::current().pointers;
+    if !pointers.pointer_exists(&link) {
         return Err(RemoveError::NotInstalled);
     }
     if running.is_running(name) {
         return Err(RemoveError::Running);
     }
     let io = |e: io::Error| RemoveError::Io(e.to_string());
-    fs::remove_file(&link).map_err(io)?;
+    pointers.remove_pointer(&link).map_err(io)?;
     match fs::remove_dir_all(root.join("packages").join(name)) {
         Ok(()) => Ok(()),
         Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(()),
         Err(e) => Err(io(e)),
     }
+}
+
+/// Removes an installed package of this system the way its package manager does (`dnf remove`, `apt-get remove`, the
+/// uninstaller of the Windows setup).
+///
+/// # Errors
+/// A sentence when the name is not plain, the command fails, or this system has no manager the store drives.
+pub fn remove_native<C: fs_store_platform::Commander>(
+    name: &str,
+    commander: &mut C,
+) -> Result<(), String> {
+    fs_store_platform::current()
+        .packages
+        .remove(name, commander)
 }

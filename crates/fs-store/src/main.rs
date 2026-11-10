@@ -24,8 +24,7 @@ fn main() -> ExitCode {
 /// True when this process runs as root. The store works in the person's own folders and asks for root itself (`pkexec`)
 /// only for an rpm; started as root it would read and write `/root/.local/share/fs-store`, a second, different store.
 fn is_root() -> bool {
-    use std::os::unix::fs::MetadataExt;
-    std::fs::metadata("/proc/self").is_ok_and(|m| m.uid() == 0)
+    fs_store_platform::current().permissions.is_elevated()
 }
 
 fn dispatch(args: &[String]) -> Result<(), String> {
@@ -38,9 +37,7 @@ fn dispatch(args: &[String]) -> Result<(), String> {
             let mode = match fs_store_engine::preferred_format() {
                 fs_store_core::Format::Rpm => "installed by rpm: programs come as rpm",
                 fs_store_core::Format::Deb => "installed by deb: programs come as deb",
-                fs_store_core::Format::Exe => {
-                    "Windows: programs come as setup.exe (Unsupported: the store cannot install it yet)"
-                }
+                fs_store_core::Format::Exe => "Windows: programs come as setup.exe",
                 _ => "not a system package: programs come as tar.gz",
             };
             println!("fs-store {} ({mode})", env!("CARGO_PKG_VERSION"));

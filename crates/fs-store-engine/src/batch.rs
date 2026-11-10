@@ -10,8 +10,8 @@ use fs_store_core::{
 use crate::prepare::Plan;
 use crate::service::{InstallFailure, Installer, timing};
 use crate::{
-    Commander, Deb, Prepared, Rpm, SystemCommander, TarGz, find_servers, program_of, start_server,
-    stop_servers,
+    Commander, Deb, Exe, Prepared, Rpm, SystemCommander, TarGz, find_servers, program_of,
+    start_server, stop_servers,
 };
 use std::time::Duration;
 
@@ -116,6 +116,9 @@ impl Installer<'_> {
         let (deb, rest): (Vec<_>, Vec<_>) = rest
             .into_iter()
             .partition(|p| p.verified.package().format == Format::Deb);
+        let (exe, rest): (Vec<_>, Vec<_>) = rest
+            .into_iter()
+            .partition(|p| p.verified.package().format == Format::Exe);
         // A program that runs is never replaced, also not inside a batch.
         let mut idle = |group: Vec<Prepared>| {
             let (idle, running): (Vec<_>, Vec<_>) = group
@@ -129,9 +132,10 @@ impl Installer<'_> {
             }
             idle
         };
-        let (rpm, deb) = (idle(rpm), idle(deb));
+        let (rpm, deb, exe) = (idle(rpm), idle(deb), idle(exe));
         results.extend(self.commit_rpm_with(rpm, observe, SystemCommander));
         results.extend(self.commit_deb_with(deb, observe, SystemCommander));
+        results.extend(self.commit_exe_with(exe, observe, SystemCommander));
         for p in rest {
             let name = p.name().to_owned();
             observe(&name, InstallState::Installing);
@@ -184,6 +188,29 @@ impl Installer<'_> {
         commit_native(group, observe, "deb batch", |files| {
             Box::new(Deb::new(&dir, files, commander))
         })
+    }
+}
+
+impl Installer<'_> {
+    /// The same for the Windows setups: each setup is its own run (and its own UAC prompt), so one that fails does not
+    /// fail the others.
+    #[allow(clippy::needless_pass_by_value)] // the same signature as `commit_rpm_with` and `commit_deb_with`
+    pub fn commit_exe_with<C: Commander + Clone>(
+        &self,
+        group: Vec<Prepared>,
+        observe: CommitObserver<'_>,
+        commander: C,
+    ) -> Vec<(String, Result<Version, InstallFailure>)> {
+        let dir = self.root.join("exe");
+        group
+            .into_iter()
+            .flat_map(|p| {
+                let commander = commander.clone();
+                commit_native(vec![p], observe, "exe setup", |files| {
+                    Box::new(Exe::new(&dir, files, commander))
+                })
+            })
+            .collect()
     }
 }
 
