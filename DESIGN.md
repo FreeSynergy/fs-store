@@ -20,6 +20,7 @@ Ideas from the function analysis `temp/research/craft-launcher.md` are used as i
 | `fs-store-sources` – TOML file | Repository (file-backed) | The file holds only the user's sources and a `disabled` list; the reference source is never an entry, so deleting it from the file cannot remove it. |
 | `words` – texts for people | none | Sentences as constants with named placeholders (coding rules 2a); no behaviour besides one pure fill function. |
 | `strategy` – how a package is installed | Strategy (`InstallStrategy`) | rpm via dnf, Flatpak, AppImage, tar.gz: one trait, one implementation per way. |
+| `fs-store-platform` – the parts that differ per system | Strategy per part, Factory + Facade (`current()`) | One trait per part, a Linux and a Windows implementation each; the engine, CLI and window use only the traits. See "Windows port". |
 | `state` – course of one installation | State (enum plus one transition fn) | `Failed` has exactly one way out: `RolledBack`. |
 | `update` – update and roll back | State plus `InstallStrategy::restore` | There is one operation so far (install/update with undo); a `Command` trait with `apply`/`invert` comes when remove is added and there are two or more commands. |
 | `update` – running check | Strategy (`RunningCheck`) | The OS check is outside the core. |
@@ -316,3 +317,26 @@ generated test keys); TOML source list (`fs-store-sources`); `words.rs`. 27 test
 installers, self-replacement of the executable, GUI/CLI, the capnp file, a `Command` trait (comes with remove),
 key expiry checks and subkey rules in `fs-store-pgp` (provisional: a valid signature by the primary key or a public
 subkey of a non-revoked trusted key counts), translation of `words.rs`, atomic write of the source file.
+
+
+## Windows port (2026-11-10, sprint decision C: a real port, no cross-build, no exception)
+**Pattern (ADR 0043: trait first):** the crate `fs-store-platform` has one trait per part that differs between systems. Each has a Linux
+implementation (the old code, moved) and a Windows one; `fs_store_platform::current()` (Factory + Facade) hands out the parts of the
+machine it runs on. Nothing outside the crate says `std::os::unix`, `/proc`, `HOME` or `pkexec`.
+
+| Part | Trait | Linux | Windows |
+|------|-------|-------|---------|
+| Installation | `SystemPackages`, `Elevation`, `Commander`; `InstallStrategy` in the engine | rpm/dnf, deb/apt, through `pkexec`; `TarGz` | the NSIS `-setup.exe` (`Exe` strategy: `setup.exe /S` through a UAC prompt), version from the registry (`reg query`), removal through `uninstall.exe` |
+| Paths | `Paths` | `~/.local/share/fs-store`, `~/.local/bin`, `~/.local/share/applications` | `%LOCALAPPDATA%\FreeSynergy\Store`, `...\bin`, the Start menu folder `FreeSynergy` |
+| Links instead of symlinks | `Pointers` (the `current/<name>` pointer), `Commands` (commands on the path), `MenuEntries` | symlink, symlink, `.desktop` file | junction (no right needed), `<name>.cmd` launcher file that says which program it runs, `.lnk` shortcut (made through `WScript.Shell`) |
+| Process information instead of `/proc` | `Processes` | `/proc`, `kill -TERM`, `setsid -f` | the process table (`sysinfo`), `taskkill` without `/F`, `CREATE_NO_WINDOW` |
+| Rights | `Permissions` | mode bits, `O_NOFOLLOW`, uid 0 | extension tells an executable, `icacls` makes a folder private, `FILE_FLAG_OPEN_REPARSE_POINT`, the High integrity level |
+| Timer and notices | `Background` | systemd user timer, `notify-send`, Unity launcher badge | `schtasks` task of the person, a balloon; no badge (Null object, a setup.exe has no package identity) |
+
+Tests are written against the traits (`crates/fs-store-platform/tests/`, `crates/fs-store-engine/tests/`) and run on both systems: the
+Linux gate on `ubuntu-24.04`, the Windows gate `.github/workflows/windows.yml` on the `windows-2022` runner of `fs-release` (the
+Windows parts are built and tested there, never cross-built). Facets: a Linux facet is a symlink whose `argv[0]` names it; a launcher
+file cannot change `argv[0]`, so a Windows facet command sets the variable `FS_COMMAND` to its name (open question for the owner).
+**Known limits on Windows:** a program without a window cannot be asked to end in order (`taskkill` without `/F` is refused for it), so
+an update of a program whose background server runs says so and waits for the person instead of ending it by force; every setup
+asks for its own UAC prompt (a batch is not one prompt); a Windows facet cannot choose by `argv[0]`.

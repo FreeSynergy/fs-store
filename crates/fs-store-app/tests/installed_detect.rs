@@ -1,12 +1,12 @@
 //! Tests of the detection of installed packages: register, `current/` links and rpm together.
 
 use std::fs;
-use std::os::unix::fs::symlink;
 use std::path::PathBuf;
 
 use fs_store_app::backend::InstallKind;
 use fs_store_app::installed::{details, detect};
 use fs_store_core::Version;
+use fs_store_platform::current;
 use fs_store_sources::Registry;
 
 fn v(a: u64, b: u64, c: u64) -> Version {
@@ -18,6 +18,11 @@ fn temp(tag: &str) -> PathBuf {
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap();
     dir
+}
+
+/// `current/<name>` points at the folder `target`, the way the store makes it on this system.
+fn symlink(target: PathBuf, link: PathBuf) -> std::io::Result<()> {
+    current().pointers.point(&link, &target)
 }
 
 fn no_rpm(_: &str) -> Option<Version> {
@@ -73,19 +78,20 @@ fn details_list_only_what_exists() {
         root.join("current/tasks"),
     )
     .unwrap();
-    fs::write(bin.join("tasks"), "").unwrap();
+    let command = |name: &str| current().commands.command_path(&bin, name);
+    fs::write(command("tasks"), "").unwrap();
     let mut reg = Registry::load(&root.join("installed.toml")).unwrap();
     reg.record("tasks", "0.6.0", "https://example.org/s");
     reg.set_facets("tasks", vec!["tasks-board".into(), "tasks-gone".into()]);
     reg.save().unwrap();
-    fs::write(bin.join("tasks-board"), "").unwrap();
+    fs::write(command("tasks-board"), "").unwrap();
     let d = details(&root, &bin, &no_rpm, InstallKind::Rpm, "tasks");
     assert_eq!(d.kinds, [InstallKind::Archive]);
     assert_eq!(d.source.as_deref(), Some("https://example.org/s"));
     assert_eq!(d.facets, ["tasks-board", "tasks-gone"]);
     let names: Vec<_> = d.commands.iter().map(|c| c.0.as_str()).collect();
     assert_eq!(names, ["tasks", "tasks-board"]);
-    assert!(d.folder.unwrap().ends_with("packages/tasks/0.6.0"));
+    assert!(PathBuf::from(d.folder.unwrap()).ends_with("packages/tasks/0.6.0"));
     let rpm_only = details(
         &root,
         &bin,
