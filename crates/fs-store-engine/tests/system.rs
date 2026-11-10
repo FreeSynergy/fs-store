@@ -1,5 +1,8 @@
 //! The store offers the package of the system it runs on; what it cannot install says `Unsupported`.
-#![allow(clippy::format_push_string)] // test data
+#![allow(
+    clippy::format_push_string,
+    clippy::case_sensitive_file_extension_comparisons
+)] // test data
 use std::collections::HashMap;
 
 use fs_store_core::*;
@@ -186,10 +189,8 @@ fn all_deb_of_a_batch_go_to_one_pkexec_apt_call() {
 #[test]
 fn a_main_file_that_is_a_deb_is_not_given_to_a_store_of_another_kind() {
     let tmp = tempfile::tempdir().unwrap();
-    let cat = catalog("app", &[]).replace(
-        r#"<custom>"#,
-        r#"<custom><value key="fs:format">deb</value>"#,
-    );
+    let cat =
+        catalog("app", &[]).replace("<custom>", r#"<custom><value key="fs:format">deb</value>"#);
     let fetch = served();
     let other =
         installer(tmp.path(), &fetch, Format::TarGz).plan(cat.as_bytes(), b"good", "app", None);
