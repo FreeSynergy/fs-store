@@ -169,3 +169,57 @@ fn clearing_finished_jobs_while_a_batch_runs_loses_nothing() {
     m.committed(vec![("fs-tasks".into(), Ok(v(0, 6, 1)))]);
     assert_eq!(m.jobs()[0].phase, Phase::Installed);
 }
+
+#[test]
+fn an_old_read_does_not_undo_an_install() {
+    let f = fake(Vec::new(), None);
+    let mut m = model(&f);
+    m.defer_refresh();
+    let ticket = m.begin_read().unwrap();
+    let old = ticket.read(); // read before the install: theme is not installed in it
+    m.run_job("fs-theme");
+    assert_eq!(m.installed().len(), 1);
+    assert!(!m.finish_read(old), "an old result is thrown away");
+    assert_eq!(m.installed().len(), 1);
+    assert!(!m.is_refreshing());
+}
+
+#[test]
+fn only_one_read_at_a_time_and_the_button_knows() {
+    let f = fake(Vec::new(), None);
+    let mut m = model(&f);
+    let ticket = m.begin_read().unwrap();
+    assert!(m.is_refreshing());
+    assert!(m.begin_read().is_none());
+    assert!(m.finish_read(ticket.read()));
+    assert!(!m.is_refreshing());
+    assert!(m.begin_read().is_some());
+}
+
+#[test]
+fn source_commands_of_the_window_only_ask_for_a_read() {
+    let f = fake(Vec::new(), None);
+    let mut m = model(&f);
+    m.refresh();
+    m.defer_refresh();
+    m.set_enabled("freesynergy", false);
+    assert!(m.take_read_wanted());
+    assert!(!m.take_read_wanted());
+    // an older read is now stale
+    let ticket = m.begin_read().unwrap();
+    m.set_enabled("freesynergy", true);
+    assert!(!m.finish_read(ticket.read()));
+}
+
+#[test]
+fn a_silent_installer_gets_its_own_text() {
+    let f = fake(Vec::new(), None);
+    let mut m = model(&f);
+    m.begin_job("fs-tasks");
+    m.observe_job("fs-tasks", Phase::Verified);
+    m.observe_job("fs-tasks", Phase::Installing);
+    m.committed(Vec::new());
+    let line = &m.job_lines()[0];
+    assert!(line.contains("gave no answer"), "{line}");
+    assert!(!line.contains("broke down"));
+}

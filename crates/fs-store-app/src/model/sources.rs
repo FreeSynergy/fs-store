@@ -17,7 +17,7 @@ impl StoreModel {
         match self.backend.add_source(&url) {
             Ok(_) => {
                 self.new_source.clear();
-                self.refresh();
+                self.sources_changed();
             }
             Err(e) => self.report(&e),
         }
@@ -27,7 +27,7 @@ impl StoreModel {
     pub fn set_enabled(&mut self, id: &str, enabled: bool) {
         self.problems.clear();
         match self.backend.set_enabled(id, enabled) {
-            Ok(()) => self.refresh(),
+            Ok(()) => self.sources_changed(),
             Err(e) => self.report(&e),
         }
     }
@@ -41,7 +41,7 @@ impl StoreModel {
             return;
         }
         match self.backend.remove_source(id) {
-            Ok(()) => self.refresh(),
+            Ok(()) => self.sources_changed(),
             Err(e) => self.report(&e),
         }
     }

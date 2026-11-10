@@ -322,9 +322,13 @@ subkey of a non-revoked trusted key counts), translation of `words.rs`, atomic w
 - Updates live on the start page (block "Updates" above the cards, with "Update all"), not in a menu entry: `StoreModel::update_rows`.
 - Installing runs in the background (queue above); every job is one line of the job list (`job_lines`), nothing else is
   blocked; only an uninstall disables the buttons. Finished jobs go with "Clear finished".
-- Display name: ONE function, `fs_store_core::display_name(id, title)` (`names.rs`): the catalog `<name>` wins, else
+- Display name: ONE function, `fs_store_core::display_name(id, title)` (`names.rs`): the catalog `<name>` wins (an empty one, or one that still starts with `fs-`, counts as missing), else
   `fs-people` becomes `FreeSynergy.People`. `StoreModel::title` is what every window and sentence uses; `fs-...` stays
   for repository, package and command only.
 - ADR 0066: the new view code (job list, update block) is the smallest possible and moves to `fs-components` with
   the rest of the render code (Thread R); no new Component was built here. Missing Components to ask for: a job list
   and an update list.
+- Refresh: the catalogs are read on a worker thread outside the model lock (`begin_read`, `ReadTicket::read`,
+  `finish_read`). An epoch counter goes up with every change of what is installed or of the sources; a read made under an
+  older epoch is thrown away and read again, so an old read never undoes a newer change. One read at a time; the button
+  shows "Reading...". Source commands in the window only ask for a read (`defer_refresh`).

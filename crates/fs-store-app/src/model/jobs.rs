@@ -222,7 +222,7 @@ impl StoreModel {
             .map(|j| j.name.clone())
             .collect();
         for name in lost {
-            self.fail_job(&name, JobError::Other(words::JOB_PANICKED.to_owned()));
+            self.fail_job(&name, JobError::Other(words::JOB_NO_ANSWER.to_owned()));
         }
         self.read_installed();
         self.merge();

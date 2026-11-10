@@ -41,14 +41,35 @@ pub(super) fn job_list(model: &StoreModel, shared: &Shared) -> Div {
     list
 }
 
+/// After a source command: starts the read the model asked for.
+pub(super) fn read_if_wanted(shared: &Shared) {
+    let wanted = locked(shared).take_read_wanted();
+    if wanted {
+        start_refresh(shared);
+    }
+}
+
 /// "Refresh": the catalogs are read on a worker thread, outside the lock of the model, so the window and the
-/// jobs stay alive; then the result is swapped in.
+/// jobs stay alive. A result that is older than a change of the model is thrown away and read again. Not twice at once.
 pub(super) fn start_refresh(shared: &Shared) {
-    let backend = locked(shared).backend();
+    let Some(ticket) = locked(shared).begin_read() else {
+        return;
+    };
+    rebuild();
     let shared = Arc::clone(shared);
     std::thread::spawn(move || {
-        let fetched = crate::model::fetch(backend.as_ref());
-        locked(&shared).apply_fetched(fetched);
+        let mut ticket = ticket;
+        loop {
+            let result = ticket.read();
+            let mut model = locked(&shared);
+            if model.finish_read(result) {
+                break;
+            }
+            match model.begin_read() {
+                Some(next) => ticket = next,
+                None => break,
+            }
+        }
         rebuild();
     });
 }

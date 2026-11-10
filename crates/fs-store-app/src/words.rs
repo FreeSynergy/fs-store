@@ -111,6 +111,8 @@ pub const DETAIL_FOLDER: &str = "Folder: {folder}";
 pub const DETAIL_SOURCE: &str = "Source: {source}";
 /// The worker of a job broke down.
 pub const JOB_PANICKED: &str = "the installer broke down unexpectedly";
+/// The installer did not report on a job it was given.
+pub const JOB_NO_ANSWER: &str = "the installer gave no answer for it";
 /// Another job is running. Placeholder: `{name}`.
 pub const JOB_BUSY: &str = "{name} is being installed. Wait until it is done.";
 
@@ -231,6 +233,8 @@ pub const UPDATE_LINE: &str = "{name}: {from} -> {to}";
 /// Heading of the update block on the start page.
 pub const UPDATES_HEADING: &str = "Updates";
 pub use crate::words_job::job_state;
+/// The refresh button while the catalogs are being read.
+pub const REFRESHING: &str = "Reading...";
 /// Heading of the job list.
 pub const JOBS_HEADING: &str = "Jobs";
 /// Clears the finished jobs from the job list.

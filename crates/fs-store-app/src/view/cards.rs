@@ -78,9 +78,13 @@ pub(super) fn cards(
     let mut top = div().flex_row().gap(GAP / 4.0).child(
         button(
             "refresh",
-            words::BUTTON_REFRESH,
+            if model.is_refreshing() {
+                words::REFRESHING
+            } else {
+                words::BUTTON_REFRESH
+            },
             ButtonVariant::Ghost,
-            !model.is_removing(),
+            !model.is_removing() && !model.is_refreshing(),
         )
         .on_click(move |_| start_refresh(&refresh)),
     );

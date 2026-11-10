@@ -10,6 +10,7 @@ use fs_components_primitives::SearchField;
 use crate::model::StoreModel;
 use crate::words;
 
+use super::job::read_if_wanted;
 use super::shell::{Shared, button, locked, rebuild};
 
 pub(super) fn sources_section(model: &StoreModel, shared: &Shared) -> Div {
@@ -28,6 +29,7 @@ pub(super) fn sources_section(model: &StoreModel, shared: &Shared) -> Div {
             )
             .on_click(move |_| {
                 locked(&add).add_source();
+                read_if_wanted(&add);
                 rebuild();
             }),
         ),
@@ -72,6 +74,7 @@ pub(super) fn sources_section(model: &StoreModel, shared: &Shared) -> Div {
                 )
                 .on_click(move |_| {
                     locked(&toggle).set_enabled(&toggle_id, !now);
+                    read_if_wanted(&toggle);
                     rebuild();
                 }),
             );
@@ -86,6 +89,7 @@ pub(super) fn sources_section(model: &StoreModel, shared: &Shared) -> Div {
                 )
                 .on_click(move |_| {
                     locked(&remove).remove_source(&remove_id);
+                    read_if_wanted(&remove);
                     rebuild();
                 }),
             );

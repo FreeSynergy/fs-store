@@ -44,6 +44,7 @@ const SCREEN: &str = "store";
 /// # Errors
 /// [`AppError`] if the shell cannot be made.
 pub fn store_app(model: &Shared, launcher: &Arc<dyn Launcher>) -> Result<AppWidget, AppError> {
+    locked(model).defer_refresh();
     let title = locked(model).window_title();
     let screen = Screen::new(
         SCREEN,

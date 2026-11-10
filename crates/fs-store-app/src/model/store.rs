@@ -28,6 +28,7 @@ pub struct StoreModel {
     pub(super) offers: Vec<PackageRow>,
     pub(super) details: HashMap<String, InstalledDetails>,
     pub(super) jobs: Vec<JobView>,
+    pub(super) sync: super::refresh::RefreshState,
     pub(super) stash: HashMap<String, crate::backend::Prepared>,
     pub(super) problems: Vec<Problem>,
     pub(super) new_source: String,
@@ -54,6 +55,7 @@ impl StoreModel {
             offers: Vec::new(),
             details: HashMap::new(),
             jobs: Vec::new(),
+            sync: super::refresh::RefreshState::default(),
             stash: HashMap::new(),
             problems: Vec::new(),
             new_source: String::new(),
@@ -190,6 +192,7 @@ impl StoreModel {
 
     /// Reads what is installed; one row per name (the newest version if a backend names it twice).
     pub(super) fn read_installed(&mut self) {
+        self.sync.epoch += 1;
         let result = fetch_installed(self.backend.as_ref());
         self.apply_installed(result);
     }
