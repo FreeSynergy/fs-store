@@ -18,7 +18,8 @@ jobs:
       app-id: net.freesynergy.Store
       macos: false
       linux-formats: "tar.gz,rpm,deb"   # what the store installs (rpm on Fedora, deb on Debian/Ubuntu); AppImage and Arch only slow the build down
-      windows-targets: ""   # Unsupported, on purpose: the engine uses Unix symlinks, /proc and Unix file modes, so there is no Windows build (no zip, no exe) until the engine has a Windows strategy
+      windows-targets: "x86_64"   # the engine has a Windows implementation of every platform part (crates/fs-store-platform), tested on the windows gate
+      windows-formats: "zip,exe"   # zip (portable) and the NSIS setup the store itself installs; the msi waits for a reason
       app-name: FreeSynergy.Store
       description: "Install, update and extend FreeSynergy programs"
     secrets:

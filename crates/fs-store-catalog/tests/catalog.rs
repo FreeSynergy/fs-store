@@ -1,4 +1,16 @@
-use fs_store_catalog::{Skipped, parse_catalog};
+use fs_store_catalog::{Catalog, CatalogError, Skipped};
+
+/// The catalogs below name the platform of the machine that wrote them (`x86_64-linux-gnu`); the tests must hold on every
+/// system, so the first platform is read as "this machine" and the second as "another architecture".
+fn parse_catalog(xml: &str) -> Result<Catalog, CatalogError> {
+    let os = std::env::consts::OS;
+    let here = format!("{}-{os}", std::env::consts::ARCH);
+    let other = format!("other-{os}");
+    fs_store_catalog::parse_catalog(
+        &xml.replace("x86_64-linux-gnu", &here)
+            .replace("aarch64-linux-gnu", &other),
+    )
+}
 use fs_store_core::{Format, Kind, Version};
 
 const XML: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
