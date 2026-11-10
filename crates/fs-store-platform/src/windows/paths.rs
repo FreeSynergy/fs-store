@@ -80,11 +80,16 @@ impl Paths for WindowsPaths {
     }
 
     fn command_name(&self, file: &str) -> String {
-        let lower = file.to_ascii_lowercase();
-        lower
-            .ends_with(".exe")
-            .then(|| file[..file.len() - 4].to_owned())
-            .unwrap_or_else(|| file.to_owned())
+        let path = Path::new(file);
+        if path
+            .extension()
+            .is_some_and(|e| e.eq_ignore_ascii_case("exe"))
+        {
+            path.file_stem()
+                .map_or_else(|| file.to_owned(), |s| s.to_string_lossy().into_owned())
+        } else {
+            file.to_owned()
+        }
     }
 
     fn is_below(&self, path: &Path, dir: &Path) -> bool {

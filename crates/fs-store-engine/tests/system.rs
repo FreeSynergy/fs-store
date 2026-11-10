@@ -161,6 +161,7 @@ fn a_windows_store_is_offered_the_setup_and_nothing_else() {
     assert!(matches!(r, Err(InstallFailure::NotOffered)));
 }
 
+#[cfg(unix)]
 #[test]
 fn all_deb_of_a_batch_go_to_one_pkexec_apt_call() {
     let tmp = tempfile::tempdir().unwrap();

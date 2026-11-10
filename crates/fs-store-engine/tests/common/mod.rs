@@ -45,3 +45,27 @@ impl RunningCheck for Idle {
         false
     }
 }
+
+/// Copies the stand-in server (`examples/serve_helper`) to `dir/<name>` (with the system's executable suffix) and returns it.
+pub fn server_copy(dir: &Path, name: &str) -> std::path::PathBuf {
+    let exe = std::env::current_exe().unwrap();
+    let examples = exe.parent().unwrap().parent().unwrap().join("examples");
+    let suffix = std::env::consts::EXE_SUFFIX;
+    let helper = examples.join(format!("serve_helper{suffix}"));
+    let copy = dir.join(format!("{name}{suffix}"));
+    // A hard link, not a copy: a file that is open for writing in a parallel test cannot be started ("text file busy").
+    if fs::hard_link(&helper, &copy).is_err() {
+        fs::copy(&helper, &copy).unwrap_or_else(|e| panic!("{}: {e}", helper.display()));
+    }
+    copy
+}
+
+/// A program file that this system can start, with the system's executable name, in `dir`.
+pub fn make_program(dir: &Path, name: &str) -> std::path::PathBuf {
+    let file = dir.join(fs_store_platform::current().paths.program_file_name(name));
+    fs::create_dir_all(dir).unwrap();
+    fs::write(&file, b"program").unwrap();
+    #[cfg(unix)]
+    fs::set_permissions(&file, std::os::unix::fs::PermissionsExt::from_mode(0o755)).unwrap();
+    file
+}

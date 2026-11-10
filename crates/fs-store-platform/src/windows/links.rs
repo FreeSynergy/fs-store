@@ -12,10 +12,10 @@ pub(super) struct WindowsLinks;
 
 const MARK: &str = "rem fs-store-link ";
 
-fn without_verbatim(path: PathBuf) -> PathBuf {
+fn without_verbatim(path: &Path) -> PathBuf {
     let text = path.to_string_lossy();
     text.strip_prefix(r"\\?\")
-        .map_or_else(|| path.clone(), PathBuf::from)
+        .map_or_else(|| path.to_owned(), PathBuf::from)
 }
 
 impl Pointers for WindowsLinks {
@@ -37,7 +37,7 @@ impl Pointers for WindowsLinks {
             .unwrap_or(false)
             .then(|| junction::get_target(link).ok())
             .flatten()
-            .map(without_verbatim)
+            .map(|p| without_verbatim(&p))
     }
 
     fn pointer_exists(&self, link: &Path) -> bool {

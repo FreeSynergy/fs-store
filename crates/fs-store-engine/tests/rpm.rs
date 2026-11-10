@@ -1,3 +1,5 @@
+//! The rpm and deb installers ask for root through `pkexec`: Linux only.
+#![cfg(unix)]
 mod common;
 
 use std::fs;

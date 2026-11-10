@@ -4,6 +4,8 @@
     clippy::format_push_string,
     clippy::case_sensitive_file_extension_comparisons
 )] // test data
+mod common;
+
 use std::collections::HashMap;
 use std::fs;
 
@@ -169,6 +171,7 @@ fn rpm_component(name: &str, files: &[(&str, &[u8])]) -> String {
     )
 }
 
+#[cfg(unix)]
 #[test]
 fn all_rpm_of_a_batch_go_to_one_pkexec_call() {
     let tmp = tempfile::tempdir().unwrap();
@@ -214,16 +217,13 @@ fn all_rpm_of_a_batch_go_to_one_pkexec_call() {
 
 #[test]
 fn a_background_server_does_not_block_the_update() {
-    use std::os::unix::process::CommandExt;
     let tmp = tempfile::tempdir().unwrap();
-    fs::write(tmp.path().join("serve"), "sleep 30\n").unwrap();
-    let mut server = std::process::Command::new("sh")
-        .arg0("fs-blockedname")
+    let program = common::server_copy(tmp.path(), "fs-blockedname");
+    let mut server = std::process::Command::new(program)
         .arg("serve")
-        .current_dir(tmp.path())
         .spawn()
         .unwrap();
-    std::thread::sleep(std::time::Duration::from_millis(200));
+    std::thread::sleep(std::time::Duration::from_millis(300));
     let tgz = tarball("a");
     let catalog = format!(
         r#"<components version="1.0">{}</components>"#,
@@ -249,9 +249,21 @@ fn a_background_server_does_not_block_the_update() {
         .into_iter()
         .map(|(_, r)| r.unwrap())
         .collect();
-    let reaper = std::thread::spawn(move || server.wait().unwrap());
-    let done = i.commit_all(ready);
-    assert_eq!(done[0].1, Ok(Version::new(1, 0, 0)));
-    reaper.join().unwrap(); // the server was ended by the store
-    assert!(fs_store_engine::find_servers("fs-blockedname", 0).is_empty());
+    #[cfg(unix)]
+    {
+        let reaper = std::thread::spawn(move || server.wait().unwrap());
+        let done = i.commit_all(ready);
+        assert_eq!(done[0].1, Ok(Version::new(1, 0, 0)));
+        reaper.join().unwrap(); // the server was ended by the store
+        assert!(fs_store_engine::find_servers("fs-blockedname", 0).is_empty());
+    }
+    // Windows cannot ask a program without a window to end: the update says so and the program keeps running.
+    #[cfg(windows)]
+    {
+        let done = i.commit_all(ready);
+        assert!(done[0].1.is_err());
+        assert!(server.try_wait().unwrap().is_none());
+        server.kill().unwrap();
+        server.wait().unwrap();
+    }
 }
