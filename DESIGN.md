@@ -125,7 +125,7 @@ Enlarging the window aborted with a wgpu validation error (copy into a swapchain
 which is gone: see "One Blinc" below.
 
 ## One Blinc (Q0, 2026-11-11)
-The store has no `blinc*` dependency and no `[patch]`. Blinc comes only through `fs-components` (git tag `v0.0.7`, which
+The store has no `blinc*` dependency and no `[patch]`. Blinc comes only through `fs-components` (git tag `v0.0.8`, which
 pins our fork once, `fs-blinc-3`); the window code writes `use fs_components::blinc::layout::...` (re-export of layout, cn, core, app,
 animation, theme, noto_emoji). All `fs-components*` dependencies stand on the same tag. `.fs-rules.toml` has
 `blinc = "components-only"`, so `fs-release`'s `check_blinc` fails the repo on a `blinc*` line, a `[patch]` or two tags.
@@ -380,4 +380,4 @@ subkey of a non-revoked trusted key counts), translation of `words.rs`, atomic w
 - `socket_owner`/`terminate`/`end_server` stay in `end.rs` until `fs-interfaces` v0.0.19 offers a public `end_server`; then `end.rs` shrinks to a call.
 
 ## v0.0.11 (timeouts)
-`fs-interfaces` v0.0.18 (`call_limited`); version 0.0.11 in all crates; `fs-components` stays v0.0.7 (Blinc `fs-blinc-3`).
+`fs-interfaces` v0.0.18 (`call_limited`); version 0.0.11 in all crates; `fs-components` v0.0.8 (Blinc `fs-blinc-3`).
