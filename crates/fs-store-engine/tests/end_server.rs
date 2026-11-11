@@ -1,7 +1,9 @@
 //! Ending a server: by its own door (`Control.stop`), and by SIGTERM for a server older than `Control`. The servers are
-//! fakes: a real `fs-interfaces` server in a thread, and a plain `serve` without `Control` (an old version).
+//! fakes: a real `fs-interfaces` server in a thread, and a plain `serve` without `Control` in a child process (an old
+//! version; this test binary started again).
 #![cfg(unix)]
 
+use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
@@ -10,7 +12,7 @@ use std::time::{Duration, Instant};
 use capnp_rpc::new_client;
 use fs_interfaces::common_capnp::blob;
 use fs_interfaces::rpc::{ServerIdentity, bind_socket, run_until_signal_as, serve};
-use fs_store_engine::{Ended, Server, end_server, end_servers, socket_of};
+use fs_store_engine::{Ended, Server, end_server, end_servers, find_servers, socket_of};
 
 /// `stop_self` is a flag of the process: one server run at a time.
 static ONE_AT_A_TIME: Mutex<()> = Mutex::new(());
@@ -59,106 +61,129 @@ fn new_server(socket: &Path) -> std::thread::JoinHandle<()> {
     })
 }
 
-/// A server without `Control`, in a thread; `stop` ends it (the test's cleanup; SIGTERM only reaches the process
-/// the person sees, which here is `sleep`).
-fn old_server(
-    socket: &Path,
-) -> (
-    std::thread::JoinHandle<()>,
-    tokio::sync::oneshot::Sender<()>,
-) {
-    let socket = socket.to_owned();
-    let (stop, stopped) = tokio::sync::oneshot::channel::<()>();
-    let handle = std::thread::spawn(move || {
-        let rt = runtime();
-        tokio::task::LocalSet::new().block_on(&rt, async {
-            let bound = bind_socket(&socket).await.unwrap();
-            let root: blob::Client = new_client(Seven);
-            serve(bound, root.client, async {
-                let _ = stopped.await;
-            })
-            .await
-            .unwrap();
-        });
+/// The old server body: serves without `Control` until SIGTERM. Runs only in the child (`FS_OLD_SERVER` is set).
+#[test]
+fn helper_old_server() {
+    let Some(socket) = std::env::var_os("FS_OLD_SERVER") else {
+        return;
+    };
+    let rt = runtime();
+    tokio::task::LocalSet::new().block_on(&rt, async {
+        let mut term =
+            tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate()).unwrap();
+        let bound = bind_socket(Path::new(&socket)).await.unwrap();
+        let root: blob::Client = new_client(Seven);
+        serve(bound, root.client, async move {
+            term.recv().await;
+        })
+        .await
+        .unwrap();
     });
-    (handle, stop)
 }
 
-fn sleeper() -> Child {
-    Command::new("sleep")
-        .arg("30")
+fn spawn_old_server(socket: &Path) -> Child {
+    let child = Command::new(std::env::current_exe().unwrap())
+        .args(["--exact", "helper_old_server", "--nocapture"])
+        .env("FS_OLD_SERVER", socket)
         .stdout(Stdio::null())
+        .stderr(Stdio::null())
         .spawn()
-        .unwrap()
+        .unwrap();
+    wait_listening(socket);
+    child
 }
 
-fn gone_process() -> u32 {
+/// A process whose command line is `<name> serve`, found by the scan; it ignores SIGTERM when `stubborn`.
+fn serve_process(dir: &Path, name: &str, stubborn: bool) -> (Child, Server) {
+    let script = if stubborn {
+        "trap '' TERM\nwhile :; do sleep 1; done\n"
+    } else {
+        "sleep 30\n"
+    };
+    std::fs::write(dir.join("serve"), script).unwrap();
+    let child = Command::new("sh")
+        .arg0(name)
+        .arg("serve")
+        .current_dir(dir)
+        .spawn()
+        .unwrap();
+    std::thread::sleep(Duration::from_millis(300));
+    let found = find_servers(name, 0);
+    assert_eq!(found.len(), 1, "{found:?}");
+    (child, found.into_iter().next().unwrap())
+}
+
+fn gone_server() -> Server {
     let mut done = Command::new("true").spawn().unwrap();
     let pid = done.id();
     done.wait().unwrap();
-    pid
-}
-
-fn server_of(pid: u32, argv: &[&str]) -> Server {
     Server {
         pid,
-        argv: argv.iter().map(|a| (*a).to_owned()).collect(),
+        argv: vec!["fs-fake".into(), "serve".into()],
         exe: None,
     }
 }
 
-fn is_gone(child: &mut Child) -> bool {
-    child.try_wait().unwrap().is_some()
-}
-
 #[test]
-fn a_server_with_control_is_ended_by_its_own_door_not_by_a_signal() {
+fn a_server_with_control_is_ended_by_its_own_door() {
     let _one = ONE_AT_A_TIME.lock().unwrap();
     let dir = tempfile::tempdir().unwrap();
     let socket: PathBuf = dir.path().join("fake.sock");
     let thread = new_server(&socket);
     wait_listening(&socket);
-    // A bystander process: a signal to "the server" would end it, Control must not.
-    let mut bystander = sleeper();
-    // The server's own process is gone already (the fake lives in this process), so only the ask is under test.
-    let gone = server_of(gone_process(), &["fs-fake", "serve"]);
-    let ended = end_server(&gone, Some(&socket), Duration::from_secs(5)).unwrap();
+    let ended = end_server(&gone_server(), Some(&socket), Duration::from_secs(5)).unwrap();
     assert_eq!(ended, Ended::Control);
     thread.join().unwrap(); // the fake server finished in order
     assert!(!listening(&socket));
-    assert!(!is_gone(&mut bystander), "no signal was sent");
-    bystander.kill().unwrap();
-    bystander.wait().unwrap();
 }
 
 #[test]
-fn a_server_older_than_control_gets_sigterm() {
-    let _one = ONE_AT_A_TIME.lock().unwrap();
+fn a_server_older_than_control_gets_sigterm_through_the_owner_of_its_socket() {
     let dir = tempfile::tempdir().unwrap();
     let socket = dir.path().join("old.sock");
-    let (thread, stop) = old_server(&socket);
-    wait_listening(&socket);
-    let mut process = sleeper();
-    let server = server_of(process.id(), &["fs-old", "serve"]);
-    let reaper = std::thread::spawn(move || {
-        process.wait().unwrap();
-    });
-    let ended = end_server(&server, Some(&socket), Duration::from_secs(5)).unwrap();
+    let mut child = spawn_old_server(&socket);
+    // The scan's process id is wrong on purpose: only the owner of the socket may be signalled.
+    let ended = end_server(&gone_server(), Some(&socket), Duration::from_secs(10)).unwrap();
     assert_eq!(ended, Ended::Signal);
-    reaper.join().unwrap(); // the process ended by the signal
+    child.wait().unwrap(); // it ended by the signal
+    assert!(!listening(&socket));
+}
+
+#[test]
+fn this_process_is_never_signalled() {
+    let _one = ONE_AT_A_TIME.lock().unwrap();
+    let dir = tempfile::tempdir().unwrap();
+    let socket = dir.path().join("self.sock");
+    let (thread, stop) = {
+        let socket = socket.clone();
+        let (stop, stopped) = tokio::sync::oneshot::channel::<()>();
+        let handle = std::thread::spawn(move || {
+            let rt = runtime();
+            tokio::task::LocalSet::new().block_on(&rt, async {
+                let bound = bind_socket(&socket).await.unwrap();
+                let root: blob::Client = new_client(Seven);
+                serve(bound, root.client, async {
+                    let _ = stopped.await;
+                })
+                .await
+                .unwrap();
+            });
+        });
+        (handle, stop)
+    };
+    wait_listening(&socket);
+    let e = end_server(&gone_server(), Some(&socket), Duration::from_secs(1)).unwrap_err();
+    assert!(e.contains("this process"), "{e}");
     let _ = stop.send(());
     thread.join().unwrap();
 }
 
 #[test]
-fn nothing_listening_falls_back_to_the_signal() {
+fn nothing_listening_falls_back_to_the_signal_of_the_found_process() {
     let dir = tempfile::tempdir().unwrap();
+    let (mut child, server) = serve_process(dir.path(), "fs-nobody", false);
+    let reaper = std::thread::spawn(move || child.wait().unwrap());
     let socket = dir.path().join("nobody.sock");
-    let mut process = sleeper();
-    let server = server_of(process.id(), &["fs-nobody", "serve"]);
-    let reaper = std::thread::spawn(move || {
-        process.wait().unwrap();
-    });
     assert_eq!(
         end_server(&server, Some(&socket), Duration::from_secs(5)),
         Ok(Ended::Signal)
@@ -167,27 +192,38 @@ fn nothing_listening_falls_back_to_the_signal() {
 }
 
 #[test]
+fn a_process_id_that_changed_meaning_is_not_signalled() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut other = Command::new("sleep").arg("30").spawn().unwrap();
+    let mut server = gone_server();
+    server.pid = other.id(); // the id now belongs to a process that is not the server found
+    let e = end_server(&server, None, Duration::from_millis(300)).unwrap_err();
+    assert!(e.contains("not the server found"), "{e}");
+    assert!(other.try_wait().unwrap().is_none(), "no signal was sent");
+    other.kill().unwrap();
+    other.wait().unwrap();
+    drop(dir);
+}
+
+#[test]
 fn a_server_that_stays_is_an_error_with_words() {
     let dir = tempfile::tempdir().unwrap();
-    let mut stubborn = Command::new("sh")
-        .args(["-c", "trap '' TERM; while :; do sleep 1; done"])
-        .stdout(Stdio::null())
-        .spawn()
-        .unwrap();
-    std::thread::sleep(Duration::from_millis(300));
-    let server = server_of(stubborn.id(), &["fs-stubborn", "serve"]);
-    let socket = dir.path().join("none.sock");
+    let (mut stubborn, server) = serve_process(dir.path(), "fs-stubborn", true);
     let e = end_servers(std::slice::from_ref(&server), Duration::from_millis(300));
-    let e2 = end_server(&server, Some(&socket), Duration::from_millis(300));
     stubborn.kill().unwrap(); // the test's own cleanup
     stubborn.wait().unwrap();
     assert!(e.unwrap_err().contains("did not end in time"));
-    assert!(e2.unwrap_err().contains("did not end in time"));
 }
 
 #[test]
 fn the_socket_is_named_by_the_command_line_or_the_default() {
-    let s = |argv: &[&str]| socket_of(&server_of(1, argv));
+    let s = |argv: &[&str]| {
+        socket_of(&Server {
+            pid: 1,
+            argv: argv.iter().map(|a| (*a).to_owned()).collect(),
+            exe: None,
+        })
+    };
     assert_eq!(
         s(&["fs-x", "serve", "--socket", "/tmp/a.sock"]),
         Some(PathBuf::from("/tmp/a.sock"))
@@ -196,7 +232,6 @@ fn the_socket_is_named_by_the_command_line_or_the_default() {
         s(&["fs-x", "serve", "--socket=/tmp/b.sock"]),
         Some(PathBuf::from("/tmp/b.sock"))
     );
-    // without it: the default place of the program, which depends on the person's runtime folder
     if let Some(path) = s(&["/usr/bin/fs-people", "serve"]) {
         assert!(path.ends_with("people.sock"), "{}", path.display());
     }

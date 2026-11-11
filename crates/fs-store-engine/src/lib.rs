@@ -34,7 +34,7 @@ pub use proc::ProcRunningCheck;
 pub use remove::{RemoveError, remove};
 pub use rpm::{Commander, Rpm, SystemCommander, remove_rpm};
 pub use servers::{
-    Ended, Server, end_server, end_servers, find_servers, is_server_of, program_of, socket_of,
-    start_server, stop_servers,
+    Ended, Server, end_server, end_servers, find_servers, is_alive, is_server_of, program_of,
+    server_info, socket_of, start_server, stop_servers,
 };
 pub use targz::TarGz;

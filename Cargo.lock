@@ -2168,6 +2168,7 @@ dependencies = [
  "gix",
  "pgp",
  "rand 0.8.8",
+ "rustix 1.1.6",
  "sha2 0.10.9",
  "tar",
  "tempfile",

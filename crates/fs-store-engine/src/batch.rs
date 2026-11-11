@@ -11,8 +11,8 @@ use crate::ending::{END_WAIT, end_old_servers};
 use crate::prepare::Plan;
 use crate::service::{InstallFailure, Installer, timing};
 use crate::{
-    Commander, Deb, Prepared, Rpm, SystemCommander, TarGz, end_servers, find_servers, program_of,
-    start_server,
+    Commander, Deb, Prepared, Rpm, SystemCommander, TarGz, end_servers, find_servers, is_alive,
+    program_of, start_server,
 };
 
 /// Something to tell while a batch runs: which package reached which phase.
@@ -91,6 +91,11 @@ impl Installer<'_> {
                 stopped.push((p.name().to_owned(), servers));
                 go.push(p);
             } else {
+                // Not installed. A server that did end meanwhile is started again (the old version), so the update
+                // that did not happen does not also take the server away.
+                for s in servers.iter().filter(|s| !is_alive(s)) {
+                    let _ = start_server(&program_of(&self.root, p.name(), s), s);
+                }
                 results.push((
                     p.name().to_owned(),
                     Err(InstallFailure::Update(UpdateError::Running)),
