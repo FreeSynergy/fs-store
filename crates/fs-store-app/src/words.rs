@@ -4,7 +4,7 @@
 
 use fs_store_core::{Kind, SourceError};
 
-use crate::backend::{JobError, Phase};
+use crate::backend::Phase;
 
 pub use fs_store_core::words::fill;
 
@@ -161,37 +161,6 @@ pub fn job_phase(phase: Phase) -> &'static str {
     }
 }
 
-/// Sentence for the reason a job failed. Placeholders: `{name}`, `{detail}`.
-#[must_use]
-pub fn job_problem(error: &JobError) -> &'static str {
-    match error {
-        JobError::Running => "{name} is running and was not replaced. Close it and try again.",
-        JobError::CatalogSignature => {
-            "The list of the source could not be trusted: its signature could not be verified."
-        }
-        JobError::ReleaseSignature => {
-            "{name} was not installed: its signature could not be verified."
-        }
-        JobError::Checksum => {
-            "{name} was not installed: the download is not the one that was announced."
-        }
-        JobError::Downgrade => {
-            "{name} was not installed: the source offers an older version than the one you have."
-        }
-        JobError::NotOffered => "No switched-on source offers {name}.",
-        JobError::Unsupported(_) => {
-            "{name} comes in a form that this store cannot install yet ({detail})."
-        }
-        JobError::RollbackFailed => {
-            "The update of {name} failed and the previous version could not be restored."
-        }
-        JobError::Other(_) => "{name} was not installed: {detail}",
-        JobError::ServerNotEnded { .. } => {
-            "{name} is installed, but its old background server could not be ended: {detail}. End it by hand so that the new version starts."
-        }
-    }
-}
-
 /// Settings: heading of the look-for-updates choice.
 pub const SETTINGS_CHECK: &str = "Look for updates";
 /// Choice: never by itself.
@@ -233,7 +202,7 @@ pub const CHECK_FAILED: &str = "Looking for updates did not work: {detail}";
 pub const UPDATE_LINE: &str = "{name}: {from} -> {to}";
 /// Heading of the update block on the start page.
 pub const UPDATES_HEADING: &str = "Updates";
-pub use crate::words_job::{JOB_NO_ANSWER, REFRESHING, job_state};
+pub use crate::words_job::{JOB_NO_ANSWER, REFRESHING, job_problem, job_state};
 /// Heading of the job list.
 pub const JOBS_HEADING: &str = "Jobs";
 /// Clears the finished jobs from the job list.

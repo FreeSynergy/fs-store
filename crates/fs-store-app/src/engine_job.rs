@@ -112,11 +112,28 @@ impl EngineBackend {
                 Ok(version) | Err(JobError::ServerNotEnded { version, .. }) => Some(*version),
                 Err(_) => None,
             };
+            let mut result = result;
             if let (Some(version), Some((source, facets))) = (ok_version, notes.get(&name)) {
-                self.remember(&name, version, source, facets);
+                let problems = self.remember(&name, version, source, facets);
+                if !problems.is_empty() {
+                    result = Err(incomplete(result, version, &problems));
+                }
             }
             results.push((name, result));
         }
         results
     }
+}
+
+/// The install worked but a step after it did not: one error that says both (a server that stayed is kept in the text).
+fn incomplete(
+    result: Result<Version, JobError>,
+    version: Version,
+    problems: &[String],
+) -> JobError {
+    let mut reason = problems.join("; ");
+    if let Err(JobError::ServerNotEnded { reason: server, .. }) = result {
+        reason = format!("the old background server could not be ended: {server}; {reason}");
+    }
+    JobError::Incomplete { version, reason }
 }

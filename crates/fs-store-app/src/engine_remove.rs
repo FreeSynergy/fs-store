@@ -16,21 +16,28 @@ pub(crate) fn uninstall(root: &Path, name: &str) -> Result<(), String> {
         let running = ProcRunningCheck::new(root);
         fs_store_engine::remove(root, name, &running).map_err(|e| format!("{name}: {e:?}"))?;
     }
-    let bin = fs_store_engine::default_bin_dir();
-    let _ = fs_store_engine::unlink_programs(root, name, &bin);
     let mut registry =
         Registry::load(&root.join("installed.toml")).map_err(|e| format!("{e:?}"))?;
     let facets = registry
         .get(name)
         .map(|e| e.facets.clone())
         .unwrap_or_default();
-    let _ = fs_store_engine::unlink_facets(
+    // The files are gone, so the register forgets the program in any case; leftovers are then said, not swallowed.
+    let problems = fs_store_engine::settle_remove(
         root,
         name,
         &facets,
-        &bin,
+        &fs_store_engine::default_bin_dir(),
         &fs_store_engine::default_apps_dir(),
     );
     registry.forget(name);
-    registry.save().map_err(|e| format!("{e:?}"))
+    registry.save().map_err(|e| format!("{e:?}"))?;
+    if problems.is_empty() {
+        Ok(())
+    } else {
+        Err(format!(
+            "the program is taken away, but leftovers remain: {}",
+            problems.join("; ")
+        ))
+    }
 }

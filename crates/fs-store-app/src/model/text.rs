@@ -132,7 +132,8 @@ pub(super) fn job_failed_line(name: &str, error: &JobError) -> String {
     let detail = match error {
         JobError::Other(text)
         | JobError::Unsupported(text)
-        | JobError::ServerNotEnded { reason: text, .. } => text.as_str(),
+        | JobError::ServerNotEnded { reason: text, .. }
+        | JobError::Incomplete { reason: text, .. } => text.as_str(),
         _ => "",
     };
     words::fill(

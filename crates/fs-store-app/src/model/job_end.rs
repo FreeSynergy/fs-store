@@ -35,14 +35,17 @@ impl StoreModel {
                 self.updated(name);
             }
             // Installed, only the old server stays: the job is done, and the person is told (never silent).
-            Err(JobError::ServerNotEnded { version, reason }) => {
+            Err(
+                error @ (JobError::ServerNotEnded { version, .. }
+                | JobError::Incomplete { version, .. }),
+            ) => {
                 if let Some(job) = self.jobs.iter_mut().find(|j| j.name == name) {
                     job.version = Some(version);
                     job.phase = Phase::Installed;
                     job.history.push(Phase::Installed);
                     self.problems.push(Problem::JobFailed {
                         name: job.name.clone(),
-                        error: JobError::ServerNotEnded { version, reason },
+                        error,
                     });
                 }
                 self.updated(name);

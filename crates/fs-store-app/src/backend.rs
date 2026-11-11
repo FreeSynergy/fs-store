@@ -131,6 +131,13 @@ pub enum JobError {
         /// Why the server could not be ended.
         reason: String,
     },
+    /// The new version IS installed, but a step after it failed (register, commands, menu entries).
+    Incomplete {
+        /// The version that was installed.
+        version: Version,
+        /// What did not work, one sentence per step.
+        reason: String,
+    },
 }
 
 /// A job whose download is done and checked; only the backend that made it can open it.

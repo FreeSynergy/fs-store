@@ -44,13 +44,12 @@ pub(crate) fn remove(root: &Path, name: &str) -> Result<(), String> {
         let running = fs_store_engine::ProcRunningCheck::new(root);
         fs_store_engine::remove(root, name, &running).map_err(|e| format!("{name}: {e:?}"))?;
     }
-    let _ = fs_store_engine::unlink_programs(root, name, &bin_dir());
     let mut registry = registry(root)?;
     let facets = registry
         .get(name)
         .map(|e| e.facets.clone())
         .unwrap_or_default();
-    let _ = fs_store_engine::unlink_facets(
+    let problems = fs_store_engine::settle_remove(
         root,
         name,
         &facets,
@@ -60,29 +59,15 @@ pub(crate) fn remove(root: &Path, name: &str) -> Result<(), String> {
     registry.forget(name);
     registry.save().map_err(|e| format!("{e:?}"))?;
     println!("removed {name}");
-    Ok(())
+    if problems.is_empty() {
+        Ok(())
+    } else {
+        Err(format!("leftovers remain: {}", problems.join("; ")))
+    }
 }
 
 fn bin_dir() -> std::path::PathBuf {
     fs_store_engine::default_bin_dir()
-}
-
-/// Puts the programs of `name` on the PATH; says what it did, never fails the install.
-pub(crate) fn link(root: &Path, name: &str) {
-    if !root.join("current").join(name).exists() {
-        return; // installed by rpm: dnf put the programs in /usr/bin
-    }
-    match fs_store_engine::link_programs(root, name, &bin_dir()) {
-        Ok((linked, skipped)) => {
-            if !linked.is_empty() {
-                println!("commands in {}: {}", bin_dir().display(), linked.join(", "));
-            }
-            for s in skipped {
-                eprintln!("{s}: another file of that name is in the way, not linked");
-            }
-        }
-        Err(e) => eprintln!("{name}: commands not linked: {e}"),
-    }
 }
 
 /// `fs-store check`: says which installed programs have a newer version, installs nothing.
@@ -110,28 +95,6 @@ pub(crate) fn check(root: &Path, extra: Option<&String>) -> Result<(), String> {
         println!("everything is up to date");
     }
     Ok(())
-}
-
-/// Makes the facet commands and menu entries of a program; returns the names made (for the register).
-pub(crate) fn link_facets(root: &Path, name: &str, facets: &[String]) -> Vec<String> {
-    match fs_store_engine::link_facets(
-        root,
-        name,
-        facets,
-        &bin_dir(),
-        &fs_store_engine::default_apps_dir(),
-    ) {
-        Ok(made) => {
-            if !made.is_empty() {
-                println!("facet commands: {}", made.join(", "));
-            }
-            made
-        }
-        Err(e) => {
-            eprintln!("{name}: facet commands not made: {e}");
-            Vec::new()
-        }
-    }
 }
 
 /// `fs-store auto <name> on|off`.

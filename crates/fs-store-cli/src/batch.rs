@@ -127,12 +127,12 @@ fn run_batch(root: &Path, installer: &Installer<'_>, found: Vec<Found>) -> Vec<S
     for (name, result) in installer.commit_all(ready) {
         match (result, by_name.iter().find(|f| f.name == name)) {
             (Ok(v), Some(f)) => {
-                finish(root, f, v);
+                problems.extend(finish(root, f, v));
                 println!("installed {name} {v}");
             }
             (Ok(_), None) => {}
             (Err(e @ InstallFailure::ServerNotEnded { version, .. }), Some(f)) => {
-                finish(root, f, version);
+                problems.extend(finish(root, f, version));
                 println!("installed {name} {version}");
                 problems.push(format!("{name}: {e}"));
             }
@@ -142,19 +142,53 @@ fn run_batch(root: &Path, installer: &Installer<'_>, found: Vec<Found>) -> Vec<S
     problems
 }
 
-/// After a good install: icon, register, programs on the PATH. None of it may fail the install that happened.
-fn finish(root: &Path, f: &Found, v: fs_store_core::Version) {
+/// After a good install: icon, register, commands on the PATH. None of it may fail the install that happened, and none
+/// of it is swallowed: what did not work is said on the error stream, and the answer is how many problems there were.
+fn finish(root: &Path, f: &Found, v: fs_store_core::Version) -> Vec<String> {
+    let mut problems = Vec::new();
     // The icon comes with a hash in the signed catalog; one that does not match is not stored.
-    if let Some((icon, Ok(bytes))) = f.entry.icon.as_ref().map(|i| (i, AnyFetch.get(&i.url))) {
-        let _ = fs_store_engine::store_icon(root, &f.name, &bytes, &icon.sha256);
+    if let Some(icon) = &f.entry.icon {
+        match AnyFetch.get(&icon.url) {
+            Ok(bytes) => match fs_store_engine::store_icon(root, &f.name, &bytes, &icon.sha256) {
+                Ok(true) => {}
+                Ok(false) => problems.push(format!(
+                    "{}: the icon does not match its hash, not stored",
+                    f.name
+                )),
+                Err(e) => problems.push(format!("{}: icon not stored: {e}", f.name)),
+            },
+            Err(e) => problems.push(format!("{}: icon not loaded: {e}", f.name)),
+        }
     }
-    if let Ok(mut registry) = fs_store_sources::Registry::load(&root.join("installed.toml")) {
-        registry.record(&f.name, &v.to_string(), &f.url);
-        registry.set_facets(
-            &f.name,
-            crate::updates::link_facets(root, &f.name, &f.entry.facets),
-        );
-        let _ = registry.save();
+    let settled = fs_store_engine::settle_install(
+        root,
+        &f.name,
+        &f.entry.facets,
+        &fs_store_engine::default_bin_dir(),
+        &fs_store_engine::default_apps_dir(),
+    );
+    if !settled.made.is_empty() {
+        println!("facet commands: {}", settled.made.join(", "));
     }
-    crate::updates::link(root, &f.name);
+    if !settled.linked.is_empty() {
+        println!("commands: {}", settled.linked.join(", "));
+    }
+    problems.extend(settled.problems);
+    match fs_store_sources::Registry::load(&root.join("installed.toml")) {
+        Ok(mut registry) => {
+            registry.record(&f.name, &v.to_string(), &f.url);
+            registry.set_facets(&f.name, settled.made);
+            if let Err(e) = registry.save() {
+                problems.push(format!(
+                    "{}: the list of installed programs was not saved: {e:?}",
+                    f.name
+                ));
+            }
+        }
+        Err(e) => problems.push(format!(
+            "{}: the list of installed programs cannot be read: {e:?}",
+            f.name
+        )),
+    }
+    problems
 }

@@ -2,6 +2,7 @@
 //! (`TarGz` for `InstallStrategy`, `ProcRunningCheck` for `RunningCheck`). No root needed.
 #![deny(missing_docs)]
 
+mod after;
 mod batch;
 mod deb;
 mod end;
@@ -20,6 +21,7 @@ mod servers;
 pub mod service;
 mod targz;
 
+pub use after::{Settled, settle_install, settle_remove};
 pub use batch::{CommitObserver, Observer};
 pub use deb::{Deb, remove_deb, remove_native};
 pub use end::{CALL_LIMIT, Ended, end_server, end_servers, server_info, socket_of, stop_servers};

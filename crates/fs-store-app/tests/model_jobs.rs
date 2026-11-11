@@ -198,3 +198,23 @@ fn a_server_that_stays_is_told_but_the_job_is_installed() {
     assert!(lines[0].contains("is installed, but its old background server could not be ended"));
     assert!(lines[0].contains("did not end in time"));
 }
+
+#[test]
+fn a_step_after_the_install_that_failed_is_told_but_the_job_is_installed() {
+    let f = fake(
+        Vec::new(),
+        Some(JobError::Incomplete {
+            version: v(1, 0, 0),
+            reason: "fs-theme: commands not linked: permission denied".into(),
+        }),
+    );
+    let mut m = model(&f);
+    m.run_job("fs-theme");
+    let job = m.job().unwrap();
+    assert_eq!(job.phase, Phase::Installed);
+    assert_eq!(job.version, Some(v(1, 0, 0)));
+    let lines = m.problem_lines();
+    assert_eq!(lines.len(), 1);
+    assert!(lines[0].contains("is installed, but a step after it did not work"));
+    assert!(lines[0].contains("permission denied"));
+}
