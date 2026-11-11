@@ -7,6 +7,7 @@ mod admin;
 mod cards;
 mod cards_ui;
 mod fetch;
+mod job_end;
 mod jobs;
 mod menu;
 mod open;
