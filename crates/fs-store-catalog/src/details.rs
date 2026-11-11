@@ -58,7 +58,7 @@ pub(crate) fn details(
         changes: release
             .children()
             .find(|n| n.has_tag_name("description"))
-            .map(crate::catalog::flat_text)
+            .map(crate::fields::flat_text)
             .unwrap_or_default(),
         origin,
         provides,
@@ -83,7 +83,7 @@ fn release_notes(component: Node) -> Vec<ReleaseNote> {
                     text: r
                         .children()
                         .find(|n| n.has_tag_name("description"))
-                        .map(crate::catalog::flat_text)
+                        .map(crate::fields::flat_text)
                         .unwrap_or_default(),
                 },
             )
@@ -137,7 +137,7 @@ fn screenshots(component: Node) -> (Vec<Screenshot>, Vec<String>) {
                 caption: s
                     .children()
                     .find(|n| n.has_tag_name("caption"))
-                    .map(crate::catalog::flat_text)
+                    .map(crate::fields::flat_text)
                     .unwrap_or_default(),
                 license: license.trim().to_owned(),
             }),

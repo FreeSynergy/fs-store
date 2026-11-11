@@ -5,6 +5,7 @@
 
 mod catalog;
 mod details;
+mod fields;
 mod title;
 
 pub use catalog::{Catalog, CatalogEntry, CatalogError, Icon, RpmFile, Skipped, parse_catalog};
