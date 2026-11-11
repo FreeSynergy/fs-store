@@ -108,11 +108,11 @@ impl EngineBackend {
         for (name, result) in installer.commit_observed(ready, &tell) {
             let result = result.map_err(job_error);
             // The install happened also when only the old server could not be ended.
-            let installed = match &result {
+            let ok_version = match &result {
                 Ok(version) | Err(JobError::ServerNotEnded { version, .. }) => Some(*version),
                 Err(_) => None,
             };
-            if let (Some(version), Some((source, facets))) = (installed, notes.get(&name)) {
+            if let (Some(version), Some((source, facets))) = (ok_version, notes.get(&name)) {
                 self.remember(&name, version, source, facets);
             }
             results.push((name, result));
