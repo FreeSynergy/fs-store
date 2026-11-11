@@ -182,19 +182,6 @@ impl StoreModel {
                 self.stash.insert(name.to_owned(), p);
                 self.observe_job(name, Phase::Verified);
             }
-            // Installed, only the old server stays: the job is done, and the person is told (never silent).
-            Err(JobError::ServerNotEnded { version, reason }) => {
-                if let Some(job) = self.jobs.iter_mut().find(|j| j.name == name) {
-                    job.version = Some(version);
-                    job.phase = Phase::Installed;
-                    job.history.push(Phase::Installed);
-                    self.problems.push(Problem::JobFailed {
-                        name: job.name.clone(),
-                        error: JobError::ServerNotEnded { version, reason },
-                    });
-                }
-                self.updated(name);
-            }
             Err(error) => self.fail_job(name, error),
         }
     }
@@ -274,6 +261,19 @@ impl StoreModel {
                     job.version = Some(version);
                     job.phase = Phase::Installed;
                     job.history.push(Phase::Installed);
+                }
+                self.updated(name);
+            }
+            // Installed, only the old server stays: the job is done, and the person is told (never silent).
+            Err(JobError::ServerNotEnded { version, reason }) => {
+                if let Some(job) = self.jobs.iter_mut().find(|j| j.name == name) {
+                    job.version = Some(version);
+                    job.phase = Phase::Installed;
+                    job.history.push(Phase::Installed);
+                    self.problems.push(Problem::JobFailed {
+                        name: job.name.clone(),
+                        error: JobError::ServerNotEnded { version, reason },
+                    });
                 }
                 self.updated(name);
             }
