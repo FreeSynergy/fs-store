@@ -13,6 +13,8 @@ mod links;
 mod mode;
 mod native;
 pub mod net;
+mod own_files;
+mod owner;
 mod prepare;
 mod proc;
 mod remove;
@@ -33,6 +35,8 @@ pub use mode::{
     preferred_format, restart, rpm_installed_version, system_from_os_release,
     without_deleted_suffix,
 };
+pub use own_files::{Report, Verdict, adopt_missing, collect, record_install, verify};
+pub use owner::{Owner, owner, system_owner};
 pub use prepare::{Downloaded, Plan, Prepared};
 pub use proc::ProcRunningCheck;
 pub use remove::{RemoveError, remove};

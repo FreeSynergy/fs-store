@@ -48,6 +48,7 @@ pub struct Prepared {
     pub(crate) verified: VerifiedPackage,
     pub(crate) previous: Option<Version>,
     pub(crate) files: Vec<Vec<u8>>,
+    pub(crate) signer: String,
 }
 
 impl Prepared {
@@ -55,6 +56,12 @@ impl Prepared {
     #[must_use]
     pub fn name(&self) -> &str {
         self.verified.package().name.as_str()
+    }
+
+    /// Fingerprint (upper-case hex) of the key that signed the release file.
+    #[must_use]
+    pub fn signer(&self) -> &str {
+        &self.signer
     }
 
     /// The version that will be installed.
@@ -179,6 +186,10 @@ impl Installer<'_> {
             }
             files.push(file);
         }
+        let signer = match &outcome {
+            SignatureOutcome::Valid { fingerprint } => fingerprint.to_ascii_uppercase(),
+            _ => String::new(),
+        };
         let package = Package {
             name: plan.entry.name.clone(),
             kind: plan.entry.kind,
@@ -194,6 +205,7 @@ impl Installer<'_> {
             verified,
             previous: plan.previous,
             files,
+            signer,
         })
     }
 }

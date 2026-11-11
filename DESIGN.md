@@ -381,3 +381,19 @@ subkey of a non-revoked trusted key counts), translation of `words.rs`, atomic w
 
 ## v0.0.11 (timeouts)
 `fs-interfaces` v0.0.18 (`call_limited`); version 0.0.11 in all crates; `fs-components` v0.0.8 (Blinc `fs-blinc-3`).
+
+## The store's own list of files (2026-11-12, user correction via strategy)
+Which package a file belongs to is stored by the store itself, the same on every system; `rpm -qf`/`dpkg -S` are at most an
+additional cross-check (`fs-store owner`, only for a path that is none of ours), never required.
+- **List:** `<root>/manifests/<name>.toml` (`fs-store-sources::ManifestStore`, atomic write): schema, name, version, source,
+  signer (fingerprint of the checked release signature, from `Prepared::signer`), `basis`, `recorded_at`, and per file `path`
+  (inside the package, `/`), `hash` (`sha256:<hex>`, algorithm-prefixed like `blake3:<hex>` of the files program), `size`, `mode`.
+  Written after a good tar.gz install by `record_install` (window and commands); rpm/deb get none (the package manager owns the files).
+  Shaped to become an AS2 `Add` activity (`files` = object, `source` = origin, name/version/signer = instrument).
+- **`fs-store verify [name]`:** checks every file against its list; "changed" and "missing" are printed (red on a terminal) and the exit
+  code is 1. Only our own installations. **`fs-store owner <path>`:** package, version, source, signature, checksum and the level of
+  proof (recorded at install / listed afterwards / changed / missing); a link into a package counts.
+- **Migration:** an install without a list gets one at the first `verify`, made from the tree on disk and marked `retroactive`
+  (it cannot see changes made before; always shown as "not the original").
+- Removing a package forgets its list. Not done yet: the install/update/remove activity log (history), per-file list for rpm/deb,
+  the sha256 of the release file itself in the list, `blake3`.

@@ -16,6 +16,7 @@ use crate::engine_map::job_error;
 struct Staged {
     ready: fs_store_engine::Prepared,
     source: String,
+    signer: String,
     facets: Vec<String>,
 }
 
@@ -64,9 +65,11 @@ impl EngineBackend {
                 .map_err(job_error)?;
             let downloaded = installer.download(&plan).map_err(job_error)?;
             let ready = installer.check(&plan, downloaded).map_err(job_error)?;
+            let signer = ready.signer().to_owned();
             return Ok(Prepared(Box::new(Staged {
                 ready,
                 source: source.url,
+                signer,
                 facets: offered.facets.clone(),
             })));
         }
@@ -93,12 +96,12 @@ impl EngineBackend {
         let verifier = PgpVerifier::builtin();
         let running = ProcRunningCheck::new(self.root());
         let installer = self.installer(&verifier, &running);
-        let notes: HashMap<String, (String, Vec<String>)> = staged
+        let notes: HashMap<String, (String, String, Vec<String>)> = staged
             .iter()
             .map(|s| {
                 (
                     s.ready.name().to_owned(),
-                    (s.source.clone(), s.facets.clone()),
+                    (s.source.clone(), s.signer.clone(), s.facets.clone()),
                 )
             })
             .collect();
@@ -113,8 +116,9 @@ impl EngineBackend {
                 Err(_) => None,
             };
             let mut result = result;
-            if let (Some(version), Some((source, facets))) = (ok_version, notes.get(&name)) {
-                let problems = self.remember(&name, version, source, facets);
+            if let (Some(version), Some((source, signer, facets))) = (ok_version, notes.get(&name))
+            {
+                let problems = self.remember(&name, version, source, signer, facets);
                 if !problems.is_empty() {
                     result = Err(incomplete(result, version, &problems));
                 }

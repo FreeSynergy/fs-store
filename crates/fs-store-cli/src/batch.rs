@@ -124,15 +124,20 @@ fn run_batch(root: &Path, installer: &Installer<'_>, found: Vec<Found>) -> Vec<S
             Err(e) => problems.push(format!("{name}: {e}")),
         }
     }
+    let signers: std::collections::HashMap<String, String> = ready
+        .iter()
+        .map(|p| (p.name().to_owned(), p.signer().to_owned()))
+        .collect();
     for (name, result) in installer.commit_all(ready) {
+        let signer = signers.get(&name).map_or("", String::as_str);
         match (result, by_name.iter().find(|f| f.name == name)) {
             (Ok(v), Some(f)) => {
-                problems.extend(finish(root, f, v));
+                problems.extend(finish(root, f, v, signer));
                 println!("installed {name} {v}");
             }
             (Ok(_), None) => {}
             (Err(e @ InstallFailure::ServerNotEnded { version, .. }), Some(f)) => {
-                problems.extend(finish(root, f, version));
+                problems.extend(finish(root, f, version, signer));
                 println!("installed {name} {version}");
                 problems.push(format!("{name}: {e}"));
             }
@@ -144,7 +149,7 @@ fn run_batch(root: &Path, installer: &Installer<'_>, found: Vec<Found>) -> Vec<S
 
 /// After a good install: icon, register, commands on the PATH. None of it may fail the install that happened, and none
 /// of it is swallowed: what did not work is said on the error stream, and the answer is how many problems there were.
-fn finish(root: &Path, f: &Found, v: fs_store_core::Version) -> Vec<String> {
+fn finish(root: &Path, f: &Found, v: fs_store_core::Version, signer: &str) -> Vec<String> {
     let mut problems = Vec::new();
     // The icon comes with a hash in the signed catalog; one that does not match is not stored.
     if let Some(icon) = &f.entry.icon {
@@ -174,6 +179,9 @@ fn finish(root: &Path, f: &Found, v: fs_store_core::Version) -> Vec<String> {
         println!("commands: {}", settled.linked.join(", "));
     }
     problems.extend(settled.problems);
+    if let Err(e) = fs_store_engine::record_install(root, &f.name, &v.to_string(), &f.url, signer) {
+        problems.push(e);
+    }
     match fs_store_sources::Registry::load(&root.join("installed.toml")) {
         Ok(mut registry) => {
             registry.record(&f.name, &v.to_string(), &f.url);

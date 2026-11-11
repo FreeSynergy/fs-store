@@ -23,13 +23,16 @@ pub(crate) fn uninstall(root: &Path, name: &str) -> Result<(), String> {
         .map(|e| e.facets.clone())
         .unwrap_or_default();
     // The files are gone, so the register forgets the program in any case; leftovers are then said, not swallowed.
-    let problems = fs_store_engine::settle_remove(
+    let mut problems = fs_store_engine::settle_remove(
         root,
         name,
         &facets,
         &fs_store_engine::default_bin_dir(),
         &fs_store_engine::default_apps_dir(),
     );
+    if let Err(e) = fs_store_sources::ManifestStore::new(root).forget(name) {
+        problems.push(format!("{name}: the list of files was not removed: {e:?}"));
+    }
     registry.forget(name);
     registry.save().map_err(|e| format!("{e:?}"))?;
     if problems.is_empty() {

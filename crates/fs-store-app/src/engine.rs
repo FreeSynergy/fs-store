@@ -114,6 +114,7 @@ impl EngineBackend {
         name: &str,
         version: Version,
         source: &str,
+        signer: &str,
         facets: &[String],
     ) -> Vec<String> {
         let path = self.root.join("installed.toml");
@@ -125,6 +126,11 @@ impl EngineBackend {
             &fs_store_engine::default_apps_dir(),
         );
         let mut problems = settled.problems;
+        if let Err(e) =
+            fs_store_engine::record_install(&self.root, name, &version.to_string(), source, signer)
+        {
+            problems.push(e);
+        }
         match fs_store_sources::Registry::load(&path) {
             Ok(mut registry) => {
                 registry.record(name, &version.to_string(), source);

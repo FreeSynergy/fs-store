@@ -6,6 +6,7 @@ mod background;
 pub use background::notification_lines;
 mod batch;
 mod commands;
+mod own;
 mod source_list;
 mod tuf;
 mod updates;

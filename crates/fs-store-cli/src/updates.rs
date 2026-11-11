@@ -49,13 +49,16 @@ pub(crate) fn remove(root: &Path, name: &str) -> Result<(), String> {
         .get(name)
         .map(|e| e.facets.clone())
         .unwrap_or_default();
-    let problems = fs_store_engine::settle_remove(
+    let mut problems = fs_store_engine::settle_remove(
         root,
         name,
         &facets,
         &bin_dir(),
         &fs_store_engine::default_apps_dir(),
     );
+    if let Err(e) = fs_store_sources::ManifestStore::new(root).forget(name) {
+        problems.push(format!("{name}: the list of files was not removed: {e:?}"));
+    }
     registry.forget(name);
     registry.save().map_err(|e| format!("{e:?}"))?;
     println!("removed {name}");

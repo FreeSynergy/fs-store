@@ -2140,6 +2140,7 @@ dependencies = [
  "fs-store-pgp",
  "fs-store-sources",
  "fs-store-tuf",
+ "tempfile",
 ]
 
 [[package]]
@@ -2165,6 +2166,7 @@ dependencies = [
  "fs-store-catalog",
  "fs-store-core",
  "fs-store-pgp",
+ "fs-store-sources",
  "gix",
  "pgp",
  "rand 0.8.8",
