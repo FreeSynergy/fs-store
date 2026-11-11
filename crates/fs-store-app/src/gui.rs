@@ -1,16 +1,12 @@
 //! The window: `fs-store [--size WxH] [--snapshot file.png] [--facet NAME] [--view cards|sources] [--demo]`;
-//! `FS_STORE_ROOT` as for the commands. `--demo` runs the window over an in-memory backend (see `demo`); `--view`
+//! `FS_STORE_ROOT` as for the commands. `--demo` runs the window over in-memory parts that touch no network, no file of the person and no process (see `demo`); `--view`
 //! opens it on that page (both are for tests of the window, such as the typing test).
 //! Pattern: Facade (one entry point over model, engine and view).
 
 use std::sync::{Arc, Mutex};
 
-use crate::backend::StoreBackend;
-use crate::demo::DemoBackend;
-use crate::engine::EngineBackend;
-use crate::launcher::{Launcher, ProcessLauncher};
+use crate::demo::parts;
 use crate::model::{StoreModel, View};
-use crate::updates::FileUpdates;
 use crate::view::{start_check, store_app};
 use fs_components_app::{WindowOptions, launch, parse_size};
 use fs_interfaces::rpc::facet_from_args;
@@ -29,8 +25,6 @@ pub fn run(argv: &[String]) -> Result<(), String> {
         match arg.as_str() {
             "--size" => size = parse_size(it.next().ok_or("--size needs WxH")?)?,
             "--snapshot" => snapshot = Some(it.next().ok_or("--snapshot needs a file")?.clone()),
-            // The facet link convention (`fs-<facet>`, ADR 0063) is read by the one shared parser. The store has a
-            // single view, so a valid facet is accepted and nothing else changes; a bad one is an error.
             "--demo" => demo = true,
             "--view" => {
                 view = match it.next().map(String::as_str) {
@@ -39,6 +33,8 @@ pub fn run(argv: &[String]) -> Result<(), String> {
                     _ => return Err("--view needs cards or sources".to_owned()),
                 };
             }
+            // The facet link convention (`fs-<facet>`, ADR 0063) is read by the one shared parser. The store has a
+            // single view, so a valid facet is accepted and nothing else changes; a bad one is an error.
             "--facet" => {
                 facet_from_args([
                     "--facet".into(),
@@ -48,18 +44,12 @@ pub fn run(argv: &[String]) -> Result<(), String> {
             other => return Err(format!("unknown argument {other}")),
         }
     }
-    let backend: Arc<dyn StoreBackend> = if demo {
-        Arc::new(DemoBackend::default())
-    } else {
-        Arc::new(EngineBackend::from_environment())
-    };
-    let mut model =
-        StoreModel::new(backend).with_updates(Arc::new(FileUpdates::from_environment()));
+    let parts = parts(demo);
+    let mut model = StoreModel::new(parts.backend).with_updates(parts.updates);
     model.refresh();
     model.show(view);
-    let launcher: Arc<dyn Launcher> =
-        Arc::new(ProcessLauncher::new(fs_store_engine::default_bin_dir()));
-    let wanted = model.check_wanted_at_start();
+    let launcher = parts.launcher;
+    let wanted = parts.check_at_start_allowed && model.check_wanted_at_start();
     let shared = Arc::new(Mutex::new(model));
     let app = store_app(&shared, &launcher).map_err(|e| e.to_string())?;
     if let Some(file) = snapshot {

@@ -138,16 +138,30 @@ Blinc macros (`flow!`, derive) are not used by the store. Moving to a new fs-com
   with `CommandStarter::new(current_exe, ["serve"])` and shows `HandshakeError` with "Try again").
 - `--facet NAME` of the window is read by `fs_interfaces::rpc::facet_from_args`/`parse_facet`; the store has one view, so a valid
   facet changes nothing and a bad one is an error.
-- **End server after an update (job step).** `fs-<name> serve` of a program is ended in order: `end_server` asks `Control.stop` over
-  its socket (`--socket`, else the default `<name>.sock`); a server older than `Control` answers `Unsupported` (or nothing listens
-  where we look), then SIGTERM through the process id, as in the handshake; never SIGKILL. This happens before the files are replaced
-  (a running program is never replaced) and again as the last job step after a good install (`ending.rs`): a server that runs now
-  is ended too. A failed install starts the old server again; after a good one the new server is NOT started here, the program's own
-  window starts it (`connect_matching`). A server that cannot be ended is never silent: `InstallFailure::ServerNotEnded` ->
-  `JobError::ServerNotEnded`; the job is installed, the register is updated, and the page says "installed, but the old background
-  server could not be ended: <why>". Tests with fake servers: `fs-store-engine/tests/end_server.rs`.
-- **`--demo` / `--view sources` (for the typing test only).** `fs-store --demo` runs the window over `DemoBackend` (in memory: one
-  reference source, three programs; a job installs nothing and says so). Why: `fs-release/actions/typing-test` starts the binary on
+- **End server after an update (job step).** `fs-<name> serve` of a program is ended in order by `end_server`: it asks
+  `Control.stop` over the socket (`--socket` of its command line, else the default `<name>.sock`). The process to wait for is the
+  OWNER OF THE SOCKET (peer credentials, `SO_PEERCRED`), not a process found by its command line; a server older than `Control`
+  answers `Unsupported` and then that owner gets SIGTERM through `rustix` (never this process, never PID 1 or lower, no external
+  `kill`, never SIGKILL). Only a server whose socket cannot be reached at all is signalled by the process id of the `/proc`
+  scan, and only while its command line still is the one found. Known gap: a process id can be reused between check and signal (a
+  `pidfd` would close it; same follow-up as in `fs-interfaces`). `fs-interfaces` v0.0.17 keeps `server_pid`/`terminate` private
+  (`pub(super)`), so the store does the same with `tokio`'s `peer_cred` and `rustix` itself; they should become public there.
+  This happens before the files are replaced (a running program is never replaced) and again as the last job step after a good
+  install (`ending.rs`): a server that runs now is asked `Control.version`; one that already says the new version (the window
+  started it meanwhile) is left alone, any other (also one that does not answer) is ended. Each server gets `END_WAIT` =
+  `FINISH_TIMEOUT` of `fs-interfaces` + 5 s (35 s), so a busy server that finishes its work is not taken for "did not end".
+  A failed install, or a server that does not end, starts the servers that did end again (old version); after a good install
+  the new server is NOT started here, the program's own window starts it (`connect_matching`). A server that cannot be ended is
+  never silent: `InstallFailure::ServerNotEnded` -> `JobError::ServerNotEnded`; the job is installed, the register is updated, and the
+  page says "installed, but the old background server could not be ended: <why>". Tests with fake servers:
+  `fs-store-engine/tests/end_server.rs` and the unit tests of `ending.rs` (new server running already, old server, stubborn server).
+  **Windows:** `servers.rs` has `cfg(unix)` where it uses Unix API and answers "nothing found" / `Unsupported` otherwise; the
+  replacement follows in the win-port (the rest of the engine, links, tar.gz, facets, is Unix-only as before).
+- **`--demo` / `--view sources` (for the typing test only).** `fs-store --demo` runs the window over sealed in-memory parts
+  (`demo::parts`): `DemoBackend` (one reference source, three programs; a job installs nothing and says so), `DemoUpdates`
+  (settings and findings in memory; its check refuses, so no `fs-store background`, no catalog over the network, no `updates.toml`,
+  no notification), no check at the start, `DemoLauncher` (starts no process, opens no address), and no menu entry is written.
+  Proof: `fs-store-app/tests/demo.rs`. Why: `fs-release/actions/typing-test` starts the binary on
   a virtual screen and types into a text field; the real engine would read the person's folders, clone catalogs and install. `--view
   sources` opens on the page with the field "Git address of a source". Workflow `typing-test.yml` calls the action with
   `--demo --view sources --size 900x640` and `click-in-window: 300,190`; on GitHub the time is only reported.

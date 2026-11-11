@@ -29,6 +29,7 @@ jobs:
           cache-key: typing-test
       - name: Build the store (release)
         run: cargo build --release -p fs-store
+      # `@main` on purpose: the action is our own, reviewed code in fs-release; the store follows its fixes at once.
       - uses: FreeSynergy/fs-release/actions/typing-test@main
         with:
           app-binary: target/release/fs-store

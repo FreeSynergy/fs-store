@@ -59,8 +59,9 @@ fn dispatch(args: &[String]) -> Result<(), String> {
 
 #[cfg(feature = "gui")]
 fn window(args: &[String]) -> Result<(), String> {
-    // The first start puts the store into the person's menu (never over a file that is not ours).
-    if !args.iter().any(|a| a == "--snapshot") {
+    // The first start puts the store into the person's menu (never over a file that is not ours); not for a picture or
+    // for `--demo` (a test of the window must not change the person's folders).
+    if !args.iter().any(|a| a == "--snapshot" || a == "--demo") {
         let _ = fs_store_engine::ensure_own_menu_entry(&fs_store_engine::default_apps_dir());
     }
     fs_store_app::gui::run(args)
