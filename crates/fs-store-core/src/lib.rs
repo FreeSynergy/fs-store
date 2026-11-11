@@ -2,6 +2,8 @@
 //! See `DESIGN.md` for the pattern map.
 #![deny(missing_docs)]
 
+pub mod capability;
+pub mod details;
 pub mod names;
 pub mod package;
 pub mod signature;
@@ -11,6 +13,8 @@ pub mod strategy;
 pub mod update;
 pub mod words;
 
+pub use capability::{Capability, Provider, Resolution, resolve};
+pub use details::{Description, Details, Origin, ReleaseNote, Screenshot, TrustLevel};
 pub use names::display_name;
 pub use package::{Format, Kind, Package, PackageName, Pre, Stage, Version};
 pub use signature::{

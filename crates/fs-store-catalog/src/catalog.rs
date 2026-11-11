@@ -2,7 +2,7 @@
 //! Format: freedesktop `AppStream` "collection metadata" (XML). Our extra fields live in `<custom>` values with the
 //! `fs:` prefix, which is how `AppStream` allows extensions; no format of our own (see `DESIGN.md`).
 
-use fs_store_core::{Format, Kind, PackageName, Version};
+use fs_store_core::{Details, Format, Kind, PackageName, Version};
 
 /// One package as the catalog offers it.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -37,6 +37,17 @@ pub struct CatalogEntry {
     pub homepage: String,
     /// Facets the program offers (ADR 0061), `fs:facets`, comma separated.
     pub facets: Vec<String>,
+    /// Size, release date, changes, origin and capabilities (ADR 0068); see `Details`.
+    pub details: Details,
+}
+
+impl CatalogEntry {
+    /// The icon is a required field; a package without one is shown as "icon missing" in the sources view, never
+    /// silently with a letter.
+    #[must_use]
+    pub fn icon_missing(&self) -> bool {
+        self.icon.is_none()
+    }
 }
 
 /// One native package file of a release (rpm, deb or exe; a program may come as several, e.g. app and server).
@@ -214,6 +225,9 @@ fn entry(c: roxmltree::Node) -> Result<CatalogEntry, (String, String)> {
     let rpms = collect_native(art, "rpm");
     let debs = collect_native(art, "deb");
     let exes = collect_native(art, "exe");
+    let long_text = Some(description(c))
+        .filter(|d| !d.is_empty())
+        .unwrap_or_else(|| text(c, "summary").unwrap_or_default().to_owned());
     Ok(CatalogEntry {
         name,
         title: crate::title::plain_name(c),
@@ -227,11 +241,16 @@ fn entry(c: roxmltree::Node) -> Result<CatalogEntry, (String, String)> {
         debs,
         exes,
         icon: icon(c),
-        description: Some(description(c))
-            .filter(|d| !d.is_empty())
-            .unwrap_or_else(|| text(c, "summary").unwrap_or_default().to_owned()),
+        description: long_text,
         homepage: homepage(c),
         facets,
+        details: {
+            let mut d = crate::details::details(c, art, &custom);
+            if matches!(d.description, fs_store_core::Description::Text(_)) {
+                d.description = fs_store_core::Description::Text(long_text.clone());
+            }
+            d
+        },
     })
 }
 
@@ -276,15 +295,20 @@ fn icon(c: roxmltree::Node) -> Option<Icon> {
 fn description(c: roxmltree::Node) -> String {
     c.children()
         .find(|n| n.has_tag_name("description"))
-        .map(|d| {
-            d.descendants()
-                .filter(roxmltree::Node::is_text)
-                .filter_map(|n| n.text())
-                .collect::<Vec<_>>()
-                .join(" ")
-        })
-        .map(|t| t.split_whitespace().collect::<Vec<_>>().join(" "))
+        .map(flat_text)
         .unwrap_or_default()
+}
+
+/// All text below `d`, tags dropped, white space squeezed.
+pub(crate) fn flat_text(d: roxmltree::Node) -> String {
+    d.descendants()
+        .filter(roxmltree::Node::is_text)
+        .filter_map(|n| n.text())
+        .collect::<Vec<_>>()
+        .join(" ")
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 fn homepage(c: roxmltree::Node) -> String {

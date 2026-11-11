@@ -4,6 +4,7 @@
 #![deny(missing_docs)]
 
 mod catalog;
+mod details;
 mod title;
 
 pub use catalog::{Catalog, CatalogEntry, CatalogError, Icon, RpmFile, Skipped, parse_catalog};
