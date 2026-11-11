@@ -371,9 +371,13 @@ subkey of a non-revoked trusted key counts), translation of `words.rs`, atomic w
   shows "Reading...". Source commands in the window only ask for a read (`defer_refresh`).
 
 ## Folgepaket (after the releases, not done yet)
-- (done) Time limits: `CALL_LIMIT` (5 s, `tokio::time::timeout`) on connect, `Control.version` and `Control.stop` in `end.rs`; a server that never answers is an error (`ServerNotEnded`), never a hang. Test: `a_server_that_never_answers_...`.
+- (done, v0.0.11) Time limits: `CALL_LIMIT` (5 s) on connect, `Control.version` and `Control.stop` in `end.rs`, through `fs_interfaces::rpc::client::call_limited` (v0.0.18; the own `limited` is only a thin wrapper that turns `Fault::TimedOut` into an `io::Error`); a server that never answers is an error (`ServerNotEnded`), never a hang. Test: `a_server_that_never_answers_...`.
 - `crates/fs-store/src/main.rs` (`is_root`) uses `std::os::unix` without `cfg` (Windows port, later).
 - `is_server_of` re-check on the found process right before SIGTERM.
 - `wait_gone` also accepts a fitting new server on the socket (started by the window meanwhile).
 - Test: the menu entry is not written for an empty `HOME`.
 - Cosmetics.
+- `socket_owner`/`terminate`/`end_server` stay in `end.rs` until `fs-interfaces` v0.0.19 offers a public `end_server`; then `end.rs` shrinks to a call.
+
+## v0.0.11 (timeouts)
+`fs-interfaces` v0.0.18 (`call_limited`); version 0.0.11 in all crates; `fs-components` stays v0.0.7 (Blinc `fs-blinc-3`).

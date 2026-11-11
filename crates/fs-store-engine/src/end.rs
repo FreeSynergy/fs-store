@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 use fs_interfaces::common_capnp::control;
+use fs_interfaces::rpc::client::{Fault, call_limited};
 use fs_interfaces::rpc::{ServerInfo, connect, default_socket, stop_server};
 
 use crate::servers::{Server, alive, own_pid};
@@ -88,22 +89,19 @@ pub enum Ended {
 
 /// How long one call to a server (connect, `Control.version`, `Control.stop`) may take. A server that is stopped
 /// (SIGSTOP), stuck, or not a Cap'n Proto server at all never answers; the job must not wait for ever
-/// (`fs-interfaces` does the same in its handshake).
+/// (`fs-interfaces` does the same in its handshake and in `call_limited`).
 pub const CALL_LIMIT: Duration = Duration::from_secs(5);
 
-/// `work` within [`CALL_LIMIT`]; else `TimedOut`.
+/// `work` within [`CALL_LIMIT`] by the one deadline of `fs-interfaces` ([`call_limited`]); else `TimedOut` carrying the
+/// [`Fault::TimedOut`] sentence ("background server did not answer within 5s").
 async fn limited<T>(work: impl Future<Output = io::Result<T>>) -> io::Result<T> {
-    tokio::time::timeout(CALL_LIMIT, work)
+    call_limited("background", CALL_LIMIT, work)
         .await
-        .unwrap_or_else(|_| {
-            Err(io::Error::new(
-                io::ErrorKind::TimedOut,
-                format!(
-                    "the server did not answer within {} s",
-                    CALL_LIMIT.as_secs()
-                ),
-            ))
-        })
+        .map_err(timed_out)?
+}
+
+fn timed_out(fault: Fault) -> io::Error {
+    io::Error::new(io::ErrorKind::TimedOut, fault)
 }
 
 fn block_on<T>(work: impl Future<Output = T>) -> io::Result<T> {

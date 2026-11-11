@@ -271,6 +271,17 @@ fn a_server_that_never_answers_is_an_error_within_the_limit_not_a_hang() {
     let began = Instant::now();
     let info = fs_store_engine::server_info(&socket).unwrap_err();
     assert_eq!(info.kind(), std::io::ErrorKind::TimedOut, "{info}");
+    // the deadline is the one of fs-interfaces: the fault arrives as `Fault::TimedOut`
+    let fault = info
+        .get_ref()
+        .and_then(|e| e.downcast_ref::<fs_interfaces::rpc::client::Fault>());
+    assert!(
+        matches!(
+            fault,
+            Some(fs_interfaces::rpc::client::Fault::TimedOut { .. })
+        ),
+        "{info:?}"
+    );
     let e = end_server(&gone_server(), Some(&socket), Duration::from_secs(1)).unwrap_err();
     assert!(e.contains("did not answer"), "{e}");
     assert!(

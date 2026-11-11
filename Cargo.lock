@@ -182,7 +182,7 @@ dependencies = [
  "objc2-foundation 0.3.2",
  "parking_lot",
  "percent-encoding",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
  "x11rb",
 ]
 
@@ -1785,7 +1785,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -2026,7 +2026,7 @@ dependencies = [
  "blinc_core",
  "blinc_layout",
  "blinc_theme",
- "fs-interfaces",
+ "fs-interfaces 0.0.1 (git+https://github.com/FreeSynergy/fs-interfaces?tag=v0.0.17)",
 ]
 
 [[package]]
@@ -2066,11 +2066,19 @@ version = "0.0.1"
 source = "git+https://github.com/FreeSynergy/fs-interfaces?tag=v0.0.17#298cebc7d376b591de1767e0a36cdfb0f0d74bda"
 dependencies = [
  "capnp",
+ "idna",
+]
+
+[[package]]
+name = "fs-interfaces"
+version = "0.0.1"
+source = "git+https://github.com/FreeSynergy/fs-interfaces?tag=v0.0.18#5fa4a8f012c1e2532dc9ca78273705d1e2bae8c5"
+dependencies = [
+ "capnp",
  "capnp-rpc",
  "chrono",
  "fs-objects",
  "futures",
- "idna",
  "rustix 1.1.6",
  "tokio",
  "tokio-util",
@@ -2098,7 +2106,7 @@ dependencies = [
 
 [[package]]
 name = "fs-store"
-version = "0.0.10"
+version = "0.0.11"
 dependencies = [
  "fs-store-app",
  "fs-store-cli",
@@ -2109,12 +2117,12 @@ dependencies = [
 
 [[package]]
 name = "fs-store-app"
-version = "0.0.10"
+version = "0.0.11"
 dependencies = [
  "fs-components",
  "fs-components-app",
  "fs-components-primitives",
- "fs-interfaces",
+ "fs-interfaces 0.0.1 (git+https://github.com/FreeSynergy/fs-interfaces?tag=v0.0.18)",
  "fs-store-catalog",
  "fs-store-core",
  "fs-store-engine",
@@ -2124,7 +2132,7 @@ dependencies = [
 
 [[package]]
 name = "fs-store-catalog"
-version = "0.0.10"
+version = "0.0.11"
 dependencies = [
  "fs-store-core",
  "roxmltree",
@@ -2132,7 +2140,7 @@ dependencies = [
 
 [[package]]
 name = "fs-store-cli"
-version = "0.0.10"
+version = "0.0.11"
 dependencies = [
  "fs-store-catalog",
  "fs-store-core",
@@ -2144,7 +2152,7 @@ dependencies = [
 
 [[package]]
 name = "fs-store-client"
-version = "0.0.10"
+version = "0.0.11"
 dependencies = [
  "fs-store-sources",
  "tempfile",
@@ -2152,16 +2160,16 @@ dependencies = [
 
 [[package]]
 name = "fs-store-core"
-version = "0.0.10"
+version = "0.0.11"
 
 [[package]]
 name = "fs-store-engine"
-version = "0.0.10"
+version = "0.0.11"
 dependencies = [
  "capnp",
  "capnp-rpc",
  "flate2",
- "fs-interfaces",
+ "fs-interfaces 0.0.1 (git+https://github.com/FreeSynergy/fs-interfaces?tag=v0.0.18)",
  "fs-store-catalog",
  "fs-store-core",
  "fs-store-pgp",
@@ -2178,7 +2186,7 @@ dependencies = [
 
 [[package]]
 name = "fs-store-pgp"
-version = "0.0.10"
+version = "0.0.11"
 dependencies = [
  "fs-store-core",
  "pgp",
@@ -2187,11 +2195,11 @@ dependencies = [
 
 [[package]]
 name = "fs-store-server"
-version = "0.0.10"
+version = "0.0.11"
 dependencies = [
  "capnp",
  "capnp-rpc",
- "fs-interfaces",
+ "fs-interfaces 0.0.1 (git+https://github.com/FreeSynergy/fs-interfaces?tag=v0.0.18)",
  "fs-store-catalog",
  "fs-store-core",
  "fs-store-engine",
@@ -2203,7 +2211,7 @@ dependencies = [
 
 [[package]]
 name = "fs-store-sources"
-version = "0.0.10"
+version = "0.0.11"
 dependencies = [
  "fs-store-core",
  "serde",
@@ -2213,7 +2221,7 @@ dependencies = [
 
 [[package]]
 name = "fs-store-tuf"
-version = "0.0.10"
+version = "0.0.11"
 dependencies = [
  "tempfile",
  "tokio",
@@ -2223,7 +2231,7 @@ dependencies = [
 
 [[package]]
 name = "fs-store-tuf-publish"
-version = "0.0.10"
+version = "0.0.11"
 dependencies = [
  "aws-lc-rs",
  "fs-store-tuf",
@@ -3599,7 +3607,7 @@ dependencies = [
  "js-sys",
  "log",
  "wasm-bindgen",
- "windows-core 0.62.2",
+ "windows-core 0.58.0",
 ]
 
 [[package]]
@@ -5523,7 +5531,7 @@ dependencies = [
  "once_cell",
  "socket2",
  "tracing",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -5967,7 +5975,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys 0.4.15",
- "windows-sys 0.59.0",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -5980,7 +5988,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys 0.12.1",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -6743,7 +6751,7 @@ dependencies = [
  "getrandom 0.4.3",
  "once_cell",
  "rustix 1.1.6",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -8097,7 +8105,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -8131,19 +8139,6 @@ dependencies = [
 
 [[package]]
 name = "windows-core"
-version = "0.62.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b8e83a14d34d0623b51dce9581199302a221863196a1dde71a7663a4c2be9deb"
-dependencies = [
- "windows-implement 0.60.2",
- "windows-interface 0.59.3",
- "windows-link 0.2.1",
- "windows-result 0.4.1",
- "windows-strings 0.5.1",
-]
-
-[[package]]
-name = "windows-core"
 version = "0.100.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "803590c6856f51d15fa2e9fabe4f4703122c8737f72ef2741b4ac09d4c2192f5"
@@ -8168,17 +8163,6 @@ dependencies = [
 
 [[package]]
 name = "windows-implement"
-version = "0.60.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "053e2e040ab57b9dc951b72c264860db7eb3b0200ba345b4e4c3b14f67855ddf"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.119",
-]
-
-[[package]]
-name = "windows-implement"
 version = "0.100.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1bc1bc82e5a1b1a4d7255861b07881a0407b552f50a4d8543c0c7276fa96f6e8"
@@ -8193,17 +8177,6 @@ name = "windows-interface"
 version = "0.58.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "053c4c462dc91d3b1504c6fe5a726dd15e216ba718e84a0e46a88fbe5ded3515"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.119",
-]
-
-[[package]]
-name = "windows-interface"
-version = "0.59.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3f316c4a2570ba26bbec722032c4099d8c8bc095efccdc15688708623367e358"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -8304,15 +8277,6 @@ name = "windows-sys"
 version = "0.52.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "282be5f36a8ce781fad8c8ae18fa3f9beff57ec1b52cb3de0789201425d9a33d"
-dependencies = [
- "windows-targets",
-]
-
-[[package]]
-name = "windows-sys"
-version = "0.59.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e38bc4d79ed67fd075bcc251a1c39b32a1776bbe92e5bef1f0bf1f8c531853b"
 dependencies = [
  "windows-targets",
 ]
