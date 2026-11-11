@@ -22,7 +22,7 @@ mod targz;
 
 pub use batch::{CommitObserver, Observer};
 pub use deb::{Deb, remove_deb, remove_native};
-pub use end::{Ended, end_server, end_servers, server_info, socket_of, stop_servers};
+pub use end::{CALL_LIMIT, Ended, end_server, end_servers, server_info, socket_of, stop_servers};
 pub use facets::{default_apps_dir, ensure_own_menu_entry, link_facets, unlink_facets};
 pub use icons::store_icon;
 pub use links::{default_bin_dir, link_programs, unlink_programs};

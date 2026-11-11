@@ -371,7 +371,8 @@ subkey of a non-revoked trusted key counts), translation of `words.rs`, atomic w
   shows "Reading...". Source commands in the window only ask for a read (`defer_refresh`).
 
 ## Folgepaket (after the releases, not done yet)
-- Time limits (`tokio::time::timeout`) for `server_info`, `socket_owner` and `stop_server` in `end.rs`, so a hung server cannot hold the job.
+- (done) Time limits: `CALL_LIMIT` (5 s, `tokio::time::timeout`) on connect, `Control.version` and `Control.stop` in `end.rs`; a server that never answers is an error (`ServerNotEnded`), never a hang. Test: `a_server_that_never_answers_...`.
+- `crates/fs-store/src/main.rs` (`is_root`) uses `std::os::unix` without `cfg` (Windows port, later).
 - `is_server_of` re-check on the found process right before SIGTERM.
 - `wait_gone` also accepts a fitting new server on the socket (started by the window meanwhile).
 - Test: the menu entry is not written for an empty `HOME`.

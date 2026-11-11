@@ -236,3 +236,47 @@ fn the_socket_is_named_by_the_command_line_or_the_default() {
         assert!(path.ends_with("people.sock"), "{}", path.display());
     }
 }
+
+/// Something listens and takes the connection but never answers (a stopped or stuck server, or not Cap'n Proto at all).
+fn silent_listener(socket: &Path) -> std::thread::JoinHandle<()> {
+    let listener = std::os::unix::net::UnixListener::bind(socket).unwrap();
+    std::thread::spawn(move || {
+        let mut held = Vec::new();
+        // keep every connection open and say nothing; ends when a connection with a byte "q" comes (cleanup)
+        for stream in listener.incoming().flatten() {
+            let mut stream = stream;
+            let mut b = [0u8; 1];
+            stream
+                .set_read_timeout(Some(Duration::from_millis(200)))
+                .ok();
+            if std::io::Read::read(&mut stream, &mut b).is_ok_and(|n| n == 1 && b[0] == b'q') {
+                return;
+            }
+            held.push(stream);
+        }
+    })
+}
+
+fn stop_silent(socket: &Path, thread: std::thread::JoinHandle<()>) {
+    let mut s = std::os::unix::net::UnixStream::connect(socket).unwrap();
+    std::io::Write::write_all(&mut s, b"q").unwrap();
+    thread.join().unwrap();
+}
+
+#[test]
+fn a_server_that_never_answers_is_an_error_within_the_limit_not_a_hang() {
+    let dir = tempfile::tempdir().unwrap();
+    let socket = dir.path().join("silent.sock");
+    let thread = silent_listener(&socket);
+    let began = Instant::now();
+    let info = fs_store_engine::server_info(&socket).unwrap_err();
+    assert_eq!(info.kind(), std::io::ErrorKind::TimedOut, "{info}");
+    let e = end_server(&gone_server(), Some(&socket), Duration::from_secs(1)).unwrap_err();
+    assert!(e.contains("did not answer"), "{e}");
+    assert!(
+        began.elapsed() < fs_store_engine::CALL_LIMIT * 2 + Duration::from_secs(3),
+        "took {:?}",
+        began.elapsed()
+    );
+    stop_silent(&socket, thread);
+}

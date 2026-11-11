@@ -15,7 +15,7 @@ ureq = { version = "2", default-features = false, features = ["tls"] }
 gix = { version = "0.73", default-features = false, features = ["worktree-mutation", "blocking-network-client", "blocking-http-transport-reqwest-rust-tls"] }
 tar = "0.4"
 fs-interfaces = { git = "https://github.com/FreeSynergy/fs-interfaces", tag = "v0.0.17", features = ["rpc"] }
-tokio = { version = "1", features = ["rt", "net"] }
+tokio = { version = "1", features = ["rt", "net", "time"] }
 capnp = "0.27"
 
 [target.'cfg(unix)'.dependencies]

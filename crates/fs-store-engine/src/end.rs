@@ -86,6 +86,26 @@ pub enum Ended {
     Signal,
 }
 
+/// How long one call to a server (connect, `Control.version`, `Control.stop`) may take. A server that is stopped
+/// (SIGSTOP), stuck, or not a Cap'n Proto server at all never answers; the job must not wait for ever
+/// (`fs-interfaces` does the same in its handshake).
+pub const CALL_LIMIT: Duration = Duration::from_secs(5);
+
+/// `work` within [`CALL_LIMIT`]; else `TimedOut`.
+async fn limited<T>(work: impl Future<Output = io::Result<T>>) -> io::Result<T> {
+    tokio::time::timeout(CALL_LIMIT, work)
+        .await
+        .unwrap_or_else(|_| {
+            Err(io::Error::new(
+                io::ErrorKind::TimedOut,
+                format!(
+                    "the server did not answer within {} s",
+                    CALL_LIMIT.as_secs()
+                ),
+            ))
+        })
+}
+
 fn block_on<T>(work: impl Future<Output = T>) -> io::Result<T> {
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
@@ -106,7 +126,7 @@ fn is_nobody(e: &io::Error) -> bool {
 /// # Errors
 /// Nothing listens there, or the answer cannot be read.
 pub fn server_info(socket: &Path) -> io::Result<ServerInfo> {
-    block_on(async {
+    block_on(limited(async {
         let connection = connect::<control::Client>(socket).await?;
         match connection.client.version_request().send().promise.await {
             Ok(response) => {
@@ -131,7 +151,7 @@ pub fn server_info(socket: &Path) -> io::Result<ServerInfo> {
             }
             Err(e) => Err(io::Error::other(e)),
         }
-    })?
+    }))?
 }
 
 /// Waits until the socket answers nobody any more and, when the owner is another process, until that is gone too.
@@ -162,12 +182,12 @@ pub fn end_server(server: &Server, socket: Option<&Path>, wait: Duration) -> Res
     let Some(socket) = socket else {
         return signal_scanned(server, wait);
     };
-    let owner = match block_on(socket_owner(socket)).map_err(|e| e.to_string())? {
+    let owner = match block_on(limited(socket_owner(socket))).map_err(|e| e.to_string())? {
         Ok(owner) => owner,
         Err(e) if is_nobody(&e) => return signal_scanned(server, wait),
         Err(e) => return Err(format!("{}: {e}", socket.display())),
     };
-    match block_on(stop_server(socket)).map_err(|e| e.to_string())? {
+    match block_on(limited(stop_server(socket))).map_err(|e| e.to_string())? {
         Ok(()) => wait_gone(owner, socket, wait).map(|()| Ended::Control),
         // Older than `Control`: only the system can end it, and then the process that owns the socket.
         Err(e) if e.kind() == io::ErrorKind::Unsupported => {
