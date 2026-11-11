@@ -125,8 +125,8 @@ Enlarging the window aborted with a wgpu validation error (copy into a swapchain
 which is gone: see "One Blinc" below.
 
 ## One Blinc (Q0, 2026-11-11)
-The store has no `blinc*` dependency and no `[patch]`. Blinc comes only through `fs-components` (git tag `v0.0.5`, which
-pins our fork once); the window code writes `use fs_components::blinc::layout::...` (re-export of layout, cn, core, app,
+The store has no `blinc*` dependency and no `[patch]`. Blinc comes only through `fs-components` (git tag `v0.0.6`, which
+pins our fork once, `fs-blinc-3`); the window code writes `use fs_components::blinc::layout::...` (re-export of layout, cn, core, app,
 animation, theme, noto_emoji). All `fs-components*` dependencies stand on the same tag. `.fs-rules.toml` has
 `blinc = "components-only"`, so `fs-release`'s `check_blinc` fails the repo on a `blinc*` line, a `[patch]` or two tags.
 Blinc macros (`flow!`, derive) are not used by the store. Moving to a new fs-components tag: `scripts/bump-components.sh` of fs-release.
@@ -369,3 +369,10 @@ subkey of a non-revoked trusted key counts), translation of `words.rs`, atomic w
   `finish_read`). An epoch counter goes up with every change of what is installed or of the sources; a read made under an
   older epoch is thrown away and read again, so an old read never undoes a newer change. One read at a time; the button
   shows "Reading...". Source commands in the window only ask for a read (`defer_refresh`).
+
+## Folgepaket (after the releases, not done yet)
+- Time limits (`tokio::time::timeout`) for `server_info`, `socket_owner` and `stop_server` in `end.rs`, so a hung server cannot hold the job.
+- `is_server_of` re-check on the found process right before SIGTERM.
+- `wait_gone` also accepts a fitting new server on the socket (started by the window meanwhile).
+- Test: the menu entry is not written for an empty `HOME`.
+- Cosmetics.
