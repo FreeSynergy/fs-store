@@ -4,6 +4,7 @@
 
 mod batch;
 mod deb;
+mod end;
 mod ending;
 mod facets;
 mod icons;
@@ -21,6 +22,7 @@ mod targz;
 
 pub use batch::{CommitObserver, Observer};
 pub use deb::{Deb, remove_deb, remove_native};
+pub use end::{Ended, end_server, end_servers, server_info, socket_of, stop_servers};
 pub use facets::{default_apps_dir, ensure_own_menu_entry, link_facets, unlink_facets};
 pub use icons::store_icon;
 pub use links::{default_bin_dir, link_programs, unlink_programs};
@@ -33,8 +35,5 @@ pub use prepare::{Downloaded, Plan, Prepared};
 pub use proc::ProcRunningCheck;
 pub use remove::{RemoveError, remove};
 pub use rpm::{Commander, Rpm, SystemCommander, remove_rpm};
-pub use servers::{
-    Ended, Server, end_server, end_servers, find_servers, is_alive, is_server_of, program_of,
-    server_info, socket_of, start_server, stop_servers,
-};
+pub use servers::{Server, find_servers, is_alive, is_server_of, program_of, start_server};
 pub use targz::TarGz;

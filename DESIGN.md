@@ -155,7 +155,7 @@ Blinc macros (`flow!`, derive) are not used by the store. Moving to a new fs-com
   never silent: `InstallFailure::ServerNotEnded` -> `JobError::ServerNotEnded`; the job is installed, the register is updated, and the
   page says "installed, but the old background server could not be ended: <why>". Tests with fake servers:
   `fs-store-engine/tests/end_server.rs` and the unit tests of `ending.rs` (new server running already, old server, stubborn server).
-  **Windows:** `servers.rs` has `cfg(unix)` where it uses Unix API and answers "nothing found" / `Unsupported` otherwise; the
+  **Windows:** `servers.rs` and `end.rs` have `cfg(unix)` where it uses Unix API and answers "nothing found" / `Unsupported` otherwise; the
   replacement follows in the win-port (the rest of the engine, links, tar.gz, facets, is Unix-only as before).
 - **`--demo` / `--view sources` (for the typing test only).** `fs-store --demo` runs the window over sealed in-memory parts
   (`demo::parts`): `DemoBackend` (one reference source, three programs; a job installs nothing and says so), `DemoUpdates`
