@@ -125,7 +125,7 @@ Enlarging the window aborted with a wgpu validation error (copy into a swapchain
 which is gone: see "One Blinc" below.
 
 ## One Blinc (Q0, 2026-11-11)
-The store has no `blinc*` dependency and no `[patch]`. Blinc comes only through `fs-components` (git tag `v0.0.6`, which
+The store has no `blinc*` dependency and no `[patch]`. Blinc comes only through `fs-components` (git tag `v0.0.7`, which
 pins our fork once, `fs-blinc-3`); the window code writes `use fs_components::blinc::layout::...` (re-export of layout, cn, core, app,
 animation, theme, noto_emoji). All `fs-components*` dependencies stand on the same tag. `.fs-rules.toml` has
 `blinc = "components-only"`, so `fs-release`'s `check_blinc` fails the repo on a `blinc*` line, a `[patch]` or two tags.
