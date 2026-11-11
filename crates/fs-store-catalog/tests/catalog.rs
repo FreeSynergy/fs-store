@@ -273,7 +273,7 @@ fn details_of_the_chosen_release_are_read() {
     assert_eq!(d.requires[0].to_string(), "people.persons 1.2");
     assert_eq!(d.requires[1].to_string(), "groups");
     assert_eq!(d.recommends[0].to_string(), "mail.send 1.0");
-    assert!(d.unreadable.is_empty());
+    assert_eq!(d.unreadable.len(), 0);
 }
 
 #[test]

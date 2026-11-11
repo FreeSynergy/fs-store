@@ -141,6 +141,18 @@ fn fits_this_machine(platform: &str) -> bool {
 /// The native package formats a release may carry next to its main artifact.
 const NATIVE: [&str; 3] = ["rpm", "deb", "exe"];
 
+/// A comma separated custom value as a list without empty parts.
+fn list(value: Option<String>) -> Vec<String> {
+    value
+        .map(|f| {
+            f.split(',')
+                .map(|s| s.trim().to_owned())
+                .filter(|s| !s.is_empty())
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
 fn entry(c: roxmltree::Node) -> Result<CatalogEntry, (String, String)> {
     let id = text(c, "id").unwrap_or_default().to_owned();
     let fail = |r: &str| (id.clone(), r.to_owned());
@@ -214,14 +226,7 @@ fn entry(c: roxmltree::Node) -> Result<CatalogEntry, (String, String)> {
         Some("appimage") => Format::AppImage,
         Some(other) => return Err(fail(&format!("unknown fs:format `{other}`"))),
     };
-    let facets = custom("fs:facets")
-        .map(|f| {
-            f.split(',')
-                .map(|s| s.trim().to_owned())
-                .filter(|s| !s.is_empty())
-                .collect()
-        })
-        .unwrap_or_default();
+    let facets = list(custom("fs:facets"));
     let rpms = collect_native(art, "rpm");
     let debs = collect_native(art, "deb");
     let exes = collect_native(art, "exe");
@@ -241,16 +246,10 @@ fn entry(c: roxmltree::Node) -> Result<CatalogEntry, (String, String)> {
         debs,
         exes,
         icon: icon(c),
-        description: long_text,
+        description: long_text.clone(),
         homepage: homepage(c),
         facets,
-        details: {
-            let mut d = crate::details::details(c, art, &custom);
-            if matches!(d.description, fs_store_core::Description::Text(_)) {
-                d.description = fs_store_core::Description::Text(long_text.clone());
-            }
-            d
-        },
+        details: crate::details::details(c, art, &custom, &long_text),
     })
 }
 

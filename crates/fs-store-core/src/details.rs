@@ -1,5 +1,5 @@
 //! Pattern: Value object. What the person may read about a package before installing it: size, where it comes from
-//! and who vouches for it, what it offers and needs, what changed. The catalog (a signed AppStream file) is the source;
+//! and who vouches for it, what it offers and needs, what changed. The catalog (a signed `AppStream` file) is the source;
 //! nothing here is read from the package itself. The signer is known only after the check and lives on the job.
 
 use crate::capability::Capability;

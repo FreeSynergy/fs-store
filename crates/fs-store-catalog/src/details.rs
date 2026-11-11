@@ -11,6 +11,7 @@ pub(crate) fn details(
     component: Node,
     art: Node,
     custom: &dyn Fn(&str) -> Option<String>,
+    long_text: &str,
 ) -> Details {
     let release = art
         .ancestors()
@@ -41,7 +42,10 @@ pub(crate) fn details(
         )),
         description: custom("fs:description-wiki")
             .filter(|w| !w.is_empty())
-            .map_or_else(|| Description::Text(String::new()), Description::WikiBlock),
+            .map_or_else(
+                || Description::Text(long_text.to_owned()),
+                Description::WikiBlock,
+            ),
         releases: release_notes(component),
         screenshots,
         images_withheld,
@@ -85,7 +89,7 @@ fn release_notes(component: Node) -> Vec<ReleaseNote> {
             )
         })
         .collect();
-    all.sort_by(|a, b| b.0.cmp(&a.0));
+    all.sort_by_key(|a| std::cmp::Reverse(a.0));
     all.into_iter().map(|(_, n)| n).collect()
 }
 
