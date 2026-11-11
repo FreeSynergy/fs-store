@@ -9,11 +9,3 @@ edition = "2024"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/FreeSynergy/fs-store"
 rust-version = "1.89"
-
-# TEMP (local only, never pushed): fs-components v0.0.8 before its tag
-[patch."https://github.com/FreeSynergy/fs-components"]
-fs-components = { path = "/srv/FreeSynergy/.wt-fsc08/crates/fs-components" }
-fs-components-app = { path = "/srv/FreeSynergy/.wt-fsc08/crates/fs-components-app" }
-fs-components-primitives = { path = "/srv/FreeSynergy/.wt-fsc08/crates/fs-components-primitives" }
-fs-components-render = { path = "/srv/FreeSynergy/.wt-fsc08/crates/fs-components-render" }
-fs-components-widgets = { path = "/srv/FreeSynergy/.wt-fsc08/crates/fs-components-widgets" }
