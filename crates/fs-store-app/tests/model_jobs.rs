@@ -178,3 +178,23 @@ fn update_all_queues_every_update_once_and_counts_them() {
     assert_eq!(m.updates_waiting(), 0);
     assert!(m.begin_all_updates().is_empty());
 }
+
+#[test]
+fn a_server_that_stays_is_told_but_the_job_is_installed() {
+    let f = fake(
+        Vec::new(),
+        Some(JobError::ServerNotEnded {
+            version: v(1, 0, 0),
+            reason: "process 7 did not end in time".into(),
+        }),
+    );
+    let mut m = model(&f);
+    m.run_job("fs-theme");
+    let job = m.job().unwrap();
+    assert_eq!(job.phase, Phase::Installed);
+    assert_eq!(job.version, Some(v(1, 0, 0)));
+    let lines = m.problem_lines();
+    assert_eq!(lines.len(), 1);
+    assert!(lines[0].contains("is installed, but its old background server could not be ended"));
+    assert!(lines[0].contains("did not end in time"));
+}

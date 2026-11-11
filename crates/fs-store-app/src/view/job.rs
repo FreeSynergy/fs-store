@@ -3,9 +3,9 @@
 
 use std::sync::Arc;
 
-use blinc_cn::components::button::ButtonVariant;
-use blinc_layout::div::{Div, div};
-use blinc_layout::prelude::text;
+use fs_components::blinc::cn::components::button::ButtonVariant;
+use fs_components::blinc::layout::div::{Div, div};
+use fs_components::blinc::layout::prelude::text;
 
 use crate::backend::{JobError, JobKind, StoreBackend};
 use crate::model::StoreModel;

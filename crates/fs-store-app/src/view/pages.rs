@@ -1,7 +1,7 @@
 //! Pattern: none (a plain text page: About).
 
-use blinc_layout::div::{Div, div};
-use blinc_layout::prelude::text;
+use fs_components::blinc::layout::div::{Div, div};
+use fs_components::blinc::layout::prelude::text;
 
 use crate::model::StoreModel;
 

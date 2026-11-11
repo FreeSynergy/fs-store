@@ -37,5 +37,8 @@ pub(crate) fn job_error(failure: InstallFailure) -> JobError {
             JobError::Other(format!("the installer failed: {}", cause.0))
         }
         InstallFailure::Update(UpdateError::RollbackFailed) => JobError::RollbackFailed,
+        InstallFailure::ServerNotEnded { version, reason } => {
+            JobError::ServerNotEnded { version, reason }
+        }
     }
 }

@@ -47,6 +47,14 @@ pub enum InstallFailure {
     ReleaseSignature,
     /// The update step failed or was rolled back.
     Update(UpdateError),
+    /// The new version IS installed, but a background server of the program could not be ended (job step "end
+    /// server"). Not an install failure: callers note the install, and tell the person this.
+    ServerNotEnded {
+        /// The version that was installed.
+        version: Version,
+        /// Why the server could not be ended.
+        reason: String,
+    },
 }
 
 /// Installs from a catalog that is already on disk or reachable through `Fetch`.
@@ -150,6 +158,10 @@ impl std::fmt::Display for InstallFailure {
                 write!(f, "installing failed and was rolled back: {}", cause.0)
             }
             Self::Update(e) => write!(f, "installing failed: {e:?}"),
+            Self::ServerNotEnded { version, reason } => write!(
+                f,
+                "{version} is installed, but the old background server could not be ended: {reason}. End it by hand so that the new version starts"
+            ),
         }
     }
 }

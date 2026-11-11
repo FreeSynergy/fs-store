@@ -6,7 +6,7 @@ use std::path::Path;
 
 use fs_store_catalog::CatalogEntry;
 use fs_store_engine::ProcRunningCheck;
-use fs_store_engine::service::{Fetch, Installer};
+use fs_store_engine::service::{Fetch, InstallFailure, Installer};
 
 use crate::commands::{AnyFetch, fetch_source, installed, read_catalog, trust};
 
@@ -131,6 +131,11 @@ fn run_batch(root: &Path, installer: &Installer<'_>, found: Vec<Found>) -> Vec<S
                 println!("installed {name} {v}");
             }
             (Ok(_), None) => {}
+            (Err(e @ InstallFailure::ServerNotEnded { version, .. }), Some(f)) => {
+                finish(root, f, version);
+                println!("installed {name} {version}");
+                problems.push(format!("{name}: {e}"));
+            }
             (Err(e), _) => problems.push(format!("{name}: {e}")),
         }
     }

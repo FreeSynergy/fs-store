@@ -7,13 +7,13 @@ use fs_store_core::{
     Format, InstallError, InstallState, InstallStrategy, Update, UpdateError, Version, run_update,
 };
 
+use crate::ending::{END_WAIT, end_old_servers};
 use crate::prepare::Plan;
 use crate::service::{InstallFailure, Installer, timing};
 use crate::{
-    Commander, Deb, Prepared, Rpm, SystemCommander, TarGz, find_servers, program_of, start_server,
-    stop_servers,
+    Commander, Deb, Prepared, Rpm, SystemCommander, TarGz, end_servers, find_servers, program_of,
+    start_server,
 };
-use std::time::Duration;
 
 /// Something to tell while a batch runs: which package reached which phase.
 pub type Observer<'a> = &'a (dyn Fn(&str, InstallState) + Sync);
@@ -76,8 +76,10 @@ impl Installer<'_> {
         prepared: Vec<Prepared>,
         observe: CommitObserver<'_>,
     ) -> Vec<(String, Result<Version, InstallFailure>)> {
-        // A background server (`fs-<name> serve`) never blocks an update: it is stopped in order first and
-        // started again afterwards, also when the install failed (then the old version starts again).
+        // A background server (`fs-<name> serve`) never blocks an update: it is ended in order first (`Control.stop`,
+        // SIGTERM for an old one). When the install failed, the old version starts again. When it worked, the new
+        // one is not started here: the window of the program starts it when it needs it (`connect_matching`),
+        // and the last job step ends what is still running of the old one.
         let mut results = Vec::new();
         let mut stopped = Vec::new();
         let mut go = Vec::new();
@@ -85,7 +87,7 @@ impl Installer<'_> {
             let servers = find_servers(p.name(), std::process::id());
             if servers.is_empty() {
                 go.push(p);
-            } else if stop_servers(&servers, Duration::from_secs(15)).is_ok() {
+            } else if end_servers(&servers, END_WAIT).is_ok() {
                 stopped.push((p.name().to_owned(), servers));
                 go.push(p);
             } else {
@@ -95,12 +97,18 @@ impl Installer<'_> {
                 ));
             }
         }
-        results.extend(self.commit_stopped(go, observe));
+        let mut done = self.commit_stopped(go, observe);
         for (name, servers) in stopped {
-            for s in &servers {
-                let _ = start_server(&program_of(&self.root, &name, s), s);
+            if done.iter().any(|(n, r)| *n == name && r.is_err()) {
+                for s in &servers {
+                    let _ = start_server(&program_of(&self.root, &name, s), s);
+                }
             }
         }
+        for (name, result) in &mut done {
+            end_old_servers(name, END_WAIT, result);
+        }
+        results.extend(done);
         results
     }
 

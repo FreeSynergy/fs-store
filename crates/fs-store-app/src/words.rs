@@ -186,6 +186,9 @@ pub fn job_problem(error: &JobError) -> &'static str {
             "The update of {name} failed and the previous version could not be restored."
         }
         JobError::Other(_) => "{name} was not installed: {detail}",
+        JobError::ServerNotEnded { .. } => {
+            "{name} is installed, but its old background server could not be ended: {detail}. End it by hand so that the new version starts."
+        }
     }
 }
 

@@ -4,10 +4,10 @@
 
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
-use blinc_cn::components::button::{ButtonBuilder, ButtonVariant};
-use blinc_core::BlincContextState;
-use blinc_layout::div::div;
-use blinc_layout::prelude::text;
+use fs_components::blinc::cn::components::button::{ButtonBuilder, ButtonVariant};
+use fs_components::blinc::core::BlincContextState;
+use fs_components::blinc::layout::div::div;
+use fs_components::blinc::layout::prelude::text;
 use fs_components_app::{AppError, AppWidget, Element, Screen, Surface};
 
 use crate::launcher::Launcher;

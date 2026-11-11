@@ -8,7 +8,7 @@ use std::io;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use fs_interfaces::rpc::{default_socket, run_until_signal};
+use fs_interfaces::rpc::{ServerIdentity, default_socket, run_until_signal_as};
 
 use crate::{LocalStore, StoreServer};
 
@@ -49,7 +49,10 @@ pub fn serve_command(args: impl IntoIterator<Item = OsString>) -> i32 {
             return 2;
         }
     };
-    let served = run_until_signal(&socket, || async {
+    // The identity lets a client of another version replace this server (`connect_matching`) and lets the store
+    // end it after an update (`Control.stop`).
+    let identity = ServerIdentity::new("fs-store", env!("CARGO_PKG_VERSION"));
+    let served = run_until_signal_as(&socket, identity, || async {
         let view: Arc<dyn crate::StoreView> = Arc::new(LocalStore::open_default());
         Ok::<_, io::Error>(StoreServer::new(view).into_client().client)
     });

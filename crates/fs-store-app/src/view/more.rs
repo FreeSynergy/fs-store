@@ -3,10 +3,10 @@
 
 use std::sync::Arc;
 
-use blinc_cn::components::dropdown_menu::{DropdownAlign, dropdown_menu_custom};
-use blinc_layout::ElementBuilder;
-use blinc_layout::div::{Div, div};
-use blinc_layout::prelude::text;
+use fs_components::blinc::cn::components::dropdown_menu::{DropdownAlign, dropdown_menu_custom};
+use fs_components::blinc::layout::ElementBuilder;
+use fs_components::blinc::layout::div::{Div, div};
+use fs_components::blinc::layout::prelude::text;
 
 use crate::launcher::Launcher;
 use crate::model::{Card, CardState};

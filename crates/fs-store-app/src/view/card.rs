@@ -3,11 +3,13 @@
 
 use std::sync::Arc;
 
-use blinc_cn::components::button::{ButtonBuilder, ButtonVariant};
-use blinc_core::{Brush, Color, Gradient, GradientSpace, GradientSpread, GradientStop, Point};
-use blinc_layout::div::{Div, div};
-use blinc_layout::image::img;
-use blinc_layout::prelude::text;
+use fs_components::blinc::cn::components::button::{ButtonBuilder, ButtonVariant};
+use fs_components::blinc::core::{
+    Brush, Color, Gradient, GradientSpace, GradientSpread, GradientStop, Point,
+};
+use fs_components::blinc::layout::div::{Div, div};
+use fs_components::blinc::layout::image::img;
+use fs_components::blinc::layout::prelude::text;
 
 use crate::launcher::Launcher;
 use crate::model::{Card, OpenWidth, Working};

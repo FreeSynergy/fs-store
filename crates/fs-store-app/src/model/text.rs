@@ -130,7 +130,9 @@ impl StoreModel {
 
 pub(super) fn job_failed_line(name: &str, error: &JobError) -> String {
     let detail = match error {
-        JobError::Other(text) | JobError::Unsupported(text) => text.as_str(),
+        JobError::Other(text)
+        | JobError::Unsupported(text)
+        | JobError::ServerNotEnded { reason: text, .. } => text.as_str(),
         _ => "",
     };
     words::fill(

@@ -1,0 +1,2 @@
+# Blinc comes only through fs-components (one tag, no `blinc*` dependency, no `[patch]`): checked by fs-release's rules.
+blinc = "components-only"

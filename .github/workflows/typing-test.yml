@@ -1,0 +1,39 @@
+# The typing test of fs-release on the store's own window: the sources view has a text field; the window runs
+# over the in-memory backend (`--demo`, see crates/fs-store-app/src/demo.rs) so nothing real is read or installed.
+# On GitHub the key-to-picture time is only reported (no GPU on the runner), a wrong character still fails the job.
+name: typing-test
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+
+jobs:
+  typing-test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends pkg-config libxkbcommon-dev libwayland-dev libfontconfig1-dev libssl-dev
+      - uses: FreeSynergy/fs-release/actions/setup-rust@main
+        with:
+          cache-key: typing-test
+      - name: Build the store (release)
+        run: cargo build --release -p fs-store
+      - uses: FreeSynergy/fs-release/actions/typing-test@main
+        with:
+          app-binary: target/release/fs-store
+          app-args: "--demo --view sources --size 900x640"
+          # The field "Git address of a source" of the sources view: 300,190 from the window's top left corner
+          # (the field is 40 px high at y 145..200 of the 900x640 picture; with or without a title bar the point lies inside).
+          click-in-window: "300,190"
+          name: fs-store

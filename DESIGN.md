@@ -119,15 +119,38 @@ Command. Cargo feature `gui` (default): `cargo build --no-default-features -p fs
 the bare command prints a hint). rpm, menu entry "FreeSynergy.Store" (`packaging/net.freesynergy.Store.desktop`) and the
 catalog list only `fs-store`.
 
-## Window resize crash (found by the user, 2026-11-08)
-Enlarging the window aborted with wgpu `Copy of X 0..1278 would end up overrunning the bounds of the Destination texture of
-X size 1276`. Cause (Blinc 0.6.0, `blinc_app` `try_render_with_compositor`): the compositor sizes its static-layer cache from
-the window's current size, but the swapchain texture it copies into is still the size of the last `Resized` event, one frame
-behind; the copy from the larger layer into the smaller surface is a validation error and wgpu aborts. The second message
-(`SurfaceAcquireSemaphores still in use`) is only the abort. Reproduced without a window with a surface texture 2 px narrower
-(`fs-components` `crates/fs-components-widgets/tests/resize_surface.rs`). Workaround: `[patch.crates-io] blinc_app` points to
-`FreeSynergy/blinc-app-fix` (blinc_app 0.6.0 plus one line: take width and height from the target texture). Every app
-workspace needs this patch until Blinc has the fix; a patch in a library is ignored by the apps that use it.
+## Window resize crash (found by the user, 2026-11-08; solved by Q0, 2026-11-11)
+Enlarging the window aborted with a wgpu validation error (copy into a swapchain texture one frame behind). Cause was in
+`blinc_app` 0.6.0; the fix lives in our Blinc fork (tag `fs-blinc-2`). Until Q0 the store carried a `[patch.crates-io]` for it,
+which is gone: see "One Blinc" below.
+
+## One Blinc (Q0, 2026-11-11)
+The store has no `blinc*` dependency and no `[patch]`. Blinc comes only through `fs-components` (git tag `v0.0.5`, which
+pins our fork once); the window code writes `use fs_components::blinc::layout::...` (re-export of layout, cn, core, app,
+animation, theme, noto_emoji). All `fs-components*` dependencies stand on the same tag. `.fs-rules.toml` has
+`blinc = "components-only"`, so `fs-release`'s `check_blinc` fails the repo on a `blinc*` line, a `[patch]` or two tags.
+Blinc macros (`flow!`, derive) are not used by the store. Moving to a new fs-components tag: `scripts/bump-components.sh` of fs-release.
+
+## Server and window, update, `--demo` (Q0, 2026-11-11)
+- `fs-store serve` answers as `run_until_signal_as(socket, ServerIdentity::new("fs-store", version), ...)`: a client of
+  another version can replace it (`connect_matching`), and it answers `Control.stop`. The window needs no handshake: it talks
+  to the engine in the process, not to a server (a Cap'n Proto `StoreBackend` may change that; then it uses `connect_matching`
+  with `CommandStarter::new(current_exe, ["serve"])` and shows `HandshakeError` with "Try again").
+- `--facet NAME` of the window is read by `fs_interfaces::rpc::facet_from_args`/`parse_facet`; the store has one view, so a valid
+  facet changes nothing and a bad one is an error.
+- **End server after an update (job step).** `fs-<name> serve` of a program is ended in order: `end_server` asks `Control.stop` over
+  its socket (`--socket`, else the default `<name>.sock`); a server older than `Control` answers `Unsupported` (or nothing listens
+  where we look), then SIGTERM through the process id, as in the handshake; never SIGKILL. This happens before the files are replaced
+  (a running program is never replaced) and again as the last job step after a good install (`ending.rs`): a server that runs now
+  is ended too. A failed install starts the old server again; after a good one the new server is NOT started here, the program's own
+  window starts it (`connect_matching`). A server that cannot be ended is never silent: `InstallFailure::ServerNotEnded` ->
+  `JobError::ServerNotEnded`; the job is installed, the register is updated, and the page says "installed, but the old background
+  server could not be ended: <why>". Tests with fake servers: `fs-store-engine/tests/end_server.rs`.
+- **`--demo` / `--view sources` (for the typing test only).** `fs-store --demo` runs the window over `DemoBackend` (in memory: one
+  reference source, three programs; a job installs nothing and says so). Why: `fs-release/actions/typing-test` starts the binary on
+  a virtual screen and types into a text field; the real engine would read the person's folders, clone catalogs and install. `--view
+  sources` opens on the page with the field "Git address of a source". Workflow `typing-test.yml` calls the action with
+  `--demo --view sources --size 900x640` and `click-in-window: 300,190`; on GitHub the time is only reported.
 
 ## Facets as commands (ADR 0063 addendum, 2026-11-08; format provisional, built 2026-11-08 for the links and menu entries)
 A facet gets its own command as a symbolic link to the program (`fs-contacts` -> `fs-people`); the program reads `argv[0]`
@@ -301,7 +324,7 @@ refused, so metadata cannot be stripped).
 
 - **Two halves of an install.** `plan` (verified catalog, which files), `download`, `check` (sum, signature) change nothing on the machine; `commit` installs. Several packages are one batch (Unit of Work): `prepare_all` runs the downloads side by side, `commit_all` installs when none is left. All rpm of a batch go into ONE `pkexec dnf install` (one password); tar.gz are unpacked one after the other. A failed download does not stop the others; its error stays on its card. A package added after the install step starts a new batch.
 - **Window.** The model holds a list of jobs (one phase each); `take_commit` hands the ready jobs out once. Button "Update all (N)" shows only when updates wait; `fs-store update --all` is one batch too.
-- **Running servers.** `fs-<name> serve` never blocks an update: the store sends SIGTERM (never SIGKILL), waits up to 15 s, installs, starts the server again with the same options if it ran (also when the install failed). A server that does not end in time keeps the update away ("still running"). Only processes of the same person are touched.
+- **Running servers.** `fs-<name> serve` never blocks an update: the store ends it (`Control.stop`, SIGTERM for an old one; never SIGKILL, see "Server and window"), waits up to 15 s, installs, starts the server again with the same options only when the install failed (Q0: after a good install the program's window starts the new one). A server that does not end in time keeps the update away ("still running"). Only processes of the same person are touched.
 - **Open.** Window asks the program to "save the session and restart" through the update hint (ADR 0065 point 7); the real `pkexec dnf` path of a batch and the window itself are not tried by hand yet.
 
 ## Provisional decisions

@@ -3,13 +3,20 @@
 //! for the clean end; the server removes its socket and finishes writes), installs, and starts it again if it
 //! ran. Pattern: Memento (what was running is remembered to be started again).
 //! Only processes of the same person are touched, and never with SIGKILL.
+//!
+//! How a server is ended ([`end_server`]): first by its own door, `Control.stop` over its socket (the server finishes
+//! its writes and removes its socket); a server older than `Control` answers `Unsupported` (or has no socket where
+//! we look), and then it gets SIGTERM, as in the version handshake of `fs-interfaces`.
 
 use std::fs;
+use std::io;
 use std::os::unix::fs::MetadataExt;
 use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
+
+use fs_interfaces::rpc::{default_socket, stop_server};
 
 /// A running `fs-<name> serve`.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -70,6 +77,101 @@ fn alive(pid: u32) -> bool {
             .next()
             .is_some_and(|r| !r.trim_start().starts_with('Z'))
     })
+}
+
+/// The socket a server listens on: its `--socket PATH`, else the default one of the program (`fs-people` listens on
+/// `people.sock`). `None` when neither can be told.
+#[must_use]
+pub fn socket_of(server: &Server) -> Option<PathBuf> {
+    let mut args = server.argv.iter().skip(2);
+    while let Some(arg) = args.next() {
+        if arg == "--socket" {
+            return args.next().map(PathBuf::from);
+        }
+        if let Some(path) = arg.strip_prefix("--socket=") {
+            return Some(PathBuf::from(path));
+        }
+    }
+    let program = Path::new(server.argv.first()?).file_name()?.to_str()?;
+    default_socket(program.strip_prefix("fs-").unwrap_or(program))
+}
+
+/// How a server ended.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Ended {
+    /// It answered `Control.stop` and went.
+    Control,
+    /// It does not know `Control` (an old version) and got SIGTERM.
+    Signal,
+}
+
+/// Ends one server and waits up to `wait` until its process is gone. `socket` is where to ask (see [`socket_of`]).
+///
+/// # Errors
+/// A sentence: the server refused or could not be asked, or did not end in time. Nothing is killed by force, and
+/// nothing is passed over in silence.
+pub fn end_server(server: &Server, socket: Option<&Path>, wait: Duration) -> Result<Ended, String> {
+    let Some(socket) = socket else {
+        return stop_servers(std::slice::from_ref(server), wait).map(|()| Ended::Signal);
+    };
+    match ask_to_stop(socket) {
+        Ok(()) => {
+            wait_gone(server.pid, wait)
+                .map_err(|e| format!("{e} (asked over {})", socket.display()))?;
+            Ok(Ended::Control)
+        }
+        // An old server does not know `Control`; nothing listens where we look: only the signal is left.
+        Err(e)
+            if matches!(
+                e.kind(),
+                io::ErrorKind::Unsupported
+                    | io::ErrorKind::NotFound
+                    | io::ErrorKind::ConnectionRefused
+            ) =>
+        {
+            stop_servers(std::slice::from_ref(server), wait).map(|()| Ended::Signal)
+        }
+        Err(e) => Err(format!("{}: {e}", socket.display())),
+    }
+}
+
+fn ask_to_stop(socket: &Path) -> io::Result<()> {
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()?;
+    let local = tokio::task::LocalSet::new();
+    local.block_on(&runtime, stop_server(socket))
+}
+
+fn wait_gone(pid: u32, wait: Duration) -> Result<(), String> {
+    let until = Instant::now() + wait;
+    while alive(pid) {
+        if Instant::now() > until {
+            return Err("a background server did not end in time".to_owned());
+        }
+        std::thread::sleep(Duration::from_millis(50));
+    }
+    Ok(())
+}
+
+/// Ends every server of `servers` ([`end_server`]), each one even when another failed.
+///
+/// # Errors
+/// All the sentences of the ones that could not be ended, joined.
+pub fn end_servers(servers: &[Server], wait: Duration) -> Result<(), String> {
+    let failed: Vec<String> = servers
+        .iter()
+        .filter_map(|s| {
+            end_server(s, socket_of(s).as_deref(), wait)
+                .err()
+                .map(|e| format!("{} (process {}): {e}", s.argv.join(" "), s.pid))
+        })
+        .collect();
+    if failed.is_empty() {
+        Ok(())
+    } else {
+        Err(failed.join("; "))
+    }
 }
 
 /// Asks each server to end (SIGTERM) and waits up to `wait` for all of them.
