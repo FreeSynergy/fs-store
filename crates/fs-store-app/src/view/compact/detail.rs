@@ -102,7 +102,7 @@ fn buttons(p: &PackagePage, busy: bool, shared: &Shared, launcher: &Arc<dyn Laun
                     &format!("c-open-{n1}"),
                     words::BUTTON_OPEN,
                     ButtonVariant::Secondary,
-                    true,
+                    p.card.open_blocked.is_none(),
                 )
                 .on_click(move |_| {
                     locked(&open).open(&n1, None, launcher.as_ref());
@@ -166,6 +166,48 @@ fn running(p: &PackagePage, shared: &Shared, width: f32) -> Option<Div> {
     )
 }
 
+/// The facts of the version block: size, origin, signature.
+fn facts_of(p: &PackagePage) -> Div {
+    let mut facts = div().flex_col().gap(1.0).child(fact(w::PAGE_SIZE, &p.size));
+    for (name, value) in &p.origin {
+        facts = facts.child(fact(name, value));
+    }
+    if !p.source_code.is_empty() {
+        facts = facts.child(fact(w::ORIGIN_CODE, &p.source_code));
+    }
+    facts = facts
+        .child(fact(w::PAGE_SIGNATURE, p.trust_word))
+        .child(text(p.trust_text).class("fs-c-sub"));
+    facts
+}
+
+/// The changes per version.
+fn changes_of(p: &PackagePage) -> Div {
+    let mut changes = div().flex_col().gap(3.0);
+    if p.releases.is_empty() {
+        changes = changes.child(text(w::CHANGES_NONE).class("fs-c-sub"));
+    }
+    for r in &p.releases {
+        changes = changes.child(
+            div()
+                .flex_col()
+                .child(
+                    div()
+                        .flex_row()
+                        .gap(2.0)
+                        .child(text(r.version.clone()).bold())
+                        .child(text(r.date.clone()).class("fs-c-sub")),
+                )
+                .child(text(if r.text.is_empty() {
+                    "No text for this version.".to_owned()
+                } else {
+                    r.text.clone()
+                })),
+        );
+    }
+    changes
+}
+
 /// The detail pane, `width` x `height`.
 pub(super) fn pane(
     model: &StoreModel,
@@ -208,6 +250,9 @@ pub(super) fn pane(
             launcher,
         ));
     pane = pane.child(head);
+    if let Some(why) = p.card.open_blocked.filter(|_| p.card.installed.is_some()) {
+        pane = pane.child(text(why).class("fs-c-sub"));
+    }
     if let Some(r) = running(&p, shared, width) {
         pane = pane.child(r);
     }
@@ -218,55 +263,29 @@ pub(super) fn pane(
         DescriptionView::Text(t) => text(t.clone()),
         DescriptionView::Wiki(id) => text(words::fill(w::DESCRIPTION_WIKI, &[("id", id)])),
     };
-    let mut facts = div().flex_col().gap(1.0).child(fact(w::PAGE_SIZE, &p.size));
-    for (name, value) in &p.origin {
-        facts = facts.child(fact(name, value));
+    pane = pane
+        .child(block(w::PAGE_DESCRIPTION, div().child(description)))
+        .child(block(w::PAGE_VERSION, facts_of(&p)));
+    // Only the blocks that have something get a box; the empty ones are one line (below), not three boxes that say "nothing"
+    let caps_blocks = [
+        (w::PAGE_PROVIDES, &p.capabilities.provides, false),
+        (w::PAGE_REQUIRES, &p.capabilities.requires, true),
+        (w::PAGE_RECOMMENDS, &p.capabilities.recommends, true),
+    ];
+    for (title, lines, answered) in caps_blocks {
+        if !lines.is_empty() {
+            pane = pane.child(block(title, caps(lines, answered)));
+        }
     }
-    if !p.source_code.is_empty() {
-        facts = facts.child(fact(w::ORIGIN_CODE, &p.source_code));
-    }
-    facts = facts
-        .child(fact(w::PAGE_SIGNATURE, p.trust_word))
-        .child(text(p.trust_text).class("fs-c-sub"));
-    let mut changes = div().flex_col().gap(3.0);
-    if p.releases.is_empty() {
-        changes = changes.child(text(w::CHANGES_NONE).class("fs-c-sub"));
-    }
-    for r in &p.releases {
-        changes = changes.child(
-            div()
-                .flex_col()
-                .child(
-                    div()
-                        .flex_row()
-                        .gap(2.0)
-                        .child(text(r.version.clone()).bold())
-                        .child(text(r.date.clone()).class("fs-c-sub")),
-                )
-                .child(text(if r.text.is_empty() {
-                    "No text for this version.".to_owned()
-                } else {
-                    r.text.clone()
-                })),
-        );
-    }
-    pane.child(block(w::PAGE_DESCRIPTION, div().child(description)))
-        .child(block(w::PAGE_VERSION, facts))
-        .child(block(
-            w::PAGE_PROVIDES,
-            caps(&p.capabilities.provides, false),
-        ))
-        .child(block(
-            w::PAGE_REQUIRES,
-            caps(&p.capabilities.requires, true),
-        ))
-        .child(block(
-            w::PAGE_RECOMMENDS,
-            caps(&p.capabilities.recommends, true),
-        ))
-        .child(block(w::PAGE_CHANGES, changes))
-        .child(block(
+    pane = pane.child(block(w::PAGE_CHANGES, changes_of(&p)));
+    if !p.pictures.is_empty() {
+        pane = pane.child(block(
             w::PAGE_PICTURES,
             div().child(text(p.pictures_note.clone()).class("fs-c-sub")),
-        ))
+        ));
+    }
+    if let Some(line) = &p.nothing_line {
+        pane = pane.child(text(line.clone()).class("fs-c-sub"));
+    }
+    pane
 }

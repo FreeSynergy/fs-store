@@ -42,6 +42,30 @@ fn confirm(shared: &Shared) {
     rebuild();
 }
 
+/// What the person must read before saying yes: a need nobody offers (red), a need with a choice (amber), each on its own line.
+fn warnings(p: &crate::model::Preview) -> Div {
+    let mut col = div().flex_col().gap(1.0);
+    for wn in &p.warnings {
+        col = col.child(
+            div()
+                .class("fs-c-warning")
+                .flex_row()
+                .gap(3.0)
+                .child(
+                    text(if wn.missing {
+                        w::WARN_MISSING
+                    } else {
+                        w::WARN_CHOICE
+                    })
+                    .bold()
+                    .class(if wn.missing { "fs-c-bad" } else { "fs-c-warn" }),
+                )
+                .child(div().flex_grow().min_w(0.0).child(text(wn.text.clone()))),
+        );
+    }
+    col
+}
+
 /// The panel, when a question waits.
 pub(super) fn preview(model: &StoreModel, shared: &Shared) -> Option<Div> {
     let p = model.preview()?;
@@ -84,6 +108,7 @@ pub(super) fn preview(model: &StoreModel, shared: &Shared) -> Option<Div> {
             .flex_col()
             .gap(3.0)
             .child(text(p.title.clone()).bold())
+            .child(warnings(p))
             .child(steps)
             .child(text(p.risk_line()).class("fs-c-sub"))
             .child(

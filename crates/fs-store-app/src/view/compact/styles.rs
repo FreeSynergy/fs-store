@@ -25,5 +25,6 @@ pub(in crate::view) const STYLES: &str = r"
 .fs-c-warn { color: var(--warning); }
 .fs-c-bad { color: var(--error); }
 .fs-c-info { color: var(--accent); }
+.fs-c-warning { padding: 6px 8px; border-left-width: 3px; border-left-color: var(--warning); background: var(--warning-bg); }
 .fs-c-track { height: 6px; background: var(--border); border-radius: var(--radius-default); }
 ";
