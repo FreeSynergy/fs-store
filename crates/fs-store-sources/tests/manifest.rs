@@ -52,3 +52,35 @@ fn the_text_form_is_stable_and_marks_the_basis() {
     assert!(text.contains("basis = \"retroactive\""), "{text}");
     assert!(text.contains("hash = \"sha256:00\""));
 }
+
+#[test]
+fn saving_from_several_threads_never_tears_the_list_and_leaves_no_temporary_file() {
+    let tmp = tempfile::tempdir().unwrap();
+    let store = std::sync::Arc::new(ManifestStore::new(tmp.path()));
+    let handles: Vec<_> = (0..8)
+        .map(|i| {
+            let store = std::sync::Arc::clone(&store);
+            std::thread::spawn(move || {
+                for n in 0..20 {
+                    let mut m = sample("x");
+                    m.recorded_at = u64::try_from(i * 100 + n).unwrap();
+                    store.save(&m).unwrap();
+                }
+            })
+        })
+        .collect();
+    for h in handles {
+        h.join().unwrap();
+    }
+    assert_eq!(
+        store.load("x").unwrap().unwrap().name,
+        "x",
+        "the list reads back whole"
+    );
+    let left: Vec<String> = std::fs::read_dir(tmp.path().join("manifests"))
+        .unwrap()
+        .flatten()
+        .map(|e| e.file_name().to_string_lossy().into_owned())
+        .collect();
+    assert_eq!(left, ["x.toml"], "no temporary file is left");
+}

@@ -155,6 +155,18 @@ impl Installer<'_> {
         results.extend(self.commit_deb_with(deb, observe, SystemCommander));
         for p in rest {
             let name = p.name().to_owned();
+            // One install of a package at a time, also across processes (window, command, timer)
+            let _lock = match crate::PackageLock::acquire(&self.root, &name) {
+                Ok(Some(lock)) => lock,
+                Ok(None) => {
+                    results.push((name, Err(InstallFailure::Locked)));
+                    continue;
+                }
+                Err(e) => {
+                    results.push((name, Err(InstallFailure::Fetch(format!("lock: {e}")))));
+                    continue;
+                }
+            };
             observe(&name, InstallState::Installing);
             let version = p.version();
             let mut files = p.files;

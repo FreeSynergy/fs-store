@@ -450,3 +450,14 @@ Craft style and the theme adapter (`fs_components_render::use_style`) come from 
   (one list, no copy) and shows an unknown name as it is.
 - **Not in the lift:** the Breeze style (`theme-breeze`, not in fs-components v0.0.11): variant C wears the platform theme until the style exists there (request to the
   shared layer); pause of a running job (the engine has no pause); real bytes only for downloads over HTTPS (a `file://` source reports once).
+
+### Review follow-ups of 0.0.12
+- **Reinstall of an existing version folder:** the folder is trusted only when it is exactly what the archive holds; the archive is unpacked beside it and compared (same files, same
+  checksums, no stranger), else the new tree takes its place in two renames (no moment without a complete tree) and the old one is removed. So the list written after an install
+  (`Basis::Installed`) always describes the archive's content, never a found tree.
+- **`verify`:** content, type (a link is not a regular file), permission bits (setuid, setgid and sticky never allowed), unreadable, missing; strangers in the folder are `extra`
+  (a warning, exit 0). The others make exit code 1.
+- **One install at a time:** `PackageLock` (a lock file `locks/<name>.lock` below the store root, `flock`) around the unpacking and switching of a tar.gz install, so the window, a command and
+  the timer cannot install the same package at once; it goes away with the process. Boundary: removals and rpm/deb installs take no such lock (the package manager has its own).
+- **List files:** written with a temporary name of their own, flushed, renamed, and the folder flushed.
+- **Signature wording:** "Maker + mirror (catalog)": the maker's signature is as the signed catalog says; the store checks our key itself.

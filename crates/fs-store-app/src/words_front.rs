@@ -85,14 +85,13 @@ pub const FOOTER_NO_SOURCE: &str = "No source is switched on. Choose one in the 
 pub const FOOTER_COUNT: &str = "{count} packages";
 
 /// Trust level: the maker and the mirror both signed.
-pub const TRUST_BOTH: &str = "Maker and mirror";
+pub const TRUST_BOTH: &str = "Maker + mirror (catalog)";
 /// Trust level: only our key.
 pub const TRUST_OURS: &str = "Our key only";
 /// Trust level: only a checksum.
 pub const TRUST_SUM: &str = "Checksum only";
 /// What the level means: both.
-pub const TRUST_BOTH_TEXT: &str =
-    "The maker's own signature was checked, then the package was signed with our key.";
+pub const TRUST_BOTH_TEXT: &str = "The signed catalog says the maker's own signature was checked when the package was mirrored. The store checks our key on the package; it does not check the maker's signature itself.";
 /// What the level means: ours.
 pub const TRUST_OURS_TEXT: &str = "Signed with our key. The maker gives no signature, so only the checksum of the maker is known.";
 /// What the level means: checksum.

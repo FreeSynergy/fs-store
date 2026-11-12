@@ -177,16 +177,21 @@ fn reinstalling_the_same_version_with_a_broken_archive_keeps_the_working_install
     .unwrap();
     let bad = tmp.path().join("bad.tar.gz");
     fs::write(&bad, b"nope").unwrap();
-    // the version is already there: nothing is unpacked, nothing is deleted
-    run_update(
+    // the version is already there: the archive is unpacked beside it to be compared; it cannot be read, so the update fails and
+    // the working install is not touched, no temporary folder is left
+    let result = run_update(
         &Update {
             package: &verified("tasks", v),
             previous: Some(v),
         },
         &mut TarGz::new(&root, &bad),
         &Idle,
-    )
-    .unwrap();
+    );
+    assert!(result.is_err());
+    assert_eq!(
+        fs::read_dir(root.join("packages/tasks")).unwrap().count(),
+        1
+    );
     assert_eq!(
         fs::read_to_string(root.join("current/tasks/bin/prog")).unwrap(),
         "v1"

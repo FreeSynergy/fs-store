@@ -30,9 +30,14 @@ fn verify_fails_on_a_changed_file_and_owner_names_the_package() {
     .unwrap();
     run(&["owner", tmp.path().join("elsewhere").to_str().unwrap()]).unwrap();
 
+    // a stranger in the folder is a warning, the exit stays 0
+    fs::write(dir.join("added"), "x").unwrap();
+    run(&["verify"]).unwrap();
+    fs::remove_file(dir.join("added")).unwrap();
+
     fs::write(dir.join("prog"), "tampered").unwrap();
     let err = run(&["verify"]).unwrap_err();
-    assert!(err.contains("1 files changed or missing"), "{err}");
+    assert!(err.contains("1 files differ"), "{err}");
     assert!(run(&["verify", "prog"]).is_err());
     assert!(
         run(&[
@@ -43,6 +48,6 @@ fn verify_fails_on_a_changed_file_and_owner_names_the_package() {
     );
 
     fs::remove_file(dir.join("prog")).unwrap();
-    assert!(run(&["verify"]).unwrap_err().contains("missing"));
+    assert!(run(&["verify"]).unwrap_err().contains("differ"));
     assert!(run(&["verify", "nothing"]).is_err());
 }

@@ -10,10 +10,12 @@ mod ending;
 mod facets;
 mod icons;
 mod links;
+mod lock;
 mod mode;
 mod native;
 pub mod net;
 mod own_files;
+mod own_judge;
 mod owner;
 mod prepare;
 mod proc;
@@ -30,6 +32,7 @@ pub use end::{CALL_LIMIT, Ended, end_server, end_servers, server_info, socket_of
 pub use facets::{default_apps_dir, ensure_own_menu_entry, link_facets, unlink_facets};
 pub use icons::store_icon;
 pub use links::{default_bin_dir, link_programs, unlink_programs};
+pub use lock::PackageLock;
 pub use mode::{
     System, deb_installed_version, detect_system, format_for, native_installed_version, own_exe,
     preferred_format, restart, rpm_installed_version, system_from_os_release,

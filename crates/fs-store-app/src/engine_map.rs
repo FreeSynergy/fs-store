@@ -33,6 +33,10 @@ pub(crate) fn job_error(failure: InstallFailure) -> JobError {
         InstallFailure::Checksum => JobError::Checksum,
         InstallFailure::ReleaseSignature => JobError::ReleaseSignature,
         InstallFailure::Cancelled => JobError::Cancelled,
+        InstallFailure::Locked => JobError::Other(
+            "another store process is installing it right now; try again when it is done"
+                .to_owned(),
+        ),
         InstallFailure::Update(UpdateError::Running) => JobError::Running,
         InstallFailure::Update(UpdateError::RolledBack(cause)) => {
             JobError::Other(format!("the installer failed: {}", cause.0))

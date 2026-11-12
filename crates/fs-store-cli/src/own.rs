@@ -54,7 +54,7 @@ fn or_unknown(text: &str) -> &str {
     if text.is_empty() { "unknown" } else { text }
 }
 
-/// `fs-store verify [name]`: our own installations against their lists; exit code 1 when a file changed or is missing.
+/// `fs-store verify [name]`: our own installations against their lists; exit code 1 when a listed file changed, is missing, has other permission bits, is no regular file any more or cannot be read; a stranger in the folder is only a warning.
 pub(crate) fn verify(root: &Path, only: Option<&str>) -> Result<(), String> {
     let reports = fs_store_engine::verify(root, only, &source_of(root))?;
     let mut bad = 0usize;
@@ -69,23 +69,28 @@ pub(crate) fn verify(root: &Path, only: Option<&str>) -> Result<(), String> {
         };
         println!("{} {}: {} files{note}", m.name, m.version, r.files.len());
         for (path, verdict) in &r.files {
-            match verdict {
-                Verdict::Intact => {}
-                Verdict::Changed => {
-                    bad += 1;
-                    println!("  {}", red(&format!("changed  {path}")));
-                }
-                Verdict::Missing => {
-                    bad += 1;
-                    println!("  {}", red(&format!("missing  {path}")));
-                }
-            }
+            let word = match verdict {
+                Verdict::Intact => continue,
+                Verdict::Changed => "changed   ",
+                Verdict::Missing => "missing   ",
+                Verdict::Mode => "mode      ",
+                Verdict::Type => "type      ",
+                Verdict::Unreadable => "unreadable",
+            };
+            bad += 1;
+            println!("  {}", red(&format!("{word} {path}")));
+        }
+        // strangers in the package folder: a warning, not a failure (exit code stays 0)
+        for path in &r.extra {
+            println!("  extra      {path}  (not in the list; warning only)");
         }
     }
     if bad == 0 {
         println!("all {} packages intact", reports.len());
         Ok(())
     } else {
-        Err(red(&format!("{bad} files changed or missing")))
+        Err(red(&format!(
+            "{bad} files differ from the list (changed, missing, mode, type or unreadable)"
+        )))
     }
 }

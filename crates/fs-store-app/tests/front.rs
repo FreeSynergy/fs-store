@@ -102,7 +102,7 @@ fn the_table_says_unknown_where_the_catalog_is_silent_and_never_guesses() {
     assert_eq!(mystery.signature, "unknown");
     assert_eq!(mystery.installed, "-");
     let kanidm = rows.iter().find(|r| r.card.name == "kanidm").unwrap();
-    assert_eq!(kanidm.signature, "Maker and mirror");
+    assert_eq!(kanidm.signature, "Maker + mirror (catalog)");
     assert_eq!(kanidm.size, "38 MiB");
     assert_eq!(
         (kanidm.installed.as_str(), kanidm.latest.as_str()),

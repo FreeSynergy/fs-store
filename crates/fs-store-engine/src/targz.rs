@@ -140,6 +140,36 @@ impl TarGz {
         Ok(top.filter(|t| t.to_str().is_some_and(|t| t.starts_with(name))))
     }
 
+    /// A folder of this version is already there. It is trusted only when it is exactly what the archive holds (the same files with the
+    /// same checksums and nothing else): the archive is unpacked beside it and compared. The same: `tmp` goes away and the folder
+    /// stays. Not the same (a changed, missing or added file): the new tree takes the place of the folder in two renames, so there
+    /// is no moment without a complete tree under the name, and the changed one is removed after.
+    fn unpack_and_compare(&self, name: &str, tmp: &Path, dest: &Path) -> io::Result<()> {
+        self.unpack(name, tmp)?;
+        self.stopped()?;
+        let fresh = crate::own_files::collect(tmp)?;
+        let same = crate::own_files::collect(dest).is_ok_and(|have| {
+            have.len() == fresh.len()
+                && have
+                    .iter()
+                    .zip(&fresh)
+                    .all(|(a, b)| a.path == b.path && a.hash == b.hash)
+        }) && crate::own_judge::stray(dest, &fresh).is_ok_and(|s| s.is_empty());
+        if same {
+            return fs::remove_dir_all(tmp);
+        }
+        let old = dest.with_extension(format!("old{}", std::process::id()));
+        let _ = fs::remove_dir_all(&old);
+        fs::rename(dest, &old)?;
+        if let Err(e) = fs::rename(tmp, dest) {
+            // put the old folder back: the version is never left without a tree
+            let _ = fs::rename(&old, dest);
+            return Err(e);
+        }
+        let _ = fs::remove_dir_all(&old);
+        Ok(())
+    }
+
     fn unpack(&self, name: &str, dest: &Path) -> io::Result<()> {
         fs::create_dir_all(dest)?;
         let top = self.common_top(name)?;
@@ -203,18 +233,19 @@ impl InstallStrategy for TarGz {
         let p = package.package();
         safe_name(p.name.as_str())?;
         let dest = self.dir(p.name.as_str(), p.version);
-        if !dest.is_dir() {
-            // Unpack beside the target and rename: a half-unpacked version never exists under its name.
-            let tmp = dest.with_extension(format!("tmp{}", std::process::id()));
-            let _ = fs::remove_dir_all(&tmp);
-            let done = self
-                .unpack(p.name.as_str(), &tmp)
+        // Unpack beside the target and rename: a half-unpacked version never exists under its name.
+        let tmp = dest.with_extension(format!("tmp{}", std::process::id()));
+        let _ = fs::remove_dir_all(&tmp);
+        let done = if dest.is_dir() {
+            self.unpack_and_compare(p.name.as_str(), &tmp, &dest)
+        } else {
+            self.unpack(p.name.as_str(), &tmp)
                 .and_then(|()| self.stopped())
-                .and_then(|()| fs::rename(&tmp, &dest));
-            if let Err(e) = done {
-                let _ = fs::remove_dir_all(&tmp);
-                return Err(err(&e));
-            }
+                .and_then(|()| fs::rename(&tmp, &dest))
+        };
+        if let Err(e) = done {
+            let _ = fs::remove_dir_all(&tmp);
+            return Err(err(&e));
         }
         self.point_current(p.name.as_str(), &dest)
             .map_err(|e| err(&e))

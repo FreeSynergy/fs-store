@@ -101,17 +101,39 @@ impl ManifestStore {
         }
     }
 
-    /// Writes the list atomically (temporary file, then rename); an older list of the package is replaced.
+    /// Writes the list atomically and durably: a temporary file with a name of its own (process and a counter, so two writers never share
+    /// one), written and flushed to the disk, renamed over the old list, and the folder flushed too, so a power cut leaves the old list
+    /// or the new one, never a torn one.
     ///
     /// # Errors
     /// `StoreError` when writing fails.
     pub fn save(&self, manifest: &Manifest) -> Result<(), StoreError> {
+        use std::io::Write;
+        use std::sync::atomic::{AtomicU64, Ordering};
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
         let path = self.file(&manifest.name)?;
         let text = toml::to_string(manifest).map_err(|e| StoreError::Format(e.to_string()))?;
         std::fs::create_dir_all(&self.dir).map_err(StoreError::Io)?;
-        let tmp = path.with_extension("toml.new");
-        std::fs::write(&tmp, text).map_err(StoreError::Io)?;
-        std::fs::rename(&tmp, &path).map_err(StoreError::Io)
+        let tmp = path.with_extension(format!(
+            "toml.new.{}.{}",
+            std::process::id(),
+            COUNTER.fetch_add(1, Ordering::Relaxed)
+        ));
+        let written = (|| {
+            let mut file = std::fs::File::create(&tmp)?;
+            file.write_all(text.as_bytes())?;
+            file.sync_all()?;
+            std::fs::rename(&tmp, &path)?;
+            // the folder entry too (on systems where a folder can be opened)
+            if let Ok(dir) = std::fs::File::open(&self.dir) {
+                let _ = dir.sync_all();
+            }
+            Ok(())
+        })();
+        if written.is_err() {
+            let _ = std::fs::remove_file(&tmp);
+        }
+        written.map_err(StoreError::Io)
     }
 
     /// Forgets the list of `name` (nothing to do when there is none).

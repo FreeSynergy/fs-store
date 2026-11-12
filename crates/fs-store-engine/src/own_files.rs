@@ -9,6 +9,8 @@ use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use fs_store_sources::{Basis, FileRecord, Manifest, ManifestStore};
+
+use crate::own_judge::{judge, stray};
 use sha2::{Digest, Sha256};
 
 const SCHEMA: u32 = 1;
@@ -36,12 +38,12 @@ pub(crate) fn hash_file(path: &Path) -> std::io::Result<String> {
 }
 
 #[cfg(unix)]
-fn mode_of(meta: &fs::Metadata) -> u32 {
+pub(crate) fn mode_of(meta: &fs::Metadata) -> u32 {
     std::os::unix::fs::PermissionsExt::mode(&meta.permissions()) & 0o7777
 }
 
 #[cfg(not(unix))]
-fn mode_of(_meta: &fs::Metadata) -> u32 {
+pub(crate) fn mode_of(_meta: &fs::Metadata) -> u32 {
     0
 }
 
@@ -146,6 +148,12 @@ pub enum Verdict {
     Changed,
     /// The file is gone.
     Missing,
+    /// The content is the same but the permission bits are not (or a setuid, setgid or sticky bit is set).
+    Mode,
+    /// It is no longer a regular file (a link, a folder).
+    Type,
+    /// It is there but cannot be read.
+    Unreadable,
 }
 
 /// The check of one package.
@@ -157,10 +165,12 @@ pub struct Report {
     pub files: Vec<(String, Verdict)>,
     /// The list was made just now from the tree (migration): changes before now cannot be seen.
     pub made_now: bool,
+    /// Files in the package folder that are not in the list (strangers: added after the install). Not an error, a warning.
+    pub extra: Vec<String>,
 }
 
 impl Report {
-    /// Nothing changed and nothing is missing.
+    /// Every listed file is as it was: same content, same mode, a regular file, readable. Strangers (`extra`) do not count here.
     #[must_use]
     pub fn is_clean(&self) -> bool {
         self.files.iter().all(|(_, v)| *v == Verdict::Intact)
@@ -221,14 +231,7 @@ fn check(root: &Path, manifest: &Manifest) -> Vec<(String, Verdict)> {
     manifest
         .files
         .iter()
-        .map(|f| {
-            let verdict = match hash_file(&dir.join(&f.path)) {
-                Ok(h) if h == f.hash => Verdict::Intact,
-                Ok(_) => Verdict::Changed,
-                Err(_) => Verdict::Missing,
-            };
-            (f.path.clone(), verdict)
-        })
+        .map(|f| (f.path.clone(), judge(&dir.join(&f.path), f)))
         .collect()
 }
 
@@ -252,9 +255,11 @@ pub fn verify(
         let Some(manifest) = store.load(&name).map_err(|e| format!("{name}: {e:?}"))? else {
             continue;
         };
+        let dir = package_dir(root, &manifest.name, &manifest.version);
         reports.push(Report {
             files: check(root, &manifest),
             made_now: made.contains(&name),
+            extra: stray(&dir, &manifest.files).unwrap_or_default(),
             manifest,
         });
     }

@@ -30,7 +30,7 @@ const COLS: [(&str, f32); 6] = [
     (w::COL_LATEST, 76.0),
     (w::COL_RELEASED, 96.0),
     (w::COL_SIZE, 72.0),
-    (w::COL_SIGNATURE, 124.0),
+    (w::COL_SIGNATURE, 172.0),
     (w::COL_CAPABILITIES, 74.0),
 ];
 

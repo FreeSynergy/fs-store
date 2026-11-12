@@ -6,7 +6,7 @@ use std::path::Path;
 
 use fs_store_sources::{Basis, FileRecord, Manifest, ManifestStore};
 
-use crate::own_files::{Verdict, hash_file, package_dir};
+use crate::own_files::{Verdict, package_dir};
 
 /// The package a path belongs to, according to our own lists.
 #[derive(Debug)]
@@ -26,6 +26,9 @@ impl Owner {
         match (self.verdict, self.manifest.basis) {
             (Verdict::Changed, _) => "changed since it was listed",
             (Verdict::Missing, _) => "listed, but the file is gone",
+            (Verdict::Mode, _) => "the permission bits changed since it was listed",
+            (Verdict::Type, _) => "no longer a regular file (a link or a folder is there)",
+            (Verdict::Unreadable, _) => "listed, but the file cannot be read",
             (Verdict::Intact, Basis::Installed) => {
                 "recorded by the store when it installed the file"
             }
@@ -73,11 +76,7 @@ pub fn owner(root: &Path, path: &Path) -> Result<Option<Owner>, String> {
 }
 
 fn check_one(path: &Path, file: &FileRecord) -> Verdict {
-    match hash_file(path) {
-        Ok(h) if h == file.hash => Verdict::Intact,
-        Ok(_) => Verdict::Changed,
-        Err(_) => Verdict::Missing,
-    }
+    crate::own_judge::judge(path, file)
 }
 
 /// Additional cross-check on Linux for a file of a system package: `rpm -qf`, else `dpkg -S`. `None` when neither knows it

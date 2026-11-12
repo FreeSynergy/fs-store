@@ -38,7 +38,7 @@ fn a_page_shows_version_with_date_size_origin_trust_changes_and_pictures() {
 #[test]
 fn a_mirrored_package_names_its_maker_the_makers_signature_and_the_source_code() {
     let p = model().package_page("kanidm").unwrap();
-    assert_eq!(p.trust_word, "Maker and mirror");
+    assert_eq!(p.trust_word, "Maker + mirror (catalog)");
     let has = |l: &str, v: &str| p.origin.iter().any(|(a, b)| *a == l && b.contains(v));
     assert!(has("Maker", "github.com/kanidm/kanidm"));
     assert!(has("Maker's signature", "kanidm.upstream.asc"));

@@ -73,6 +73,8 @@ pub enum InstallFailure {
     Update(UpdateError),
     /// The person cancelled at a point where nothing was left half done: nothing on disk changed, or what was begun is gone again.
     Cancelled,
+    /// Another process (the window, a command, the timer) is installing this package right now; nothing was changed here.
+    Locked,
     /// The new version IS installed, but a background server of the program could not be ended (job step "end
     /// server"). Not an install failure: callers note the install, and tell the person this.
     ServerNotEnded {
@@ -189,6 +191,7 @@ impl std::fmt::Display for InstallFailure {
                 f.write_str("the downloaded file is not signed by a trusted key")
             }
             Self::Cancelled => f.write_str("cancelled; nothing was changed"),
+            Self::Locked => f.write_str("another store process is installing it right now; nothing was changed"),
             Self::Update(UpdateError::RolledBack(cause)) => {
                 write!(f, "installing failed and was rolled back: {}", cause.0)
             }
