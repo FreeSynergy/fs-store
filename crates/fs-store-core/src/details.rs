@@ -120,3 +120,34 @@ pub struct Details {
     /// Entries of the three lists that could not be read; never dropped silently.
     pub unreadable: Vec<String>,
 }
+
+impl Details {
+    /// The release date (`YYYY-MM-DD`) as Unix milliseconds at midnight UTC; `None` when the catalog gives no date or a date that is
+    /// not one. The wire form of the date (`Timestamp.unixMillis`; 0 there means "not said").
+    #[must_use]
+    pub fn released_millis(&self) -> Option<i64> {
+        Self::millis_of(&self.released)
+    }
+
+    /// The same for any date text `YYYY-MM-DD` (the date of a release in the list of changes).
+    #[must_use]
+    pub fn millis_of(date: &str) -> Option<i64> {
+        let mut parts = date.trim().split('-');
+        let (y, m, d): (i64, i64, i64) = (
+            parts.next()?.parse().ok()?,
+            parts.next()?.parse().ok()?,
+            parts.next()?.get(..2)?.parse().ok()?,
+        );
+        if parts.next().is_some() || !(1..=12).contains(&m) || !(1..=31).contains(&d) {
+            return None;
+        }
+        // days since 1970-01-01 of a civil date (Howard Hinnant's algorithm)
+        let y = if m <= 2 { y - 1 } else { y };
+        let era = y.div_euclid(400);
+        let yoe = y.rem_euclid(400);
+        let doy = (153 * (if m > 2 { m - 3 } else { m + 9 }) + 2) / 5 + d - 1;
+        let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+        let days = era * 146_097 + doe - 719_468;
+        Some(days * 86_400_000)
+    }
+}

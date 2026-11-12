@@ -64,6 +64,12 @@ fn read_one(
             format: e.format,
             source: source.id.0.clone(),
             facets: e.facets,
+            summary: e.summary,
+            icon_sha256: e
+                .icon
+                .map(|i| i.sha256.to_ascii_lowercase())
+                .unwrap_or_default(),
+            details: e.details,
         })
         .collect();
     let skipped = catalog

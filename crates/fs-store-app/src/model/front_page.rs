@@ -17,6 +17,8 @@ use super::store::StoreModel;
 pub struct CapLine {
     /// The capability and its level.
     pub text: String,
+    /// The name is in the list of `fs-interfaces` (`fs_interfaces::capabilities`, one list for all); a name that is not there is shown as it is.
+    pub known: bool,
     /// How it is answered (for a need); `Met` for the lines that need no answer.
     pub state: NeedsState,
     /// The answer in words (who provides it); empty for an offer.
@@ -96,6 +98,7 @@ pub struct PackagePage {
 fn lines_of(list: &[Capability]) -> Vec<CapLine> {
     list.iter()
         .map(|c| CapLine {
+            known: fs_interfaces::capabilities::is_known(&c.name),
             text: c.to_string(),
             state: NeedsState::Met,
             answer: String::new(),
@@ -142,6 +145,7 @@ impl StoreModel {
                 Resolution::Missing => (NeedsState::Missing, w::CAP_MISSING.to_owned()),
             };
             CapLine {
+                known: fs_interfaces::capabilities::is_known(&need.name),
                 text: need.to_string(),
                 state,
                 answer: text,

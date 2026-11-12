@@ -435,3 +435,18 @@ elements; the numbers are in `fs-components-styles/CRAFT-MEASUREMENT.md` (measur
   glyphs as dark ink on a light ground and finds the caret by blinking; with the white-on-dark Craft look it reads the (correct) text
   as wrong. Need to `fs-release`: a polarity check. The text field is the same widget in both looks (checked by eye on the Craft picture).
 - Demo flags for pictures: `--job NAME:waiting|verified|installing` shows a running tile.
+
+## Version 0.0.12: on fs-components v0.0.11 and fs-interfaces v0.0.19 (lift, 2026-11-12)
+Builds directly on `fs-components` v0.0.11 and `fs-interfaces` v0.0.19 (Blinc `fs-blinc-3.1`). **Handoff note: regenerate `Cargo.lock` after the tags
+`fs-components` v0.0.11 and `fs-interfaces` v0.0.19 are pushed** (the lock here was made from the local tags: `fs-components` v0.0.11 = 0960ad8,
+`fs-interfaces` v0.0.19 = 90e62c3, one source each). No `[patch]`, no local path: the Craft building blocks (`fs-components-widgets::craft`), the
+Craft style and the theme adapter (`fs_components_render::use_style`) come from v0.0.11.
+- **Contains:** the storefront (variant B, Craft) and the compact window (variant C, `--variant c`), the catalog facts (`Details`, trust level, capabilities,
+  pictures with a licence), the resolver, `fs-store owner` and `verify` with the own file list, the engine's cancel and progress, no second start while a job
+  runs, the reason for a locked Open (DE+EN), the warning lines in the question before an install, empty blocks as one line.
+- **Wire:** `fs-store-server` writes the new `Package` fields of `store.capnp` (@7 to @18: size, released, releases, origin, trust, provides/requires/recommends,
+  iconSha256, pictures, description). What the catalog does not say stays at the contract's default (0, empty), so a reader shows "unknown", and a package known only
+  from the register carries none of it. Capability names are written as the catalog gives them; the window checks them against `fs_interfaces::capabilities`
+  (one list, no copy) and shows an unknown name as it is.
+- **Not in the lift:** the Breeze style (`theme-breeze`, not in fs-components v0.0.11): variant C wears the platform theme until the style exists there (request to the
+  shared layer); pause of a running job (the engine has no pause); real bytes only for downloads over HTTPS (a `file://` source reports once).

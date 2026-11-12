@@ -34,6 +34,8 @@ pub struct CatalogEntry {
     pub icon: Option<Icon>,
     /// A longer description (`<description>` text, tags dropped); the one-line `<summary>` when there is none.
     pub description: String,
+    /// The one-line `<summary>`; empty when there is none.
+    pub summary: String,
     /// The project page (`<url type="homepage">`), e.g. the Git repository; empty when there is none.
     pub homepage: String,
     /// Facets the program offers (ADR 0061), `fs:facets`, comma separated.
@@ -236,6 +238,7 @@ fn entry(c: roxmltree::Node) -> Result<CatalogEntry, (String, String)> {
         exes,
         icon: icon(c),
         description: long_text.clone(),
+        summary: text(c, "summary").unwrap_or_default().to_owned(),
         homepage: homepage(c),
         facets,
         details: crate::details::details(c, art, &custom, &long_text),

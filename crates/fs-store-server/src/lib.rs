@@ -23,3 +23,6 @@ pub use local::LocalStore;
 pub use program::serve_command;
 pub use service::StoreServer;
 pub use view::{PackageInfo, SkippedInfo, SourceInfo, StoreView};
+
+#[cfg(test)]
+mod wire_test;

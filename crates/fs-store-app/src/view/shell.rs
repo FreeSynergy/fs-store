@@ -73,7 +73,7 @@ pub enum Variant {
     /// The storefront (Craft).
     #[default]
     Storefront,
-    /// The compact list and page (Breeze).
+    /// The compact list and page.
     Compact,
 }
 

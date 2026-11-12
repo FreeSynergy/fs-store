@@ -35,12 +35,11 @@ pub fn run(argv: &[String]) -> Result<(), String> {
                 look_given = true;
                 look = match it.next().map(String::as_str) {
                     Some("craft") => Some(fs_components_styles::StyleId::Craft),
-                    Some("breeze") => Some(fs_components_styles::StyleId::Breeze),
                     Some("standard") => None,
-                    _ => return Err("--look needs craft, breeze or standard".to_owned()),
+                    _ => return Err("--look needs craft or standard".to_owned()),
                 };
             }
-            // The window: `b` the storefront (tiles, table; Craft look), `c` compact (list and page; Breeze look)
+            // The window: `b` the storefront (tiles, table; Craft look), `c` compact (list and page; platform look for now)
             "--variant" => {
                 variant = match it.next().map(String::as_str) {
                     Some("b") => Variant::Storefront,
@@ -77,10 +76,11 @@ pub fn run(argv: &[String]) -> Result<(), String> {
         }
     }
     if !look_given {
-        look = Some(match variant {
-            Variant::Storefront => fs_components_styles::StyleId::Craft,
-            Variant::Compact => fs_components_styles::StyleId::Breeze,
-        });
+        // Variant C wears the platform theme until fs-components has the Breeze style (a request to the shared layer)
+        look = match variant {
+            Variant::Storefront => Some(fs_components_styles::StyleId::Craft),
+            Variant::Compact => None,
+        };
     }
     fs_components_render::use_style(look);
     let parts = parts(demo);

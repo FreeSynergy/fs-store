@@ -1,4 +1,4 @@
-//! Pattern: none (one style sheet constant: variant C over theme variables only, so any style can wear it; the Breeze style is its own).
+//! Pattern: none (one style sheet constant: variant C over theme variables only, so any style can wear it; a Breeze style is a request to fs-components).
 
 pub(in crate::view) const STYLES: &str = r"
 .fs-c-root { background: var(--background); }

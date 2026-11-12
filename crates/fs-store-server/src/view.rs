@@ -3,7 +3,7 @@
 //! Pattern: Strategy — [`StoreView`] is the read side the server asks; [`crate::LocalStore`] answers
 //! from the files of this machine, a test answers from memory. The server never touches files itself.
 
-use fs_store_core::{Format, Kind};
+use fs_store_core::{Details, Format, Kind};
 
 /// A source of packages.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -33,6 +33,13 @@ pub struct PackageInfo {
     pub source: String,
     /// Facets it offers.
     pub facets: Vec<String>,
+    /// One line about it (`<summary>` of the catalog); empty when the catalog has none.
+    pub summary: String,
+    /// What the signed catalog says besides: size, date, changes, origin, trust level, capabilities, pictures, description. Empty
+    /// (`Details::default()`) for a package the store knows only from its register, so the wire says "not said" for all of it.
+    pub details: Details,
+    /// Lower-case hex SHA-256 of the icon file; empty when the catalog has no icon.
+    pub icon_sha256: String,
 }
 
 /// A catalog entry (or a whole source) that was not offered, with the reason.

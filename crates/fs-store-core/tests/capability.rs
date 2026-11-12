@@ -80,3 +80,17 @@ fn a_package_does_not_answer_its_own_need() {
         Resolution::Missing
     );
 }
+
+#[test]
+fn a_release_date_is_unix_milliseconds_at_midnight_or_nothing() {
+    use fs_store_core::Details;
+    assert_eq!(Details::millis_of("2026-11-09"), Some(1_794_182_400_000));
+    assert_eq!(Details::millis_of("1970-01-01"), Some(0));
+    assert_eq!(
+        Details::millis_of("2026-11-09T10:00:00Z"),
+        Some(1_794_182_400_000)
+    );
+    for bad in ["", "unknown", "2026-13-01", "2026-11", "2026-11-09-1"] {
+        assert_eq!(Details::millis_of(bad), None, "{bad}");
+    }
+}

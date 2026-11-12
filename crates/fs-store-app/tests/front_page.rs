@@ -133,3 +133,28 @@ fn the_selected_page_is_the_one_that_was_opened_and_none_before() {
     m.open_page("gone");
     assert!(m.package_page_selected().is_none());
 }
+
+#[test]
+fn a_capability_name_is_checked_against_the_one_list_of_fs_interfaces_and_shown_either_way() {
+    let m = model();
+    let k = m.package_page("kanidm").unwrap();
+    // `identity.oidc` is in the list, `mail.send` (recommended) is not: both are shown
+    assert!(
+        k.capabilities
+            .provides
+            .iter()
+            .any(|l| l.text.starts_with("identity.oidc") && l.known)
+    );
+    assert!(
+        k.capabilities
+            .recommends
+            .iter()
+            .any(|l| l.text.starts_with("mail.send") && !l.known)
+    );
+    assert!(
+        k.capabilities
+            .requires
+            .iter()
+            .any(|l| l.text.starts_with("people.persons") && l.known)
+    );
+}

@@ -130,6 +130,9 @@ impl StoreView for LocalStore {
                         .find(|s| s.url == e.source)
                         .map_or_else(|| e.source.clone(), |s| s.id.0.clone()),
                     facets: e.facets.clone(),
+                    summary: String::new(),
+                    details: fs_store_core::Details::default(),
+                    icon_sha256: String::new(),
                 }
             })
             .collect())
