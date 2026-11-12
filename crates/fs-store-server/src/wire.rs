@@ -42,7 +42,13 @@ pub(crate) fn wire_kind(kind: Kind) -> Option<PackageKind> {
 pub(crate) fn split_for_wire(list: Vec<PackageInfo>) -> (Vec<PackageInfo>, Vec<SkippedInfo>) {
     let (mut keep, mut left) = (Vec::new(), Vec::new());
     for p in list {
-        if wire_kind(p.kind).is_some() {
+        if let Some(why) = &p.locked {
+            // The contract (v0.0.19) has no field for "locked": a locked program is not sent as a normal package.
+            left.push(SkippedInfo {
+                reason: format!("locked ({why}); the contract has no lock field yet"),
+                id: p.name,
+            });
+        } else if wire_kind(p.kind).is_some() {
             keep.push(p);
         } else {
             left.push(SkippedInfo {

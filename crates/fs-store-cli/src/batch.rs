@@ -80,6 +80,10 @@ pub(crate) fn install_batch(
             problems.push(last);
             continue;
         };
+        if let Some(why) = &hit.entry.locked {
+            println!("{name} is locked in this store version ({why}); not changed");
+            continue;
+        }
         if only_newer && current.is_some_and(|c| hit.entry.version <= c) {
             println!(
                 "{name} is up to date ({})",

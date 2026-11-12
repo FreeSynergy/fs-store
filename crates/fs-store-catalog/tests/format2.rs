@@ -1,7 +1,9 @@
 //! Tests of the reader for catalog format 2: kinds this store does not install are shown locked and never fail anything, texts in several
 //! languages are chosen by the language of the program, and the new fields are read.
 
-use fs_store_catalog::{COMING_SOON, NOT_SUPPORTED, parse_catalog, parse_catalog_in};
+use fs_store_catalog::{
+    COMING_SOON, NOT_SUPPORTED, UNREADABLE_MIN_STORE, parse_catalog, parse_catalog_in,
+};
 use fs_store_core::{Description, Kind};
 
 fn artifact(extra: &str) -> String {
@@ -224,4 +226,50 @@ fn the_new_fields_are_read() {
     assert_eq!(plain.mediatypes.len(), 0);
     assert_eq!(plain.origin.maker, "");
     assert!(matches!(plain.description, Description::Text(_)));
+}
+
+#[test]
+fn an_unreadable_min_store_locks_the_entry_and_an_empty_one_does_not() {
+    let with = |min: &str| {
+        component(
+            "net.freesynergy.u",
+            "program",
+            &format!(
+                r#"<releases><release version="1.0.0">{}</release></releases>"#,
+                artifact("")
+            ),
+        )
+        .replace(
+            "</custom>",
+            &format!(r#"<value key="fs:min-store">{min}</value></custom>"#),
+        )
+    };
+    for bad in ["0.1", "soon", "1.x.0"] {
+        let c = parse_catalog(&catalog(&[with(bad)])).unwrap();
+        assert_eq!(c.skipped.len(), 0, "{bad}");
+        assert_eq!(
+            c.entries[0].locked.as_deref(),
+            Some(UNREADABLE_MIN_STORE),
+            "{bad}"
+        );
+        assert!(!c.entries[0].installable());
+    }
+    // counter-proof: a readable one that fits, and a value that is empty (= not said)
+    assert!(parse_catalog(&catalog(&[with("0.0.1")])).unwrap().entries[0].installable());
+    assert!(parse_catalog(&catalog(&[with("")])).unwrap().entries[0].installable());
+}
+
+#[test]
+fn a_locked_entry_without_a_release_file_makes_no_statement_about_the_signature() {
+    let server = component("net.freesynergy.srv", "server", "");
+    let c = parse_catalog(&catalog(&[server, good("net.freesynergy.a")])).unwrap();
+    assert_eq!(c.entries[0].details.trust, None);
+    // counter-proof: a signed entry with a release file keeps its level; a locked one WITH a release file keeps it too
+    assert!(c.entries[1].details.trust.is_some());
+    let wants_newer = good("net.freesynergy.n").replace(
+        "</custom>",
+        r#"<value key="fs:min-store">99.0.0</value></custom>"#,
+    );
+    let n = parse_catalog(&catalog(&[wants_newer])).unwrap();
+    assert!(n.entries[0].locked.is_some() && n.entries[0].details.trust.is_some());
 }

@@ -15,9 +15,7 @@ impl Lang {
     /// The language of the person's environment.
     #[must_use]
     pub fn current() -> Self {
-        let v = std::env::var("FS_LANG")
-            .or_else(|_| std::env::var("LANG"))
-            .unwrap_or_default();
+        let v = fs_store_core::language::from_environment();
         if v.to_ascii_lowercase().starts_with("de") {
             Lang::De
         } else {
@@ -32,6 +30,15 @@ pub fn no_window(lang: Lang) -> &'static str {
     match lang {
         Lang::En => "A component has no window of its own, so there is nothing to open.",
         Lang::De => "Eine Komponente hat kein eigenes Fenster, es gibt nichts zu \u{f6}ffnen.",
+    }
+}
+
+/// The three words before the capabilities of a feature: what it offers, needs and can use.
+#[must_use]
+pub fn feature_words(lang: Lang) -> [&'static str; 3] {
+    match lang {
+        Lang::En => ["offers", "needs", "can use"],
+        Lang::De => ["bietet", "braucht", "nutzt"],
     }
 }
 

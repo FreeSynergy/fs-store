@@ -25,6 +25,9 @@ fn fits_this_machine(platform: &str) -> bool {
 /// The native package formats a release may carry next to its main artifact.
 const NATIVE: [&str; 3] = ["rpm", "deb", "exe"];
 
+/// What a locked offer says when its `fs:min-store` is not `MAJOR.MINOR.PATCH`.
+pub const UNREADABLE_MIN_STORE: &str = "unreadable min-store";
+
 /// What a locked offer of kind server or icon-theme says.
 pub const COMING_SOON: &str = "coming soon";
 
@@ -44,7 +47,12 @@ fn kind_of(written: Option<&str>) -> (Kind, String) {
 /// Why this store cannot install the offer, or `None`: its kind is not installable, or `fs:min-store` is newer than this store.
 fn lock_reason(kind: Kind, min_store: Option<&str>) -> Option<&'static str> {
     let own = Version::parse(env!("CARGO_PKG_VERSION"));
-    let too_new = min_store
+    // A `fs:min-store` that cannot be read locks the entry: what the entry wants is not known, so it is not guessed.
+    let wanted = min_store.filter(|m| !m.is_empty());
+    if wanted.is_some_and(|m| Version::parse(m).is_none()) && kind.is_installable() {
+        return Some(UNREADABLE_MIN_STORE);
+    }
+    let too_new = wanted
         .and_then(Version::parse)
         .zip(own)
         .is_some_and(|(want, own)| want > own);
@@ -75,6 +83,11 @@ fn locked_entry(
     let long_text = Some(description(c, prefs))
         .filter(|d| !d.is_empty())
         .unwrap_or_else(|| summary.clone());
+    let mut details = crate::details::details(c, c, custom, &long_text, prefs);
+    // Without a release file there is nothing that was signed here: no statement about the signature (shown as "unknown").
+    if newest_with_artifact(c).is_err() {
+        details.trust = None;
+    }
     CatalogEntry {
         name,
         title: crate::title::plain_name(c),
@@ -94,7 +107,7 @@ fn locked_entry(
         summary,
         homepage: homepage(c),
         facets: list(custom("fs:facets")),
-        details: crate::details::details(c, c, custom, &long_text, prefs),
+        details,
     }
 }
 

@@ -60,6 +60,7 @@ fn read_one(
         .map(|e| PackageInfo {
             name: e.name.as_str().to_owned(),
             kind: e.kind,
+            locked: e.locked,
             version: e.version.to_string(),
             format: e.format,
             source: source.id.0.clone(),

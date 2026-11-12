@@ -92,3 +92,39 @@ fn the_navigation_opens_a_section_for_servers_and_the_start_lists_unknown_kinds_
             .all(|b| b.cards.iter().all(|c| c.name != "fs-odd"))
     );
 }
+
+#[test]
+fn a_locked_update_is_not_counted_and_not_started_by_update_all() {
+    unsafe { std::env::set_var("FS_LANG", "en") };
+    let f = common::fake(
+        vec![
+            fs_store_app::backend::InstalledRow {
+                name: "fs-old".into(),
+                version: Version::new(1, 0, 0),
+            },
+            fs_store_app::backend::InstalledRow {
+                name: "fs-fine".into(),
+                version: Version::new(1, 0, 0),
+            },
+        ],
+        None,
+    );
+    {
+        let mut st = f.state.lock().unwrap();
+        // a newer version is offered for both; the first wants a newer store
+        st.offered.push(PackageRow {
+            locked: Some("not supported by this store version".into()),
+            ..common::package("fs-old", Version::new(2, 0, 0))
+        });
+        st.offered
+            .push(common::package("fs-fine", Version::new(2, 0, 0)));
+    }
+    let mut m = common::model(&f);
+    let started: Vec<String> = m.begin_all_updates().into_iter().map(|(_, n)| n).collect();
+    assert_eq!(started, ["fs-fine"]);
+    let updates = m
+        .tab_counts()
+        .into_iter()
+        .find(|(t, _)| *t == fs_store_app::model::Tab::Updates);
+    assert_eq!(updates.map(|(_, n)| n), Some(1));
+}

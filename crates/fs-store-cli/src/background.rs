@@ -5,6 +5,7 @@
 use std::path::Path;
 use std::process::Command;
 
+use fs_store_catalog::CatalogEntry;
 use fs_store_sources::{CheckEvery, Findings, InstallMode, Novelty, Registry, Settings, Update};
 
 use crate::commands::{addresses, fetch_source, read_catalog, trust};
@@ -32,7 +33,12 @@ fn scan(root: &Path, extra: Option<&String>) -> Result<(Vec<Update>, Vec<Novelty
             }
         };
         reached = true;
-        for entry in catalog.entries {
+        // A locked entry (a kind or a store version this one does not know) is neither a new program nor an update to count.
+        for entry in catalog
+            .entries
+            .into_iter()
+            .filter(CatalogEntry::installable)
+        {
             offered.push(Novelty {
                 name: entry.name.as_str().to_owned(),
                 version: entry.version.to_string(),

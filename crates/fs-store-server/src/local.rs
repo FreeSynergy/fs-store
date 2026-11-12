@@ -132,6 +132,7 @@ impl StoreView for LocalStore {
                     facets: e.facets.clone(),
                     summary: String::new(),
                     details: fs_store_core::Details::default(),
+                    locked: None,
                     icon_sha256: String::new(),
                 }
             })

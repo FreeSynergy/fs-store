@@ -20,6 +20,7 @@ fn info(name: &str, details: Details) -> PackageInfo {
         facets: Vec::new(),
         summary: "Identity management".into(),
         details,
+        locked: None,
         icon_sha256: "ab12".into(),
     }
 }
@@ -216,4 +217,22 @@ fn the_maker_goes_on_the_wire_and_kinds_the_contract_lacks_are_reported_not_sque
     let ids: Vec<&str> = left.iter().map(|s| s.id.as_str()).collect();
     assert_eq!(ids, ["fs-server", "fs-odd"]);
     assert!(left[0].reason.contains("Server"));
+}
+
+#[test]
+fn a_locked_program_is_not_sent_as_a_normal_package() {
+    use crate::wire::split_for_wire;
+    let mut locked = info("fs-wants-newer", Details::default());
+    locked.locked = Some("not supported by this store version".into());
+    let (keep, left) = split_for_wire(vec![locked, info("kanidm", Details::default())]);
+    // the kind is a plain program, and still it is left out with the reason
+    assert_eq!(keep.len(), 1);
+    assert_eq!(keep[0].name, "kanidm");
+    assert_eq!(left.len(), 1);
+    assert_eq!(left[0].id, "fs-wants-newer");
+    assert!(
+        left[0]
+            .reason
+            .contains("not supported by this store version")
+    );
 }

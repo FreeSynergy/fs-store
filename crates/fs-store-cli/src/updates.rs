@@ -86,7 +86,7 @@ pub(crate) fn check(root: &Path, extra: Option<&String>) -> Result<(), String> {
             .and_then(|(c, _)| read_catalog(&c))
             .map(|cat| cat.entries.into_iter().find(|o| o.name.as_str() == e.name));
         match offered {
-            Ok(Some(o)) if o.version > have => {
+            Ok(Some(o)) if o.version > have && o.installable() => {
                 println!("{} {} -> {}", e.name, have, o.version);
                 newer += 1;
             }

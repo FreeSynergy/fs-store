@@ -5,10 +5,17 @@
 /// always last as the fallback. Never empty.
 #[must_use]
 pub fn preferred() -> Vec<String> {
-    let value = std::env::var("FS_LANG")
-        .or_else(|_| std::env::var("LANG"))
-        .unwrap_or_default();
-    preferred_from(&value)
+    preferred_from(&from_environment())
+}
+
+/// `FS_LANG`, else `LANG`; an empty `FS_LANG` counts as not set, so it does not hide `LANG`.
+#[must_use]
+pub fn from_environment() -> String {
+    ["FS_LANG", "LANG"]
+        .iter()
+        .filter_map(|k| std::env::var(k).ok())
+        .find(|v| !v.trim().is_empty())
+        .unwrap_or_default()
 }
 
 /// The same for a given value (for tests and for callers that know the language already).

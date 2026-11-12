@@ -38,10 +38,11 @@ pub(super) fn extra_rows(d: &Details) -> Vec<(&'static str, String)> {
                         format!("{label} {}", all.join(", "))
                     })
                 };
+                let [offers, needs, uses] = crate::words_lang::feature_words(w::Lang::current());
                 let parts: Vec<String> = [
-                    caps("offers", &f.provides),
-                    caps("needs", &f.requires),
-                    caps("can use", &f.recommends),
+                    caps(offers, &f.provides),
+                    caps(needs, &f.requires),
+                    caps(uses, &f.recommends),
                 ]
                 .into_iter()
                 .flatten()

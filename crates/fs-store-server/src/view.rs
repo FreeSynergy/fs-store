@@ -38,6 +38,9 @@ pub struct PackageInfo {
     /// What the signed catalog says besides: size, date, changes, origin, trust level, capabilities, pictures, description. Empty
     /// (`Details::default()`) for a package the store knows only from its register, so the wire says "not said" for all of it.
     pub details: Details,
+    /// Why this store version cannot install it (a locked entry); `None` when it can. The wire has no field for it yet, so a locked
+    /// package is reported as skipped, never sent as a normal one.
+    pub locked: Option<String>,
     /// Lower-case hex SHA-256 of the icon file; empty when the catalog has no icon.
     pub icon_sha256: String,
 }

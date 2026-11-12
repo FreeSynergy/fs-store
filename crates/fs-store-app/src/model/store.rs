@@ -249,7 +249,8 @@ impl StoreModel {
                     .map(|i| i.version);
                 let action = match installed {
                     None => Action::Install,
-                    Some(v) if package.version > v => Action::Update,
+                    // a locked package has no update to do (the store cannot install it)
+                    Some(v) if package.version > v && package.locked.is_none() => Action::Update,
                     Some(_) => Action::UpToDate,
                 };
                 AvailableRow {
