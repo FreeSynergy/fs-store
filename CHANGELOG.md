@@ -18,6 +18,7 @@
 - **Review follow-ups of 0.0.13:** an entry with an unreadable `fs:min-store` is locked ("unreadable min-store"); a locked entry without a release file says nothing about the signature (unknown);
   locked entries are not counted as updates or new programs (`fs-store check`, `background`, "Update all" in the window and the commands); an empty `FS_LANG` no longer hides `LANG`; the feature words
   (offers, needs, can use) follow the program language (DE+EN); the wire reports a locked program as `skipped` (no lock field in the contract before v0.0.20); the engine refusal in `plan` has its own test.
+- **Commands and locked packages:** `fs-store install X` / `update X` with a locked package now fail (exit not zero); only `update --all` skips it with a note.
 - **Known limits:** the wiki block is not loaded; the text of a locked entry is read in the language of the program only (no re-read when it changes); an entry that is locked
   because of `fs:min-store` is compared with the version of this crate.
 
@@ -37,6 +38,7 @@
 - **Nachbesserungen zu 0.0.13:** Ein Eintrag mit nicht lesbarem `fs:min-store` ist gesperrt („unreadable min-store“); ein gesperrter Eintrag ohne Release-Datei sagt nichts zur Signatur (unbekannt);
   gesperrte Einträge zählen weder als Update noch als neues Programm (`fs-store check`, `background`, „Alle aktualisieren“ im Fenster und in den Befehlen); ein leeres `FS_LANG` verdeckt `LANG` nicht mehr;
   die Feature-Wörter (bietet, braucht, nutzt) folgen der Programmsprache (DE+EN); die Wire meldet ein gesperrtes Programm als `skipped` (kein Sperrfeld im Vertrag vor v0.0.20); die Sperre in `plan` hat einen eigenen Test.
+- **Befehle und gesperrte Pakete:** `fs-store install X` / `update X` mit gesperrtem Paket schlagen jetzt fehl (Exit nicht 0); nur `update --all` überspringt es mit Hinweis.
 - **Bekannte Grenzen:** Der Wiki-Block wird nicht geladen; der Text eines gesperrten Eintrags wird nur in der Sprache des Programms gelesen (kein Neulesen bei Wechsel); ein Eintrag, der wegen
   `fs:min-store` gesperrt ist, wird mit der Version dieses Crates verglichen.
 

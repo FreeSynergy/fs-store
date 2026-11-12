@@ -30,7 +30,7 @@ pub(crate) fn update_all(root: &Path, extra: Option<&String>) -> Result<(), Stri
             println!("{}: automatic updates are off", e.name);
         }
     }
-    install_batch(root, &wants, extra, true)
+    install_batch(root, &wants, extra, true, true)
 }
 
 /// `fs-store uninstall <name>` (also `remove`): takes the package away and forgets it in the register.

@@ -172,7 +172,7 @@ pub(crate) fn cmd_install(
         name: name.to_owned(),
         source: arg.cloned(),
     };
-    crate::batch::install_batch(root, &[want], extra, only_newer)
+    crate::batch::install_batch(root, &[want], extra, only_newer, false)
 }
 
 /// Runs one command (`sources`, `available`, `install`, `update`, `installed`) with its arguments.

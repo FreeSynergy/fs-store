@@ -470,3 +470,5 @@ Craft style and the theme adapter (`fs_components_render::use_style`) come from 
 - **Language** is a Strategy over the variants of an element (`fs_store_core::language::pick`), the catalog reader takes the list of preferred languages (`parse_catalog_in`), the window passes
   `language::preferred()`. The engine and the commands keep reading English (they show no catalog texts).
 - **Wire:** only what `store.capnp` v0.0.19 can say goes out. `split_for_wire` reports the kinds it cannot say as `skipped` instead of writing a wrong kind.
+- **Locked offers in the commands:** `install X` and `update X` with a locked package fail (exit not zero, `locked::outcome`); `update --all` skips it with a note. `check`, `background` and `update --all`
+  fetch a signed catalog from a Git source, so only the decision (`locked::outcome`) has a test, not the commands end to end; the filtering in `check` and `background` (`CatalogEntry::installable`) is untested. Known limit.

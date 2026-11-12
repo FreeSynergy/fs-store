@@ -9,6 +9,7 @@ use fs_store_engine::ProcRunningCheck;
 use fs_store_engine::service::{Fetch, InstallFailure, Installer};
 
 use crate::commands::{AnyFetch, fetch_source, installed, read_catalog, trust};
+use crate::locked::Outcome;
 
 /// One package to install or update, and where to get it from (`None`: any enabled source).
 pub(crate) struct Want {
@@ -25,12 +26,14 @@ struct Found {
     sig: Vec<u8>,
 }
 
-/// Installs or updates all of `wants` as one batch; `only_newer` makes it an update.
+/// Installs or updates all of `wants` as one batch; `only_newer` makes it an update; `sweep` marks `update --all`, which skips a locked package
+/// with a note instead of failing (a package the person named fails).
 pub(crate) fn install_batch(
     root: &Path,
     wants: &[Want],
     extra: Option<&String>,
     only_newer: bool,
+    sweep: bool,
 ) -> Result<(), String> {
     let (verifier, policy) = trust(extra)?;
     let running = ProcRunningCheck::new(root);
@@ -80,9 +83,16 @@ pub(crate) fn install_batch(
             problems.push(last);
             continue;
         };
-        if let Some(why) = &hit.entry.locked {
-            println!("{name} is locked in this store version ({why}); not changed");
-            continue;
+        match crate::locked::outcome(name, hit.entry.locked.as_deref(), sweep) {
+            Outcome::Proceed => {}
+            Outcome::Skip(note) => {
+                println!("{note}");
+                continue;
+            }
+            Outcome::Fail(why) => {
+                problems.push(why);
+                continue;
+            }
         }
         if only_newer && current.is_some_and(|c| hit.entry.version <= c) {
             println!(
