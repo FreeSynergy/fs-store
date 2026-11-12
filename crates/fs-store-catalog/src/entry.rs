@@ -85,8 +85,10 @@ fn locked_entry(
         .unwrap_or_else(|| summary.clone());
     let mut details = crate::details::details(c, c, custom, &long_text, prefs);
     // Without a release file there is nothing that was signed here: no statement about the signature (shown as "unknown").
+    // No release was chosen either, so the component's own description must not stand in for "what changed".
     if newest_with_artifact(c).is_err() {
         details.trust = None;
+        details.changes.clear();
     }
     CatalogEntry {
         name,

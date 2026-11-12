@@ -264,6 +264,15 @@ fn a_locked_entry_without_a_release_file_makes_no_statement_about_the_signature(
     let server = component("net.freesynergy.srv", "server", "");
     let c = parse_catalog(&catalog(&[server, good("net.freesynergy.a")])).unwrap();
     assert_eq!(c.entries[0].details.trust, None);
+    // the package description is not "what changed" of a release that does not exist
+    let described = component(
+        "net.freesynergy.d",
+        "server",
+        "<description><p>About the service.</p></description>",
+    );
+    let d = &parse_catalog(&catalog(&[described])).unwrap().entries[0];
+    assert_eq!(d.description, "About the service.");
+    assert_eq!(d.details.changes, "");
     // counter-proof: a signed entry with a release file keeps its level; a locked one WITH a release file keeps it too
     assert!(c.entries[1].details.trust.is_some());
     let wants_newer = good("net.freesynergy.n").replace(
