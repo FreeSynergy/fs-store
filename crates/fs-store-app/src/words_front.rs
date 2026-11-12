@@ -15,6 +15,8 @@ pub const NAV_THEMES: &str = "Themes";
 pub const NAV_SERVERS: &str = "Servers";
 /// Nav entry: icon sets (no kind of that name exists in the catalog yet).
 pub const NAV_ICON_SETS: &str = "Icon sets";
+/// Title of the start block with the entries of a kind this store version does not know.
+pub const START_UNSUPPORTED: &str = "Not supported by this store version";
 /// Note on a nav entry whose kind has no package.
 pub const NAV_NONE_YET: &str = "No package of this kind yet";
 /// Note on a nav entry the catalog cannot describe yet.
@@ -157,6 +159,16 @@ pub const PICTURES_NONE: &str = "No pictures from the maker.";
 /// Pictures: how many are withheld. Placeholders: `{count}`.
 pub const PICTURES_WITHHELD: &str =
     "{count} not shown: no clear licence, no hash or no https address";
+/// Page fact: what the installed program takes on disk. Placeholder: `{size}`.
+pub const SIZE_INSTALLED: &str = "{size} installed";
+/// Page fact: the features of a package.
+pub const FACT_FEATURES: &str = "Features";
+/// Page fact: the media types it handles.
+pub const FACT_MEDIATYPES: &str = "Media types";
+/// A picture's source. Placeholders: `{license}`, `{source}`.
+pub const PICTURE_SOURCE: &str = "{license}, source: {source}";
+/// The wiki block with the revision it was made from. Placeholders: `{block}`, `{rev}`.
+pub const WIKI_WITH_REV: &str = "{block}, made from revision {rev}";
 /// The description is a block of the wiki that cannot be loaded yet.
 pub const DESCRIPTION_WIKI: &str =
     "The description lives in the wiki (block {id}). Loading it comes later.";

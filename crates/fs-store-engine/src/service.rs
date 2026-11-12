@@ -65,6 +65,8 @@ pub enum InstallFailure {
     NotOffered,
     /// The format has no installer yet.
     Unsupported(Format),
+    /// The offer is shown locked (a kind this store version does not install, or one that wants a newer store); the text is the reason.
+    NotInstallable(String),
     /// Checksum differs from the catalog.
     Checksum,
     /// Signature of the release file is not valid for the trusted key.
@@ -180,6 +182,9 @@ impl std::fmt::Display for InstallFailure {
                 f.write_str("the catalog offers an older version than the installed one (refused)")
             }
             Self::NotOffered => f.write_str("not offered by this source"),
+            Self::NotInstallable(why) => {
+                write!(f, "this store version does not install it: {why}")
+            }
             Self::Unsupported(Format::Exe) => f.write_str(
                 "Unsupported: the Windows setup.exe cannot be installed by the store yet (the store itself does not run on Windows)",
             ),

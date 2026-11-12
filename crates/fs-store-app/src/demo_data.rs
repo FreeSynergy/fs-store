@@ -32,6 +32,7 @@ fn row(
         description: summary.into(),
         homepage: "https://example.invalid".into(),
         native: Vec::new(),
+        locked: None,
         details: Details {
             size: mib.map(|m| m * 1024 * 1024 + 300_000),
             released: released.into(),
@@ -81,6 +82,7 @@ fn programs() -> Vec<PackageRow> {
         url: "https://example.invalid/tasks-board.png".into(),
         sha256: "00".into(),
         caption: "The board".into(),
+        source: "https://example.invalid/maker-shots".into(),
         license: "CC-BY-4.0".into(),
     }];
     tasks.details.images_withheld = vec!["https://example.invalid/x.png: no clear licence".into()];
@@ -109,7 +111,11 @@ fn programs() -> Vec<PackageRow> {
         Some(OurKeyOnly),
     );
     wiki.details.requires = caps("texts.blocks 1.0");
-    wiki.details.description = Description::WikiBlock("wiki:store/fs-wiki-intro".into());
+    wiki.details.description = Description::WikiBlock(fs_store_core::WikiRef {
+        block: "0190a1f2-7c3b-7d10-9a55-2f4e8b6c1d30".into(),
+        source_rev: Some(14),
+        lang: String::new(),
+    });
     let mut mystery = row(
         ("fs-mystery", ""),
         Kind::Program,
@@ -131,7 +137,36 @@ fn programs() -> Vec<PackageRow> {
         Some(ChecksumOnly),
     );
     local.details.provides = caps("tasks.items 1.1");
+    tasks.details.installed_size = Some(41_943_040);
+    tasks.details.origin.maker = "FreeSynergy".into();
+    tasks.details.mediatypes = vec!["text/calendar".into()];
     vec![tasks, people, wiki, mystery, local]
+}
+
+/// Entries this store version lists but cannot install: a kind it does not install yet, and a kind it does not know.
+fn locked() -> Vec<PackageRow> {
+    use TrustLevel::OurKeyOnly;
+    let mut relay = row(
+        ("fs-relay", "FreeSynergy.Relay"),
+        Kind::Server,
+        (0, 1, 0),
+        "A background service that relays messages between programs.",
+        None,
+        "",
+        Some(OurKeyOnly),
+    );
+    relay.locked = Some("coming soon".into());
+    let mut odd = row(
+        ("fs-hologram", "Hologram"),
+        Kind::Unsupported,
+        (1, 0, 0),
+        "A kind of package that a newer store knows.",
+        None,
+        "",
+        Some(OurKeyOnly),
+    );
+    odd.locked = Some("not supported by this store version".into());
+    vec![relay, odd]
 }
 
 /// Foreign components, mirrored: the maker's signature and the mirror's.
@@ -219,6 +254,7 @@ pub(crate) fn offered() -> Vec<PackageRow> {
     let mut all = programs();
     all.extend(components());
     all.extend(looks());
+    all.extend(locked());
     all
 }
 

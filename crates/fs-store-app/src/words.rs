@@ -89,6 +89,8 @@ pub const STORE_PROBLEM: &str = "The store could not do this: {detail}";
 pub const SOURCE_UNREADABLE: &str = "The source {source} could not be read: {detail}";
 /// An entry of a catalog is not offered. Placeholders: `{id}`, `{reason}`.
 pub const ENTRY_SKIPPED: &str = "{id} is not offered: {reason}";
+/// Install pressed for a locked package (a kind this store version cannot install). Placeholder: `{name}`.
+pub const LOCKED_PACKAGE: &str = "{name} cannot be installed by this store version.";
 /// The button of a package did nothing. Placeholder: `{name}`.
 pub const NOTHING_TO_DO: &str =
     "{name} needs nothing: it is up to date, or no source offers it any more.";
@@ -132,6 +134,9 @@ pub fn kind(kind: Kind) -> &'static str {
         Kind::Frontend => "Frontend",
         Kind::Component => "Component",
         Kind::Theme => "Theme",
+        Kind::Server => "Server",
+        Kind::IconTheme => "Icon set",
+        Kind::Unsupported => "Not supported",
     }
 }
 

@@ -1,5 +1,39 @@
 # Changelog
 
+## 0.0.13
+
+### English
+- **Reader for catalog format 2.** An unknown or not yet installable `fs:kind` never fails the catalog or a package any more: before, `entry()` returned an error for such a
+  component and it was listed only as "skipped" (the other packages loaded). Now the entry is read as far as it goes (name, summary, description, icon, version when a release
+  says one) and shown **locked**: `server` and `icon-theme` are kinds of their own and say "Coming soon", any other kind is `Unsupported` ("not supported by this store version", the
+  written kind stays in `CatalogEntry.kind_text`). An entry with `fs:min-store` above this store's version is locked the same way. Install is refused in three places (the button, the model
+  `begin_job` and `ask_install`, and `Engine::plan`, `InstallFailure::NotInstallable`). Servers and icon sets have a section in the navigation when the catalog lists some.
+- **Languages:** description, summary, picture caption and the text of a release are chosen by `xml:lang`: language of the program (`FS_LANG`, else `LANG`), then English, then the
+  variant without a language, then the first (`fs_store_core::language`, `parse_catalog_in`; `parse_catalog` stays English).
+- **More fields read:** `<size type="installed">`, `fs:maker`, `fs-source` of a picture, `fs:features` with `fs:feature.<key>.name|provides|requires|recommends`,
+  `<provides><mediatype>`, `fs:description-wiki` with `-source-rev` and `-lang` (the block is named on the page, never loaded from the wiki). The package page shows them.
+- **Wire:** `Origin.maker` is written. The contract (`fs-interfaces` v0.0.19) has no word for the kinds server/icon-theme/unknown, for features, media types, the installed size, a picture source or a
+  wiki revision and language: those are not squeezed in; an entry of such a kind is returned in `skipped` with the reason, the wiki block id goes out alone. Request list for `fs-interfaces` v0.0.20:
+  `PackageKind` `server @4`, `iconTheme @5`; `Feature`; `Picture.source`; `Mediatype`; installed size; `wikiBlock` language and `sourceRev`.
+- **Known limits:** the wiki block is not loaded; the text of a locked entry is read in the language of the program only (no re-read when it changes); an entry that is locked
+  because of `fs:min-store` is compared with the version of this crate.
+
+### Deutsch
+- **Leser für Katalogformat 2.** Ein unbekannter oder noch nicht installierbarer `fs:kind` macht weder den Katalog noch ein Paket zum Fehler: Vorher gab `entry()` für so einen Eintrag einen
+  Fehler zurück und er stand nur unter „übersprungen“ (die anderen Pakete wurden geladen). Jetzt wird der Eintrag so weit gelesen wie möglich (Name, Kurztext, Beschreibung, Icon, Version
+  wenn ein Release eine nennt) und **gesperrt** gezeigt: `server` und `icon-theme` sind eigene Arten und sagen „Kommt bald“, jede andere Art ist `Unsupported` („von dieser Store-Version nicht
+  unterstützt“, die geschriebene Art bleibt in `CatalogEntry.kind_text`). Ein Eintrag mit `fs:min-store` über der Version dieses Stores ist genauso gesperrt. Installieren wird an drei Stellen
+  verweigert (Knopf, Modell `begin_job` und `ask_install`, `Engine::plan` mit `InstallFailure::NotInstallable`). Server und Icon-Sets haben einen Abschnitt in der Navigation, sobald der Katalog welche nennt.
+- **Sprachen:** Beschreibung, Kurztext, Bildunterschrift und Release-Text werden nach `xml:lang` gewählt: Sprache des Programms (`FS_LANG`, sonst `LANG`), dann Englisch, dann die Fassung ohne
+  Sprache, dann die erste (`fs_store_core::language`, `parse_catalog_in`; `parse_catalog` bleibt Englisch).
+- **Weitere Felder gelesen:** `<size type="installed">`, `fs:maker`, `fs-source` am Bild, `fs:features` mit `fs:feature.<key>.name|provides|requires|recommends`, `<provides><mediatype>`,
+  `fs:description-wiki` mit `-source-rev` und `-lang` (der Block wird auf der Seite genannt, nie aus dem Wiki geladen). Die Paketseite zeigt sie.
+- **Wire:** `Origin.maker` wird geschrieben. Der Vertrag (`fs-interfaces` v0.0.19) hat kein Wort für die Arten server/icon-theme/unbekannt, für Features, Mediatypes, installierte Größe, Bildquelle und
+  Wiki-Revision und -Sprache: Das wird nicht hineingepresst; ein Eintrag so einer Art kommt in `skipped` mit dem Grund zurück, die Wiki-Block-Id geht allein hinaus. Bedarfsliste für `fs-interfaces` v0.0.20:
+  `PackageKind` `server @4`, `iconTheme @5`; `Feature`; `Picture.source`; `Mediatype`; installierte Größe; `wikiBlock` Sprache und `sourceRev`.
+- **Bekannte Grenzen:** Der Wiki-Block wird nicht geladen; der Text eines gesperrten Eintrags wird nur in der Sprache des Programms gelesen (kein Neulesen bei Wechsel); ein Eintrag, der wegen
+  `fs:min-store` gesperrt ist, wird mit der Version dieses Crates verglichen.
+
 ## 0.0.12
 
 ### English

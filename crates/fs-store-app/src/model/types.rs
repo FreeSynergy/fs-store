@@ -62,6 +62,8 @@ pub enum Problem {
     },
     /// A job is running already.
     Busy(String),
+    /// "Install" was pressed for a package this store version cannot install (shown locked).
+    Locked(String),
     /// A job failed: which package and why.
     JobFailed {
         /// Package name.

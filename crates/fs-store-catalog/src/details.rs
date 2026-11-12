@@ -12,6 +12,7 @@ pub(crate) fn details(
     art: Node,
     custom: &dyn Fn(&str) -> Option<String>,
     long_text: &str,
+    prefs: &[String],
 ) -> Details {
     let release = art
         .ancestors()
@@ -32,21 +33,23 @@ pub(crate) fn details(
         source: String::new(),
         upstream: custom("fs:upstream").unwrap_or_default(),
         upstream_signature: custom("fs:upstream-signature").unwrap_or_default(),
+        maker: custom("fs:maker").unwrap_or_default(),
         source_code: custom("fs:source-code").unwrap_or_default(),
     };
-    let (screenshots, images_withheld) = screenshots(component);
+    let (screenshots, images_withheld) = screenshots(component, prefs);
     Details {
         trust: Some(TrustLevel::of(
             &origin,
             custom("fs:signature").is_some_and(|s| !s.is_empty()),
         )),
-        description: custom("fs:description-wiki")
-            .filter(|w| !w.is_empty())
-            .map_or_else(
-                || Description::Text(long_text.to_owned()),
-                Description::WikiBlock,
-            ),
-        releases: release_notes(component),
+        description: crate::more::wiki(custom).map_or_else(
+            || Description::Text(long_text.to_owned()),
+            Description::WikiBlock,
+        ),
+        releases: release_notes(component, prefs),
+        installed_size: crate::more::installed_size(art),
+        features: crate::more::features(custom, &mut unreadable),
+        mediatypes: crate::more::mediatypes(component),
         screenshots,
         images_withheld,
         size: art
@@ -55,11 +58,7 @@ pub(crate) fn details(
             .and_then(|n| n.text())
             .and_then(|t| t.trim().parse().ok()),
         released: release.attribute("date").unwrap_or_default().to_owned(),
-        changes: release
-            .children()
-            .find(|n| n.has_tag_name("description"))
-            .map(crate::fields::flat_text)
-            .unwrap_or_default(),
+        changes: crate::lang::lang_text(release, "description", prefs),
         origin,
         provides,
         requires,
@@ -69,7 +68,7 @@ pub(crate) fn details(
 }
 
 /// Every release with its text, newest first (by version when it parses, else as listed).
-fn release_notes(component: Node) -> Vec<ReleaseNote> {
+fn release_notes(component: Node, prefs: &[String]) -> Vec<ReleaseNote> {
     let mut all: Vec<(Option<fs_store_core::Version>, ReleaseNote)> = component
         .descendants()
         .filter(|n| n.has_tag_name("release"))
@@ -80,11 +79,7 @@ fn release_notes(component: Node) -> Vec<ReleaseNote> {
                 ReleaseNote {
                     version: version.to_owned(),
                     date: r.attribute("date").unwrap_or_default().to_owned(),
-                    text: r
-                        .children()
-                        .find(|n| n.has_tag_name("description"))
-                        .map(crate::fields::flat_text)
-                        .unwrap_or_default(),
+                    text: crate::lang::lang_text(r, "description", prefs),
                 },
             )
         })
@@ -105,7 +100,7 @@ fn clear_license(l: &str) -> bool {
 
 /// `<screenshots><screenshot><image type="source" fs-sha256=".." fs-license="..">URL</image><caption>..`. A picture is
 /// shown only with an https address, a hash and a clear licence; any other is listed as withheld with the reason.
-fn screenshots(component: Node) -> (Vec<Screenshot>, Vec<String>) {
+fn screenshots(component: Node, prefs: &[String]) -> (Vec<Screenshot>, Vec<String>) {
     let (mut shown, mut withheld) = (Vec::new(), Vec::new());
     for s in component
         .descendants()
@@ -134,11 +129,12 @@ fn screenshots(component: Node) -> (Vec<Screenshot>, Vec<String>) {
             None => shown.push(Screenshot {
                 url: url.to_owned(),
                 sha256: sha256.to_owned(),
-                caption: s
-                    .children()
-                    .find(|n| n.has_tag_name("caption"))
-                    .map(crate::fields::flat_text)
-                    .unwrap_or_default(),
+                caption: crate::lang::lang_text(s, "caption", prefs),
+                source: img
+                    .attribute("fs-source")
+                    .unwrap_or_default()
+                    .trim()
+                    .to_owned(),
                 license: license.trim().to_owned(),
             }),
         }

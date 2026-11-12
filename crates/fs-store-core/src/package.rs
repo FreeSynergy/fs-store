@@ -12,6 +12,24 @@ pub enum Kind {
     Component,
     /// A theme.
     Theme,
+    /// A server (a background service): the catalog may list it, this store version does not install it yet (shown locked, "Coming soon").
+    Server,
+    /// An icon theme: listed, not installable yet (shown locked, "Coming soon").
+    IconTheme,
+    /// A kind written in the catalog that this store version does not know. The entry is shown locked ("not supported by this version of the
+    /// store") with what could be read; it is never an error for the entry, the other packages or the catalog.
+    Unsupported,
+}
+
+impl Kind {
+    /// Can this store version install a package of this kind?
+    #[must_use]
+    pub fn is_installable(self) -> bool {
+        matches!(
+            self,
+            Kind::Program | Kind::Frontend | Kind::Component | Kind::Theme
+        )
+    }
 }
 
 /// How the package is delivered.

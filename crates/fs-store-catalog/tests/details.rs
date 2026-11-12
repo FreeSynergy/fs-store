@@ -141,7 +141,11 @@ fn description_is_text_or_a_wiki_reference_and_trust_is_honest() {
     let e = &parse_catalog(RICH).unwrap().entries[0];
     assert_eq!(
         e.details.description,
-        Description::WikiBlock("wiki:rich-intro".into())
+        Description::WikiBlock(fs_store_core::WikiRef {
+            block: "wiki:rich-intro".into(),
+            source_rev: None,
+            lang: String::new(),
+        })
     );
     assert_eq!(e.description, "Long text.");
     assert_eq!(e.details.trust, Some(TrustLevel::OurKeyOnly));

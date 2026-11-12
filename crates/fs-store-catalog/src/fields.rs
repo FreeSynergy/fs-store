@@ -25,12 +25,9 @@ pub(crate) fn icon(c: roxmltree::Node) -> Option<Icon> {
     })
 }
 
-/// All text below `<description>`, tags dropped, white space squeezed.
-pub(crate) fn description(c: roxmltree::Node) -> String {
-    c.children()
-        .find(|n| n.has_tag_name("description"))
-        .map(flat_text)
-        .unwrap_or_default()
+/// All text below the `<description>` in the best language, tags dropped, white space squeezed.
+pub(crate) fn description(c: roxmltree::Node, prefs: &[String]) -> String {
+    crate::lang::lang_text(c, "description", prefs)
 }
 
 /// All text below `d`, tags dropped, white space squeezed.

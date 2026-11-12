@@ -25,6 +25,38 @@ pub(crate) fn write_sources(
     }
 }
 
+/// The kind as the contract (`store.capnp` v0.0.19) says it; `None` for a kind it has no word for (server, icon theme, unknown): those are
+/// not squeezed into another kind, they are reported as left out until the contract has the kinds (request for fs-interfaces v0.0.20).
+pub(crate) fn wire_kind(kind: Kind) -> Option<PackageKind> {
+    match kind {
+        Kind::Program => Some(PackageKind::Program),
+        Kind::Frontend => Some(PackageKind::Frontend),
+        Kind::Component => Some(PackageKind::Component),
+        Kind::Theme => Some(PackageKind::Theme),
+        Kind::Server | Kind::IconTheme | Kind::Unsupported => None,
+    }
+}
+
+/// The packages the contract can carry, and a `SkippedInfo` (with the reason) for each that it cannot: the reader of the wire sees the
+/// entry as "not offered" with the reason, never as a package of a wrong kind.
+pub(crate) fn split_for_wire(list: Vec<PackageInfo>) -> (Vec<PackageInfo>, Vec<SkippedInfo>) {
+    let (mut keep, mut left) = (Vec::new(), Vec::new());
+    for p in list {
+        if wire_kind(p.kind).is_some() {
+            keep.push(p);
+        } else {
+            left.push(SkippedInfo {
+                reason: format!(
+                    "locked, this store version does not install kind {:?}; the contract has no kind for it yet",
+                    p.kind
+                ),
+                id: p.name,
+            });
+        }
+    }
+    (keep, left)
+}
+
 pub(crate) fn write_packages(
     list: &[PackageInfo],
     out: capnp::struct_list::Builder<'_, package::Owned>,
@@ -33,12 +65,8 @@ pub(crate) fn write_packages(
     for (i, p) in (0u32..).zip(list) {
         let mut b = out.reborrow().get(i);
         b.set_name(p.name.as_str());
-        b.set_kind(match p.kind {
-            Kind::Program => PackageKind::Program,
-            Kind::Frontend => PackageKind::Frontend,
-            Kind::Component => PackageKind::Component,
-            Kind::Theme => PackageKind::Theme,
-        });
+        // `split_for_wire` took out the kinds the contract cannot say; none is left here.
+        b.set_kind(wire_kind(p.kind).unwrap_or(PackageKind::Program));
         b.set_version(p.version.as_str());
         b.set_format(match p.format {
             Format::TarGz => PackageFormat::TarGz,
@@ -86,6 +114,7 @@ fn write_details(b: &mut package::Builder<'_>, p: &PackageInfo) {
     origin.set_source(d.origin.upstream.as_str());
     origin.set_maker_signature(d.origin.upstream_signature.as_str());
     origin.set_source_code(d.origin.source_code.as_str());
+    origin.set_maker(d.origin.maker.as_str());
     for (kind, list) in [(0, &d.provides), (1, &d.requires), (2, &d.recommends)] {
         let mut out = match kind {
             0 => b.reborrow().init_provides(count(list.len())),
@@ -104,7 +133,8 @@ fn write_details(b: &mut package::Builder<'_>, p: &PackageInfo) {
     let mut description = b.reborrow().init_description();
     match &d.description {
         Description::Text(t) => description.set_text(t.as_str()),
-        Description::WikiBlock(id) => description.set_wiki_block(id.as_str()),
+        // Only the block id: the contract (v0.0.19) has no place for the revision or the language wish.
+        Description::WikiBlock(wiki) => description.set_wiki_block(wiki.block.as_str()),
     }
 }
 

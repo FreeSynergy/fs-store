@@ -21,16 +21,19 @@ fn titles(m: &StoreModel) -> Vec<String> {
 fn the_navigation_counts_kinds_and_locks_what_has_nothing_or_cannot_be_said_yet() {
     let nav = model().nav();
     let by = |label: &str| nav.iter().find(|n| n.label == label).unwrap().clone();
-    assert_eq!(by("Start").count, 10);
+    assert_eq!(by("Start").count, 12);
     assert_eq!((by("Programs").count, by("Programs").enabled), (5, true));
     assert_eq!(by("Frontends").count, 2);
     assert_eq!(by("Components").count, 2);
     assert_eq!(by("Themes").count, 1);
-    for locked in ["Servers", "Icon sets"] {
-        let e = by(locked);
-        assert!(!e.enabled && e.section.is_none());
-        assert_eq!(e.note, Some("Coming soon"));
-    }
+    // Icon sets: the catalog lists none, so the entry is locked; Servers: the demo lists one, so it opens, and both say "Coming soon"
+    let icons = by("Icon sets");
+    assert!(!icons.enabled && icons.section.is_none());
+    assert_eq!(icons.note, Some("Coming soon"));
+    let servers = by("Servers");
+    assert_eq!((servers.count, servers.enabled), (1, true));
+    assert!(servers.section.is_some());
+    assert_eq!(servers.note, Some("Coming soon"));
     assert!(by("Start").current);
 }
 
@@ -74,7 +77,7 @@ fn the_search_narrows_by_title_name_or_description_and_ignores_case() {
     m.set_search("fs-theme");
     assert_eq!(titles(&m), ["Dark theme"]);
     m.set_search("");
-    assert_eq!(m.listing().len(), 10);
+    assert_eq!(m.listing().len(), 12);
 }
 
 #[test]
@@ -179,7 +182,7 @@ fn the_footer_names_the_sources_from_the_settings() {
         m.footer_sources(),
         "Sources (from the settings): freesynergy"
     );
-    assert_eq!(m.footer_count(), "10 packages");
+    assert_eq!(m.footer_count(), "12 packages");
 }
 
 #[test]

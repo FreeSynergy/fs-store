@@ -48,6 +48,7 @@ fn what_the_catalog_says_arrives_and_every_name_of_a_capability_is_kept() {
             source: "https://example.invalid/catalog".into(),
             upstream: "https://github.com/kanidm/kanidm".into(),
             upstream_signature: "https://example.invalid/k.asc".into(),
+            maker: "Kanidm Project".into(),
             source_code: "https://example.invalid/k-src.tar.gz".into(),
         },
         provides: caps("identity.oidc 1.0, mail.send 1.2"),
@@ -62,9 +63,14 @@ fn what_the_catalog_says_arrives_and_every_name_of_a_capability_is_kept() {
             url: "https://example.invalid/1.png".into(),
             sha256: "00".into(),
             caption: "Main".into(),
+            source: "https://example.invalid/maker".into(),
             license: "CC-BY-4.0".into(),
         }],
-        description: Description::WikiBlock("wiki:store/kanidm".into()),
+        description: Description::WikiBlock(fs_store_core::WikiRef {
+            block: "0190a1f2-7c3b-7d10-9a55-2f4e8b6c1d30".into(),
+            source_rev: Some(7),
+            lang: "de".into(),
+        }),
         ..Details::default()
     };
     let message = written(&[info("kanidm", rich)]);
@@ -146,7 +152,11 @@ fn what_the_catalog_says_arrives_and_every_name_of_a_capability_is_kept() {
     );
     match p.get_description().which().unwrap() {
         package::description::WikiBlock(id) => {
-            assert_eq!(id.unwrap().to_str().unwrap(), "wiki:store/kanidm");
+            // only the block id goes on the wire: the contract has no place for the revision or the language
+            assert_eq!(
+                id.unwrap().to_str().unwrap(),
+                "0190a1f2-7c3b-7d10-9a55-2f4e8b6c1d30"
+            );
         }
         package::description::Text(_) => panic!("the description is a wiki block"),
     }
@@ -177,4 +187,33 @@ fn what_the_catalog_does_not_say_stays_at_the_default_of_the_contract() {
     // the older fields are as before
     assert_eq!(p.get_name().unwrap().to_str().unwrap(), "fs-mystery");
     assert_eq!(p.get_version().unwrap().to_str().unwrap(), "1.5.0");
+}
+
+#[test]
+fn the_maker_goes_on_the_wire_and_kinds_the_contract_lacks_are_reported_not_squeezed() {
+    use crate::wire::split_for_wire;
+    let with_maker = Details {
+        origin: Origin {
+            maker: "Kanidm Project".into(),
+            ..Origin::default()
+        },
+        ..Details::default()
+    };
+    let message = written(&[info("kanidm", with_maker)]);
+    let list = message
+        .get_root_as_reader::<capnp::struct_list::Reader<package::Owned>>()
+        .unwrap();
+    let maker = list.get(0).get_origin().unwrap().get_maker().unwrap();
+    assert_eq!(maker.to_str().unwrap(), "Kanidm Project");
+    // a server, an icon theme and an unknown kind are not a program on the wire: they come back as left out, with the reason
+    let mut server = info("fs-server", Details::default());
+    server.kind = Kind::Server;
+    let mut unknown = info("fs-odd", Details::default());
+    unknown.kind = Kind::Unsupported;
+    let (keep, left) = split_for_wire(vec![info("kanidm", Details::default()), server, unknown]);
+    assert_eq!(keep.len(), 1);
+    assert_eq!(keep[0].name, "kanidm");
+    let ids: Vec<&str> = left.iter().map(|s| s.id.as_str()).collect();
+    assert_eq!(ids, ["fs-server", "fs-odd"]);
+    assert!(left[0].reason.contains("Server"));
 }

@@ -110,6 +110,9 @@ pub struct Card {
     pub can_cancel: bool,
     /// Why "Open" is locked (no window of its own); `None` when it can be pressed.
     pub open_blocked: Option<&'static str>,
+    /// Why "Install" is locked: a kind this store version does not install yet ("Coming soon") or does not know ("not supported by this store
+    /// version"). `None` when it can be installed.
+    pub install_blocked: Option<&'static str>,
 }
 
 impl Card {
@@ -284,6 +287,10 @@ impl StoreModel {
                 .and_then(|j| j.progress),
             can_cancel: self.can_cancel(name),
             open_blocked: super::card_text::open_blocked(row.map(|r| r.package.kind)),
+            install_blocked: super::card_text::install_blocked(
+                row.and_then(|r| r.package.locked.as_deref()),
+                row.map(|r| r.package.kind),
+            ),
         }
     }
 }

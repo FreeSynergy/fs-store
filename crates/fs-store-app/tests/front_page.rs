@@ -16,21 +16,29 @@ fn a_page_shows_version_with_date_size_origin_trust_changes_and_pictures() {
     let m = model();
     let p = m.package_page("fs-tasks").unwrap();
     assert_eq!(p.version, "0.1.0 \u{2192} 0.2.0 (2026-11-09)");
-    assert_eq!(p.size, "14 MiB");
+    assert_eq!(p.size, "14 MiB, 40 MiB installed");
     assert_eq!(p.trust_word, "Our key only");
     assert!(p.trust_text.contains("maker gives no signature"));
     assert_eq!(p.releases[0].version, "0.2.0");
     assert_eq!(p.releases[1].date, "2026-10-21");
     assert_eq!(
         p.pictures,
-        [("The board".to_owned(), "CC-BY-4.0".to_owned())]
+        [(
+            "The board".to_owned(),
+            "CC-BY-4.0, source: https://example.invalid/maker-shots".to_owned()
+        )]
     );
     assert!(p.pictures_note.contains("1 with a clear licence"));
     assert!(p.pictures_note.contains("1 not shown"));
     assert!(
         p.origin
             .iter()
-            .any(|(l, v)| *l == "Maker" && v == "made by FreeSynergy")
+            .any(|(l, v)| *l == "Maker" && v == "FreeSynergy")
+    );
+    assert!(
+        p.origin
+            .iter()
+            .any(|(l, v)| *l == "Media types" && v == "text/calendar")
     );
     assert!(p.icon_missing);
 }
@@ -50,14 +58,24 @@ fn a_description_can_point_to_a_wiki_block_and_is_never_loaded() {
     let p = model().package_page("fs-wiki").unwrap();
     assert_eq!(
         p.description,
-        DescriptionView::Wiki("wiki:store/fs-wiki-intro".to_owned())
+        DescriptionView::Wiki(
+            "0190a1f2-7c3b-7d10-9a55-2f4e8b6c1d30, made from revision 14".to_owned()
+        )
     );
+    // counter-proof: a package with a text description is shown as text
+    let t = model().package_page("fs-people").unwrap();
+    assert!(matches!(t.description, DescriptionView::Text(_)));
 }
 
 #[test]
 fn a_package_with_no_facts_says_unknown_everywhere() {
     let p = model().package_page("fs-mystery").unwrap();
     assert_eq!(p.size, "unknown");
+    assert!(
+        p.origin
+            .iter()
+            .all(|(l, _)| *l != "Features" && *l != "Media types")
+    );
     assert_eq!(p.trust_word, "unknown");
     assert!(p.trust_text.contains("does not say"));
     assert_eq!(p.releases.len(), 0);

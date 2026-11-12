@@ -6,7 +6,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, PoisonError};
 
-use fs_store_catalog::parse_catalog;
+use fs_store_catalog::parse_catalog_in;
 use fs_store_core::{SignaturePolicy, SignatureVerifier, SourceId, SourceRepository, Version};
 use fs_store_engine::net::{HttpsFetch, clone_catalog};
 use fs_store_engine::service::{Fetch, FileFetch};
@@ -97,7 +97,11 @@ impl EngineBackend {
         if !SignaturePolicy::default().is_satisfied_by(&verifier.verify(&catalog, Some(&sig))) {
             return Err("the signature of the catalog is not valid".to_owned());
         }
-        let parsed = parse_catalog(&String::from_utf8_lossy(&catalog)).map_err(|e| e.0)?;
+        let parsed = parse_catalog_in(
+            &String::from_utf8_lossy(&catalog),
+            &fs_store_core::language::preferred(),
+        )
+        .map_err(|e| e.0)?;
         fs_store_sources::ensure_fresh(
             &self.root.join("serials.toml"),
             url,
@@ -178,6 +182,7 @@ impl StoreBackend for EngineBackend {
                                 description: e.description,
                                 homepage: e.homepage,
                                 native,
+                                locked: e.locked,
                                 details: {
                                     let mut d = e.details;
                                     d.origin.source.clone_from(&source.url);

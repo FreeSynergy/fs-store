@@ -26,6 +26,9 @@ pub(crate) fn id_from_url(url: &str) -> String {
 pub(crate) fn job_error(failure: InstallFailure) -> JobError {
     match failure {
         InstallFailure::Fetch(text) | InstallFailure::Catalog(text) => JobError::Other(text),
+        InstallFailure::NotInstallable(reason) => {
+            JobError::Other(format!("this store version does not install it: {reason}"))
+        }
         InstallFailure::CatalogSignature => JobError::CatalogSignature,
         InstallFailure::NotOffered => JobError::NotOffered,
         InstallFailure::Downgrade => JobError::Downgrade,

@@ -2,7 +2,6 @@
 //! Format: freedesktop `AppStream` "collection metadata" (XML). Our extra fields live in `<custom>` values with the
 //! `fs:` prefix, which is how `AppStream` allows extensions; no format of our own (see `DESIGN.md`).
 
-use crate::fields::{description, homepage, icon, list};
 use fs_store_core::{Details, Format, Kind, PackageName, Version};
 
 /// One package as the catalog offers it.
@@ -14,6 +13,10 @@ pub struct CatalogEntry {
     pub title: String,
     /// Kind (`fs:kind`, default program).
     pub kind: Kind,
+    /// The `fs:kind` as written when this store does not know it (`Kind::Unsupported`); empty otherwise.
+    pub kind_text: String,
+    /// Why the offer is shown locked and cannot be installed (kind not known or not installable yet, or a newer store is wanted); `None` when it can be.
+    pub locked: Option<String>,
     /// Newest release that has an artifact.
     pub version: Version,
     /// Delivery format (`fs:format`, default tar.gz).
@@ -50,6 +53,12 @@ impl CatalogEntry {
     #[must_use]
     pub fn icon_missing(&self) -> bool {
         self.icon.is_none()
+    }
+
+    /// Can this store version install the offer?
+    #[must_use]
+    pub fn installable(&self) -> bool {
+        self.locked.is_none()
     }
 }
 
@@ -105,6 +114,15 @@ pub struct CatalogError(pub String);
 /// # Errors
 /// `CatalogError` when the text is not XML or not a `<components>` document.
 pub fn parse_catalog(xml: &str) -> Result<Catalog, CatalogError> {
+    parse_catalog_in(xml, &["en".to_owned()])
+}
+
+/// Reads an `AppStream` collection and chooses every text that comes in several languages (`xml:lang`) by `languages`, most wanted first
+/// (see `fs_store_core::language::preferred`): the first that is there, else the text without a language, else the first.
+///
+/// # Errors
+/// `CatalogError` when the text is not XML or not a `<components>` document.
+pub fn parse_catalog_in(xml: &str, languages: &[String]) -> Result<Catalog, CatalogError> {
     let doc = roxmltree::Document::parse(xml).map_err(|e| CatalogError(e.to_string()))?;
     let root = doc.root_element();
     if root.tag_name().name() != "components" {
@@ -116,7 +134,7 @@ pub fn parse_catalog(xml: &str) -> Result<Catalog, CatalogError> {
         ..Catalog::default()
     };
     for c in root.children().filter(|n| n.has_tag_name("component")) {
-        match entry(c) {
+        match crate::entry::entry(c, languages) {
             Ok(e) if out.entries.iter().any(|o| o.name == e.name) => out.skipped.push(Skipped {
                 id: e.name.as_str().to_owned(),
                 reason: "duplicate id in the catalog".to_owned(),
@@ -126,147 +144,4 @@ pub fn parse_catalog(xml: &str) -> Result<Catalog, CatalogError> {
         }
     }
     Ok(out)
-}
-
-fn text<'a>(n: roxmltree::Node<'a, 'a>, tag: &str) -> Option<&'a str> {
-    n.children()
-        .find(|c| c.has_tag_name(tag))
-        .and_then(|c| c.text())
-        .map(str::trim)
-}
-
-/// `platform` like `x86_64-linux-gnu`: the architecture must be ours and the system the one this store runs on
-/// (`linux`, `windows`).
-fn fits_this_machine(platform: &str) -> bool {
-    platform.starts_with(std::env::consts::ARCH) && platform.contains(std::env::consts::OS)
-}
-
-/// The native package formats a release may carry next to its main artifact.
-const NATIVE: [&str; 3] = ["rpm", "deb", "exe"];
-
-fn entry(c: roxmltree::Node) -> Result<CatalogEntry, (String, String)> {
-    let id = text(c, "id").unwrap_or_default().to_owned();
-    let fail = |r: &str| (id.clone(), r.to_owned());
-    let name = PackageName::new(&id).ok_or_else(|| fail("component has no id"))?;
-    let custom = |key: &str| {
-        c.children()
-            .find(|n| n.has_tag_name("custom"))
-            .and_then(|cu| {
-                cu.children()
-                    .find(|v| v.has_tag_name("value") && v.attribute("key") == Some(key))
-            })
-            .and_then(|v| v.text())
-            .map(|t| t.trim().to_owned())
-    };
-    // Newest release that has an artifact; unparsable versions are reported, not guessed.
-    let mut best: Option<(Version, roxmltree::Node)> = None;
-    let mut bad_version: Option<String> = None;
-    for r in c.descendants().filter(|n| n.has_tag_name("release")) {
-        // The first binary artifact for this machine (no `platform` means any).
-        let Some(art) = r.descendants().find(|n| {
-            n.has_tag_name("artifact")
-                && n.attribute("type") != Some("source")
-                && !n
-                    .attribute("fs-format")
-                    .is_some_and(|f| NATIVE.contains(&f))
-                && n.attribute("platform").is_none_or(fits_this_machine)
-        }) else {
-            continue;
-        };
-        let raw = r.attribute("version").unwrap_or_default();
-        // A bad old release does not hide the others; it is only reported when nothing else is usable.
-        let Some(v) = Version::parse(raw) else {
-            bad_version.get_or_insert_with(|| format!("version `{raw}` is not major.minor.patch"));
-            continue;
-        };
-        if best.is_none_or(|(b, _)| v > b) {
-            best = Some((v, art));
-        }
-    }
-    let (version, art) = best.ok_or_else(|| {
-        fail(
-            &bad_version
-                .unwrap_or_else(|| "no release with an artifact for this machine".to_owned()),
-        )
-    })?;
-    let location = text(art, "location")
-        .ok_or_else(|| fail("artifact has no location"))?
-        .to_owned();
-    let sha256 = art
-        .children()
-        .find(|n| n.has_tag_name("checksum") && n.attribute("type") == Some("sha256"))
-        .and_then(|n| n.text())
-        .ok_or_else(|| fail("artifact has no sha256 checksum"))?
-        .trim()
-        .to_owned();
-    let signature_url = custom("fs:signature")
-        .ok_or_else(|| fail("no fs:signature (unsigned packages are never offered)"))?;
-    let kind = match custom("fs:kind").as_deref() {
-        None | Some("program") => Kind::Program,
-        Some("frontend") => Kind::Frontend,
-        Some("component") => Kind::Component,
-        Some("theme") => Kind::Theme,
-        Some(other) => return Err(fail(&format!("unknown fs:kind `{other}`"))),
-    };
-    let format = match custom("fs:format").as_deref() {
-        None | Some("tar.gz") => Format::TarGz,
-        Some("rpm") => Format::Rpm,
-        Some("deb") => Format::Deb,
-        Some("exe") => Format::Exe,
-        Some("flatpak") => Format::Flatpak,
-        Some("appimage") => Format::AppImage,
-        Some(other) => return Err(fail(&format!("unknown fs:format `{other}`"))),
-    };
-    let facets = list(custom("fs:facets"));
-    let rpms = collect_native(art, "rpm");
-    let debs = collect_native(art, "deb");
-    let exes = collect_native(art, "exe");
-    let long_text = Some(description(c))
-        .filter(|d| !d.is_empty())
-        .unwrap_or_else(|| text(c, "summary").unwrap_or_default().to_owned());
-    Ok(CatalogEntry {
-        name,
-        title: crate::title::plain_name(c),
-        kind,
-        version,
-        format,
-        location,
-        sha256,
-        signature_url,
-        rpms,
-        debs,
-        exes,
-        icon: icon(c),
-        description: long_text.clone(),
-        summary: text(c, "summary").unwrap_or_default().to_owned(),
-        homepage: homepage(c),
-        facets,
-        details: crate::details::details(c, art, &custom, &long_text),
-    })
-}
-
-/// The artifacts of `format` (`fs-format`) next to `art` in the same release that fit this machine and carry a
-/// signature address.
-fn collect_native(art: roxmltree::Node, format: &str) -> Vec<RpmFile> {
-    art.parent()
-        .into_iter()
-        .flat_map(|artifacts| artifacts.children())
-        .filter(|n| {
-            n.has_tag_name("artifact")
-                && n.attribute("fs-format") == Some(format)
-                && n.attribute("platform").is_none_or(fits_this_machine)
-        })
-        .filter_map(|n| {
-            Some(RpmFile {
-                location: text(n, "location")?.to_owned(),
-                sha256: n
-                    .children()
-                    .find(|c| c.has_tag_name("checksum") && c.attribute("type") == Some("sha256"))?
-                    .text()?
-                    .trim()
-                    .to_owned(),
-                signature_url: n.attribute("fs-signature")?.to_owned(),
-            })
-        })
-        .collect()
 }

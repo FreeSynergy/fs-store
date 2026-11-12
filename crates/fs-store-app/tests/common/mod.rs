@@ -42,6 +42,7 @@ pub fn package(name: &str, version: Version) -> PackageRow {
         homepage: String::new(),
         details: fs_store_core::Details::default(),
         native: Vec::new(),
+        locked: None,
     }
 }
 

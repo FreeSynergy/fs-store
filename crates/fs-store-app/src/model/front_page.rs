@@ -8,7 +8,7 @@ use crate::words;
 use crate::words_front as w;
 
 use super::cards::{Card, Placeholder};
-use super::front_text::{kind_text, or_unknown, size_text, trust_sentence, trust_word};
+use super::front_text::{kind_text, or_unknown, trust_sentence, trust_word};
 use super::front_types::NeedsState;
 use super::store::StoreModel;
 
@@ -52,7 +52,7 @@ pub struct ReleaseLine {
 pub enum DescriptionView {
     /// Text of the catalog.
     Text(String),
-    /// A block of the wiki; only said, not loaded.
+    /// A block of the wiki (its id and, when known, the revision it was made from); only said, not loaded.
     Wiki(String),
 }
 
@@ -67,7 +67,7 @@ pub struct PackagePage {
     pub version: String,
     /// Download size or `unknown`.
     pub size: String,
-    /// Where it comes from: label and value.
+    /// Where it comes from (source, maker, signature of the maker), then what else the catalog says: features, media types. Label and value.
     pub origin: Vec<(&'static str, String)>,
     /// The signature level in a word.
     pub trust_word: &'static str,
@@ -174,15 +174,7 @@ impl StoreModel {
             .and_then(|r| self.sources.iter().find(|s| s.id == r.package.source))
             .map(|s| s.url.clone())
             .unwrap_or_default();
-        let mut origin = vec![(w::ORIGIN_SOURCE, or_unknown(&source_url))];
-        match d.map(|d| &d.origin) {
-            Some(o) if o.is_mirror() => {
-                origin.push((w::ORIGIN_MAKER, o.upstream.clone()));
-                origin.push((w::ORIGIN_MAKER_SIG, or_unknown(&o.upstream_signature)));
-            }
-            Some(_) => origin.push((w::ORIGIN_MAKER, w::ORIGIN_OURS.to_owned())),
-            None => origin.push((w::ORIGIN_MAKER, w::UNKNOWN.to_owned())),
-        }
+        let origin = super::front_extra::origin_rows(d, &source_url);
         let released = or_unknown(d.map_or("", |d| d.released.as_str()));
         let version = match (card.version_line(), released.as_str()) {
             (line, w::UNKNOWN) => line,
@@ -210,9 +202,7 @@ impl StoreModel {
         Some(PackagePage {
             kind: kind_text(card.kind).to_owned(),
             version,
-            size: d
-                .and_then(|d| d.size)
-                .map_or_else(|| w::UNKNOWN.to_owned(), size_text),
+            size: super::front_extra::size_line(d),
             origin,
             trust_word: trust_word(trust),
             trust_text: trust_sentence(trust),
@@ -221,7 +211,7 @@ impl StoreModel {
                 .map(|d| {
                     d.screenshots
                         .iter()
-                        .map(|s| (s.caption.clone(), s.license.clone()))
+                        .map(|s| (s.caption.clone(), super::front_extra::picture_line(s)))
                         .collect()
                 })
                 .unwrap_or_default(),
@@ -239,7 +229,9 @@ impl StoreModel {
                 })
                 .unwrap_or_default(),
             description: match d.map(|d| &d.description) {
-                Some(Description::WikiBlock(id)) => DescriptionView::Wiki(id.clone()),
+                Some(Description::WikiBlock(wiki)) => {
+                    DescriptionView::Wiki(super::front_extra::wiki_line(wiki))
+                }
                 _ => DescriptionView::Text(card.description_text()),
             },
             homepage: card.homepage.clone(),

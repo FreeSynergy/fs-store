@@ -9,6 +9,7 @@ mod cards;
 mod cards_ui;
 mod fetch;
 mod front;
+mod front_extra;
 mod front_page;
 mod front_preview;
 mod front_start;

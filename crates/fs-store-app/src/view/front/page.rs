@@ -94,7 +94,7 @@ fn actions(p: &PackagePage, busy: bool, shared: &Shared, launcher: &Arc<dyn Laun
             &format!("{id}-{name}"),
             label,
             Look::Fill,
-            !busy,
+            !busy && p.card.install_blocked.is_none(),
             act(shared, move |m| m.ask_install(&name)),
         )
     };
@@ -237,6 +237,9 @@ pub(super) fn page(
     }
     // A locked Open says why, in words, right under the name
     if let Some(why) = p.card.open_blocked.filter(|_| p.card.installed.is_some()) {
+        title = title.child(text(why).class("craft-sub"));
+    }
+    if let Some(why) = p.card.install_blocked {
         title = title.child(text(why).class("craft-sub"));
     }
     let mut links = div().flex_row().gap(2.0);

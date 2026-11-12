@@ -14,11 +14,13 @@ use super::store::StoreModel;
 const START_CARDS: usize = 4;
 
 /// The kinds with a nav entry, in the order shown.
-pub(super) const KINDS: [(Kind, &str); 4] = [
+pub(super) const KINDS: [(Kind, &str); 6] = [
     (Kind::Program, w::NAV_PROGRAMS),
     (Kind::Frontend, w::NAV_FRONTENDS),
     (Kind::Component, w::NAV_COMPONENTS),
     (Kind::Theme, w::NAV_THEMES),
+    (Kind::Server, w::NAV_SERVERS),
+    (Kind::IconTheme, w::NAV_ICON_SETS),
 ];
 
 impl StoreModel {
@@ -54,6 +56,15 @@ impl StoreModel {
             if !list.is_empty() {
                 out.push(block(label, Some(Section::Kind(kind)), list));
             }
+        }
+        // Entries of a kind this store version does not know: listed, locked, never hidden.
+        let unknown: Vec<Card> = cards
+            .iter()
+            .filter(|c| c.kind == Some(Kind::Unsupported))
+            .cloned()
+            .collect();
+        if !unknown.is_empty() {
+            out.push(block(w::START_UNSUPPORTED, None, unknown));
         }
         out
     }
@@ -151,6 +162,8 @@ pub fn apply_show_flag(model: &mut StoreModel, flag: &str, value: &str) -> Resul
         ("--section", "frontend") => model.open_section(Section::Kind(Kind::Frontend)),
         ("--section", "component") => model.open_section(Section::Kind(Kind::Component)),
         ("--section", "theme") => model.open_section(Section::Kind(Kind::Theme)),
+        ("--section", "server") => model.open_section(Section::Kind(Kind::Server)),
+        ("--section", "icon-theme") => model.open_section(Section::Kind(Kind::IconTheme)),
         ("--tab", "all") => model.set_tab(Tab::All),
         ("--tab", "installed") => model.set_tab(Tab::Installed),
         ("--tab", "updates") => model.set_tab(Tab::Updates),

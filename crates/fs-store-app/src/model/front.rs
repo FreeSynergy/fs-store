@@ -85,8 +85,7 @@ impl StoreModel {
         self.cards().iter().filter(|c| c.kind == Some(kind)).count()
     }
 
-    /// The navigation: the start page, a kind each (locked while it has no package) and the kinds the catalog cannot
-    /// describe yet (locked, "coming soon").
+    /// The navigation: the start page and a kind each (locked while it has no package; servers and icon sets say "Coming soon").
     #[must_use]
     pub fn nav(&self) -> Vec<NavEntry> {
         let total = self.cards().len();
@@ -101,23 +100,19 @@ impl StoreModel {
         }];
         for (kind, label) in KINDS {
             let count = self.kind_count(kind);
+            // A kind this store does not install yet has a section when the catalog lists some; it says "Coming soon" either way.
+            let note = if kind.is_installable() {
+                (count == 0).then_some(w::NAV_NONE_YET)
+            } else {
+                Some(w::COMING_SOON)
+            };
             out.push(NavEntry {
-                section: Some(Section::Kind(kind)),
+                section: (count > 0).then_some(Section::Kind(kind)),
                 label,
                 count,
                 enabled: count > 0,
                 current: section == Section::Kind(kind),
-                note: (count == 0).then_some(w::NAV_NONE_YET),
-            });
-        }
-        for label in [w::NAV_SERVERS, w::NAV_ICON_SETS] {
-            out.push(NavEntry {
-                section: None,
-                label,
-                count: 0,
-                enabled: false,
-                current: false,
-                note: Some(w::COMING_SOON),
+                note,
             });
         }
         out

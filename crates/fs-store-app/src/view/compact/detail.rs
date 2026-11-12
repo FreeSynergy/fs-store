@@ -70,7 +70,13 @@ fn buttons(p: &PackagePage, busy: bool, shared: &Shared, launcher: &Arc<dyn Laun
     let mut row = div().flex_row().gap(2.0);
     let ask = |label: &str, id: &str, variant: ButtonVariant| {
         let (shared, name) = (Arc::clone(shared), name.clone());
-        button(&format!("{id}-{name}"), label, variant, !busy).on_click(move |_| {
+        button(
+            &format!("{id}-{name}"),
+            label,
+            variant,
+            !busy && p.card.install_blocked.is_none(),
+        )
+        .on_click(move |_| {
             locked(&shared).ask_install(&name);
             rebuild();
         })
@@ -251,6 +257,9 @@ pub(super) fn pane(
         ));
     pane = pane.child(head);
     if let Some(why) = p.card.open_blocked.filter(|_| p.card.installed.is_some()) {
+        pane = pane.child(text(why).class("fs-c-sub"));
+    }
+    if let Some(why) = p.card.install_blocked {
         pane = pane.child(text(why).class("fs-c-sub"));
     }
     if let Some(r) = running(&p, shared, width) {

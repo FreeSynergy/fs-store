@@ -96,6 +96,9 @@ impl StoreModel {
                     words::ENTRY_SKIPPED,
                     &[("id", &self.title(id)), ("reason", reason)],
                 ),
+                Problem::Locked(name) => {
+                    words::fill(words::LOCKED_PACKAGE, &[("name", &self.title(name))])
+                }
                 Problem::Busy(name) => words::fill(words::JOB_BUSY, &[("name", &self.title(name))]),
                 Problem::JobFailed { name, error } => job_failed_line(&self.title(name), error),
                 Problem::NothingToDo(name) => {

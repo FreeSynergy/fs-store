@@ -461,3 +461,12 @@ Craft style and the theme adapter (`fs_components_render::use_style`) come from 
   the timer cannot install the same package at once; it goes away with the process. Boundary: removals and rpm/deb installs take no such lock (the package manager has its own).
 - **List files:** written with a temporary name of their own, flushed, renamed, and the folder flushed.
 - **Signature wording:** "Maker + mirror (catalog)": the maker's signature is as the signed catalog says; the store checks our key itself.
+
+## Catalog format 2 reader (0.0.13)
+- **A kind is never an error.** `fs:kind` is read into `Kind` (program, frontend, component, theme, server, icon-theme, else `Unsupported` with the text kept). A kind this store does not install, or an
+  `fs:min-store` above the crate version, gives a `CatalogEntry` with `locked: Some(reason)`: read tolerantly (no release file needed, version `0.0.0` when none), never downloaded. Evidence before the change:
+  `entry()` returned `Err((id, "unknown fs:kind"))` and `parse_catalog` pushed it to `Catalog.skipped`, so only that entry was lost and the catalog and the other packages loaded; it was not shown as locked.
+  Locked entries are refused by the engine (`plan`), the model (`begin_job`, `ask_install`) and the buttons. A server/icon-theme entry may enter the real catalog once a store with this reader is released.
+- **Language** is a Strategy over the variants of an element (`fs_store_core::language::pick`), the catalog reader takes the list of preferred languages (`parse_catalog_in`), the window passes
+  `language::preferred()`. The engine and the commands keep reading English (they show no catalog texts).
+- **Wire:** only what `store.capnp` v0.0.19 can say goes out. `split_for_wire` reports the kinds it cannot say as `skipped` instead of writing a wrong kind.

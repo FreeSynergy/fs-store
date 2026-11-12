@@ -13,6 +13,8 @@ pub struct Origin {
     pub upstream: String,
     /// Address of the upstream's own signature file that was checked when mirroring (`fs:upstream-signature`).
     pub upstream_signature: String,
+    /// Name of the maker (`fs:maker`); empty when not said.
+    pub maker: String,
     /// Address of the source code of exactly this version (`fs:source-code`), mirrored with the package.
     pub source_code: String,
 }
@@ -55,14 +57,25 @@ impl TrustLevel {
 pub enum Description {
     /// Plain text from the catalog.
     Text(String),
-    /// Id of a wiki block that holds the text (`fs:description-wiki`); the store does not load it yet.
-    WikiBlock(String),
+    /// A block of the wiki that holds the text (`fs:description-wiki`); the store does not load it yet.
+    WikiBlock(WikiRef),
 }
 
 impl Default for Description {
     fn default() -> Self {
         Self::Text(String::new())
     }
+}
+
+/// Which block of the wiki holds the description, and what is known about it (ADR 0072: ONE block, a language is only a wish).
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct WikiRef {
+    /// The block id (a `UUIDv7`).
+    pub block: String,
+    /// The revision of the source text this block was made from (`fs:description-wiki-source-rev`); `None` when not said.
+    pub source_rev: Option<u64>,
+    /// The language the text is wanted in (`fs:description-wiki-lang`); empty when no wish is said.
+    pub lang: String,
 }
 
 /// What changed in one release (`<release>` with its `<description>`).
@@ -83,10 +96,27 @@ pub struct Screenshot {
     pub url: String,
     /// SHA-256 of the file (the catalog is signed, so the hash is trusted).
     pub sha256: String,
-    /// Caption, may be empty.
+    /// Caption in the language chosen, may be empty.
     pub caption: String,
+    /// Where the picture comes from (`fs-source`: an address or a maker); empty when not said.
+    pub source: String,
     /// Licence of the picture (SPDX id or expression).
     pub license: String,
+}
+
+/// A feature of a package (`fs:feature.<key>.*`): a part that has its own capabilities.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct Feature {
+    /// The key (`contacts`).
+    pub key: String,
+    /// The name for people; empty when not said.
+    pub name: String,
+    /// What the feature offers.
+    pub provides: Vec<Capability>,
+    /// What the feature must have.
+    pub requires: Vec<Capability>,
+    /// What the feature can use.
+    pub recommends: Vec<Capability>,
 }
 
 /// The extra facts of one offer.
@@ -108,6 +138,12 @@ pub struct Details {
     pub recommends: Vec<Capability>,
     /// How far it is vouched for.
     pub trust: Option<TrustLevel>,
+    /// Size of the unpacked program in bytes (`<size type="installed">`); `None` when the catalog does not say.
+    pub installed_size: Option<u64>,
+    /// Features the package has on its own (`fs:features`), each with what it offers and needs.
+    pub features: Vec<Feature>,
+    /// The media types it handles (`<provides><mediatype>`), e.g. `text/calendar`.
+    pub mediatypes: Vec<String>,
     /// The long description (text, later a wiki block).
     pub description: Description,
     /// Changes of every release the catalog lists, newest first. Not rights: see `provides`/`requires` below, which

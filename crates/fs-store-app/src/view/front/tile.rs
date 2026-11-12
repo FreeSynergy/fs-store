@@ -160,7 +160,7 @@ fn actions(
             look,
             match state {
                 CardState::Installed => card.open_blocked.is_none(),
-                _ => !busy && card.working.is_none(),
+                _ => !busy && card.working.is_none() && card.install_blocked.is_none(),
             },
             go,
         )))
@@ -246,6 +246,9 @@ pub(super) fn tile(
     } else {
         body = body.child(actions(card, busy, inner, shared, launcher));
         if let Some(why) = card.open_blocked.filter(|_| card.installed.is_some()) {
+            body = body.child(text(why).class("craft-sub"));
+        }
+        if let Some(why) = card.install_blocked {
             body = body.child(text(why).class("craft-sub"));
         }
     }

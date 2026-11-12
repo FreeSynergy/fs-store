@@ -108,6 +108,9 @@ impl Installer<'_> {
             .into_iter()
             .find(|e| e.name.as_str() == name)
             .ok_or(InstallFailure::NotOffered)?;
+        if let Some(reason) = &entry.locked {
+            return Err(InstallFailure::NotInstallable(reason.clone()));
+        }
         // A Windows store is offered the setup.exe; there is no installer for it, and that is said, not hidden.
         if self.prefer == Format::Exe {
             return Err(InstallFailure::Unsupported(Format::Exe));

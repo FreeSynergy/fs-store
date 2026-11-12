@@ -5,6 +5,7 @@
 pub mod capability;
 pub mod control;
 pub mod details;
+pub mod language;
 pub mod names;
 pub mod package;
 pub mod signature;
@@ -16,7 +17,9 @@ pub mod words;
 
 pub use capability::{Capability, Provider, Resolution, resolve};
 pub use control::{CANCELLED, CancelToken, Progress};
-pub use details::{Description, Details, Origin, ReleaseNote, Screenshot, TrustLevel};
+pub use details::{
+    Description, Details, Feature, Origin, ReleaseNote, Screenshot, TrustLevel, WikiRef,
+};
 pub use names::display_name;
 pub use package::{Format, Kind, Package, PackageName, Pre, Stage, Version};
 pub use signature::{

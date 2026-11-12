@@ -27,6 +27,9 @@ pub fn kind_text(kind: Option<Kind>) -> &'static str {
         Some(Kind::Frontend) => "Frontend",
         Some(Kind::Component) => "Component",
         Some(Kind::Theme) => "Theme",
+        Some(Kind::Server) => "Server",
+        Some(Kind::IconTheme) => "Icon set",
+        Some(Kind::Unsupported) => "Not supported",
         None => w::UNKNOWN,
     }
 }

@@ -82,7 +82,7 @@ fn action(row: &TableRow, busy: bool, shared: &Shared, launcher: &Arc<dyn Launch
             look,
             match state {
                 CardState::Installed => row.card.open_blocked.is_none(),
-                _ => !busy && row.card.working.is_none(),
+                _ => !busy && row.card.working.is_none() && row.card.install_blocked.is_none(),
             },
             Arc::new(move || {
                 if state == CardState::Installed {

@@ -179,6 +179,11 @@ impl StoreModel {
 
     /// Asks before an install or update: the steps, the highest risk, the two answers. Not while something runs.
     pub fn ask_install(&mut self, name: &str) {
+        // A locked package (a kind this store version does not install) is never asked about, whoever calls.
+        if self.is_locked(name) {
+            self.problems = vec![super::types::Problem::Locked(name.to_owned())];
+            return;
+        }
         // A package that is being installed is not installed a second time.
         if self.jobs.iter().any(|j| j.name == name && !j.is_finished()) {
             self.problems

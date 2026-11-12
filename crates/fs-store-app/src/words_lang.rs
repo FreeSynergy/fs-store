@@ -35,6 +35,28 @@ pub fn no_window(lang: Lang) -> &'static str {
     }
 }
 
+/// Why "Install" is locked for a kind the catalog lists but this store version does not install yet (a server, an icon set).
+#[must_use]
+pub fn coming_soon(lang: Lang) -> &'static str {
+    match lang {
+        Lang::En => "Coming soon: this store version cannot install this kind of package yet.",
+        Lang::De => {
+            "Kommt bald: Diese Version des Stores kann diese Art Paket noch nicht installieren."
+        }
+    }
+}
+
+/// Why "Install" is locked for a kind this store version does not know at all.
+#[must_use]
+pub fn not_supported(lang: Lang) -> &'static str {
+    match lang {
+        Lang::En => "Not supported by this store version: update the store to install it.",
+        Lang::De => {
+            "Von dieser Store-Version nicht unterst\u{fc}tzt: Aktualisiere den Store, um es zu installieren."
+        }
+    }
+}
+
 /// The warning line of the question before an install when a need has no provider. Placeholders: `{need}`, `{title}`.
 #[must_use]
 pub fn missing_need(lang: Lang) -> &'static str {

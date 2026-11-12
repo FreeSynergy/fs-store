@@ -88,6 +88,14 @@ impl StoreModel {
         self.busy_name().is_some()
     }
 
+    /// Is the package shown locked: this store version cannot install it?
+    #[must_use]
+    pub fn is_locked(&self, name: &str) -> bool {
+        self.available
+            .iter()
+            .any(|r| r.package.name == name && r.package.locked.is_some())
+    }
+
     /// Puts the job the button of `name` stands for into the queue: `Pending` (its download starts at once).
     /// `None` (and a problem) if there is nothing to start, the program is being removed, or it is queued already.
     /// Run it with [`StoreBackend::prepare`], tell [`StoreModel::prepared`], then [`StoreModel::take_commit`].
@@ -101,6 +109,10 @@ impl StoreModel {
             return None;
         }
         self.problems.clear();
+        if self.is_locked(name) {
+            self.problems.push(Problem::Locked(name.to_owned()));
+            return None;
+        }
         let action = self
             .available
             .iter()

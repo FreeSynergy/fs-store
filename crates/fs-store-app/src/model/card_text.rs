@@ -97,6 +97,22 @@ pub(super) fn open_blocked(kind: Option<fs_store_core::Kind>) -> Option<&'static
         .then(|| crate::words_front::no_window(crate::words_front::Lang::current()))
 }
 
+/// Why "Install" is locked: the package carries a reason (`locked`), and the words say it for its kind in the language of the program. `None`
+/// when it can be installed.
+#[must_use]
+pub(super) fn install_blocked(
+    locked: Option<&str>,
+    kind: Option<fs_store_core::Kind>,
+) -> Option<&'static str> {
+    use fs_store_core::Kind;
+    locked?;
+    let lang = crate::words_front::Lang::current();
+    Some(match kind {
+        Some(Kind::Server | Kind::IconTheme) => crate::words_lang::coming_soon(lang),
+        _ => crate::words_lang::not_supported(lang),
+    })
+}
+
 /// How many cards of width `item` with `gap` between them fit in a row of `room` pixels (at least one).
 #[must_use]
 pub fn columns(room: f32, item: f32, gap: f32) -> usize {

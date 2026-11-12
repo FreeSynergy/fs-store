@@ -45,6 +45,9 @@ pub struct PackageRow {
     pub details: Details,
     /// The native package formats the release also comes in (rpm, deb), besides the unpacked archive.
     pub native: Vec<Format>,
+    /// Why this store version cannot install it (a kind it does not install yet, or one it does not know); `None` when it can. A locked
+    /// package is listed and read, never installed.
+    pub locked: Option<String>,
 }
 
 /// A package on this machine.

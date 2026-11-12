@@ -12,7 +12,7 @@ use fs_interfaces::store_capnp::store;
 
 use crate::capabilities::{CONTRACT_VERSION, capabilities, refuse};
 use crate::view::StoreView;
-use crate::wire::{len, write_packages, write_skipped, write_sources};
+use crate::wire::{len, split_for_wire, write_packages, write_skipped, write_sources};
 
 /// The root capability of the store.
 pub struct StoreServer {
@@ -90,7 +90,9 @@ impl store::Server for StoreServer {
         _: store::AvailableParams,
         mut results: store::AvailableResults,
     ) -> Done {
-        let (packages, skipped) = self.read(|v| v.available()).await?;
+        let (packages, mut skipped) = self.read(|v| v.available()).await?;
+        let (packages, left) = split_for_wire(packages);
+        skipped.extend(left);
         let mut out = results.get();
         write_packages(&packages, out.reborrow().init_list(len(packages.len())));
         write_skipped(&skipped, out.init_skipped(len(skipped.len())));
@@ -102,7 +104,7 @@ impl store::Server for StoreServer {
         _: store::InstalledParams,
         mut results: store::InstalledResults,
     ) -> Done {
-        let list = self.read(|v| v.installed()).await?;
+        let (list, _) = split_for_wire(self.read(|v| v.installed()).await?);
         write_packages(&list, results.get().init_list(len(list.len())));
         Ok(())
     }
