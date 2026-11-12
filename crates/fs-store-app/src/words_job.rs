@@ -43,6 +43,7 @@ pub fn job_problem(error: &JobError) -> &'static str {
         JobError::RollbackFailed => {
             "The update of {name} failed and the previous version could not be restored."
         }
+        JobError::Cancelled => "{name}: cancelled, nothing was changed.",
         JobError::Other(_) => "{name} was not installed: {detail}",
         JobError::Incomplete { .. } => {
             "{name} is installed, but a step after it did not work: {detail}"

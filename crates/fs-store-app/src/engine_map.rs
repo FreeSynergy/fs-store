@@ -32,6 +32,7 @@ pub(crate) fn job_error(failure: InstallFailure) -> JobError {
         InstallFailure::Unsupported(format) => JobError::Unsupported(format!("{format:?}")),
         InstallFailure::Checksum => JobError::Checksum,
         InstallFailure::ReleaseSignature => JobError::ReleaseSignature,
+        InstallFailure::Cancelled => JobError::Cancelled,
         InstallFailure::Update(UpdateError::Running) => JobError::Running,
         InstallFailure::Update(UpdateError::RolledBack(cause)) => {
             JobError::Other(format!("the installer failed: {}", cause.0))

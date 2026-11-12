@@ -3,7 +3,7 @@
 //! `Installing`, `Installed`; on an error `Failed` and then `RolledBack` (nothing is left half done;
 //! `RollbackFailed` stays at `Failed`).
 
-use fs_store_core::Version;
+use fs_store_core::{CancelToken, Progress, Version};
 
 use crate::backend::{JobError, JobKind, Phase, Prepared};
 use crate::words;
@@ -26,6 +26,10 @@ pub struct JobView {
     pub version: Option<Version>,
     /// Why it failed.
     pub error: Option<JobError>,
+    /// How far the download is (bytes), while it is read.
+    pub progress: Option<Progress>,
+    /// Set by "Cancel".
+    pub cancel: CancelToken,
 }
 
 impl JobView {
@@ -118,6 +122,8 @@ impl StoreModel {
             history: vec![Phase::Pending],
             version: None,
             error: None,
+            progress: None,
+            cancel: CancelToken::new(),
         });
         let job = self.jobs.last()?;
         Some(Ticket {

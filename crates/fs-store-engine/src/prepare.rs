@@ -3,7 +3,10 @@
 //! waits for the network, so a batch runs it for all packages at once.
 
 use fs_store_catalog::{CatalogEntry, parse_catalog};
-use fs_store_core::{Format, Package, SignatureOutcome, SourceId, VerifiedPackage, Version};
+use fs_store_core::{
+    CANCELLED, CancelToken, Format, Package, Progress, SignatureOutcome, SourceId, VerifiedPackage,
+    Version,
+};
 use sha2::{Digest, Sha256};
 
 use crate::service::{InstallFailure, Installer, hex, timing};
@@ -40,7 +43,7 @@ impl Plan {
 
 /// Downloaded files with their signatures, not checked yet.
 #[derive(Debug)]
-pub struct Downloaded(Vec<(Vec<u8>, Vec<u8>)>);
+pub struct Downloaded(Vec<(Vec<u8>, Vec<u8>)>, CancelToken);
 
 /// A package that passed every check and waits to be installed.
 #[derive(Debug)]
@@ -49,6 +52,7 @@ pub struct Prepared {
     pub(crate) previous: Option<Version>,
     pub(crate) files: Vec<Vec<u8>>,
     pub(crate) signer: String,
+    pub(crate) cancel: CancelToken,
 }
 
 impl Prepared {
@@ -56,6 +60,13 @@ impl Prepared {
     #[must_use]
     pub fn name(&self) -> &str {
         self.verified.package().name.as_str()
+    }
+
+    /// The same package with another cancel token: what the person's "Cancel" sets (the install looks at it between its small steps).
+    #[must_use]
+    pub fn with_cancel(mut self, cancel: CancelToken) -> Self {
+        self.cancel = cancel;
+        self
     }
 
     /// Fingerprint (upper-case hex) of the key that signed the release file.
@@ -151,18 +162,35 @@ impl Installer<'_> {
     /// # Errors
     /// `Fetch` when an address cannot be read.
     pub fn download(&self, plan: &Plan) -> Result<Downloaded, InstallFailure> {
+        self.download_controlled(plan, &CancelToken::new(), &|_| {})
+    }
+
+    /// Like [`Installer::download`], with a way to stop (`cancel`: nothing is on the machine yet, so stopping is always safe) and a report
+    /// of how far the release files are (`progress`, called while a file is read; the signature files are small and not reported).
+    ///
+    /// # Errors
+    /// `Cancelled` when `cancel` was set; else as `download`.
+    pub fn download_controlled(
+        &self,
+        plan: &Plan,
+        cancel: &CancelToken,
+        progress: &(dyn Fn(Progress) + Sync),
+    ) -> Result<Downloaded, InstallFailure> {
         let mut all = Vec::new();
         for (location, signature_url, _) in &plan.wanted {
             let t = std::time::Instant::now();
-            let file = self.fetch.get(location).map_err(InstallFailure::Fetch)?;
+            let file = self
+                .fetch
+                .get_controlled(location, cancel, progress)
+                .map_err(fetch_failure)?;
             let sig = self
                 .fetch
-                .get(signature_url)
-                .map_err(InstallFailure::Fetch)?;
+                .get_controlled(signature_url, cancel, &|_| {})
+                .map_err(fetch_failure)?;
             timing("download", location, t);
             all.push((file, sig));
         }
-        Ok(Downloaded(all))
+        Ok(Downloaded(all, cancel.clone()))
     }
 
     /// Checks sums and signatures of what was downloaded.
@@ -170,9 +198,13 @@ impl Installer<'_> {
     /// # Errors
     /// `Checksum` or `ReleaseSignature`.
     pub fn check(&self, plan: &Plan, downloaded: Downloaded) -> Result<Prepared, InstallFailure> {
+        let cancel = downloaded.1;
         let mut files = Vec::new();
         let mut outcome = SignatureOutcome::Missing;
         for ((location, _, sha256), (file, sig)) in plan.wanted.iter().zip(downloaded.0) {
+            if cancel.is_cancelled() {
+                return Err(InstallFailure::Cancelled);
+            }
             let t = std::time::Instant::now();
             if hex(&Sha256::digest(&file)) != sha256.to_ascii_lowercase() {
                 return Err(InstallFailure::Checksum);
@@ -206,6 +238,16 @@ impl Installer<'_> {
             previous: plan.previous,
             files,
             signer,
+            cancel,
         })
+    }
+}
+
+/// A fetch that stopped because the person asked is `Cancelled`; anything else is a download problem.
+fn fetch_failure(text: String) -> InstallFailure {
+    if text == CANCELLED {
+        InstallFailure::Cancelled
+    } else {
+        InstallFailure::Fetch(text)
     }
 }

@@ -6,7 +6,10 @@ use std::io;
 use std::path::{Component, Path, PathBuf};
 
 use flate2::read::GzDecoder;
-use fs_store_core::{Format, InstallError, InstallStrategy, PackageName, VerifiedPackage, Version};
+use fs_store_core::{
+    CANCELLED, CancelToken, Format, InstallError, InstallStrategy, PackageName, VerifiedPackage,
+    Version,
+};
 
 /// Largest unpacked size and entry count we accept from one archive (decompression-bomb limit).
 const MAX_UNPACKED: u64 = 4 * 1024 * 1024 * 1024;
@@ -26,6 +29,7 @@ enum Archive {
 pub struct TarGz {
     root: PathBuf,
     archive: Archive,
+    cancel: CancelToken,
 }
 
 impl std::fmt::Debug for TarGz {
@@ -58,7 +62,11 @@ impl TarGz {
     fn make(root: &Path, archive: Archive) -> Self {
         // Absolute, so the `current` links do not depend on the working directory.
         let root = std::path::absolute(root).unwrap_or_else(|_| root.to_owned());
-        Self { root, archive }
+        Self {
+            root,
+            archive,
+            cancel: CancelToken::new(),
+        }
     }
 
     /// `archive` is a downloaded and signature-checked file.
@@ -71,6 +79,22 @@ impl TarGz {
     #[must_use]
     pub fn from_bytes(root: &Path, bytes: Vec<u8>) -> Self {
         Self::make(root, Archive::Bytes(bytes))
+    }
+
+    /// The person's "Cancel" is looked at between the entries and before the unpacked folder takes its name: a stop leaves no
+    /// folder of this version behind and the `current` link where it was. After the switch of the link there is nothing to stop.
+    #[must_use]
+    pub fn with_cancel(mut self, cancel: CancelToken) -> Self {
+        self.cancel = cancel;
+        self
+    }
+
+    fn stopped(&self) -> io::Result<()> {
+        if self.cancel.is_cancelled() {
+            Err(io::Error::new(io::ErrorKind::Interrupted, CANCELLED))
+        } else {
+            Ok(())
+        }
     }
 
     fn dir(&self, name: &str, v: Version) -> PathBuf {
@@ -121,6 +145,7 @@ impl TarGz {
         let top = self.common_top(name)?;
         let (mut total, mut count) = (0u64, 0usize);
         for entry in self.open()?.entries()? {
+            self.stopped()?;
             let mut entry = entry?;
             count += 1;
             total = total.saturating_add(entry.header().size()?);
@@ -184,6 +209,7 @@ impl InstallStrategy for TarGz {
             let _ = fs::remove_dir_all(&tmp);
             let done = self
                 .unpack(p.name.as_str(), &tmp)
+                .and_then(|()| self.stopped())
                 .and_then(|()| fs::rename(&tmp, &dest));
             if let Err(e) = done {
                 let _ = fs::remove_dir_all(&tmp);

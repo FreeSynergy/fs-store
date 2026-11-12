@@ -8,6 +8,12 @@ use crate::backend::{JobError, Phase};
 
 impl StoreModel {
     pub(super) fn fail_job(&mut self, name: &str, error: JobError) {
+        // A stop the person asked for is not a failure: nothing was changed, so the job just goes away and the card is as it was.
+        if error == JobError::Cancelled {
+            self.jobs.retain(|j| j.name != name);
+            self.stash.remove(name);
+            return;
+        }
         let Some(job) = self.jobs.iter_mut().find(|j| j.name == name) else {
             return;
         };

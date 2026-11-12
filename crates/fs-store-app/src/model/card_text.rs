@@ -50,15 +50,32 @@ impl Card {
         format!("{date} - {}", self.size)
     }
 
-    /// How far a running job is, as a share 0..1 and the sentence under the bar (nothing is invented: the store reports
-    /// phases, not bytes). `None` when the card is not busy with a job.
+    /// How far a running job is, as a share 0..1 and the sentence under the bar. While the release file is read it is bytes (what the
+    /// server said, nothing guessed); else the phase. `None` when the card is not busy with a job.
     #[must_use]
-    pub fn progress(&self) -> Option<(f32, &'static str)> {
+    pub fn progress(&self) -> Option<(f32, String)> {
         use crate::backend::Phase;
         let super::cards::Working::Job(_, phase) = self.working? else {
             return None;
         };
-        Some(match phase {
+        if phase == Phase::Pending
+            && let Some(bytes) = self.bytes
+        {
+            let line = match bytes.total {
+                Some(total) => format!(
+                    "Downloading {} of {}{}",
+                    super::front_text::size_text(bytes.done),
+                    super::front_text::size_text(total),
+                    bytes.share().map_or_else(String::new, |s| format!(
+                        " \u{b7} {} %",
+                        (s * 100.0).round()
+                    ))
+                ),
+                None => format!("Downloading {}", super::front_text::size_text(bytes.done)),
+            };
+            return Some((bytes.share().unwrap_or(0.1), line));
+        }
+        let (share, line) = match phase {
             Phase::Pending => (0.1, "Waiting for the download and the checks"),
             Phase::Verified => (
                 0.45,
@@ -67,6 +84,7 @@ impl Card {
             Phase::Installing => (0.8, "Installing"),
             Phase::Installed => (1.0, "Installed"),
             Phase::Failed | Phase::RolledBack => (1.0, "Something went wrong; going back"),
-        })
+        };
+        Some((share, line.to_owned()))
     }
 }

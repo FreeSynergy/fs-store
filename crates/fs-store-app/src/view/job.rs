@@ -101,13 +101,35 @@ pub(super) fn start_all_updates(shared: &Shared) {
     }
 }
 
+/// What the worker of `name` gets: the token "Cancel" sets, and a report of the download that tells the model and asks for a new
+/// drawing (not more often than every 150 ms, so a fast download does not draw for every piece).
+fn control_of(shared: &Shared, name: &str) -> crate::backend::JobControl {
+    let cancel = locked(shared).job_cancel(name).unwrap_or_default();
+    let (shared, name) = (Arc::clone(shared), name.to_owned());
+    let last = std::sync::Mutex::new(std::time::Instant::now());
+    crate::backend::JobControl {
+        cancel,
+        progress: Arc::new(move |p| {
+            locked(&shared).observe_progress(&name, p);
+            let mut at = last
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
+            if at.elapsed() >= std::time::Duration::from_millis(150) {
+                *at = std::time::Instant::now();
+                rebuild();
+            }
+        }),
+    }
+}
+
 /// Downloads and checks on a worker thread; then, if every download of the queue is done, installs the batch.
 fn spawn_prepare(shared: &Shared, backend: Arc<dyn StoreBackend>, kind: JobKind, name: String) {
     let shared = Arc::clone(shared);
     std::thread::spawn(move || {
         // A panic in the worker must not leave the job "running" for ever, silently.
+        let control = control_of(&shared, &name);
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            backend.prepare(kind, &name)
+            backend.prepare_controlled(kind, &name, &control)
         }))
         .unwrap_or_else(|_| Err(JobError::Other(words::JOB_PANICKED.to_owned())));
         locked(&shared).prepared(&name, result);

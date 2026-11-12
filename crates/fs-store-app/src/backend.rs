@@ -2,7 +2,11 @@
 //! (`sources`, `addSource`, `setEnabled`, `removeSource`, `available`, `installed`, `install`/`update` with
 //! phases). The in-process engine implements it now; a Cap'n Proto client can do it later.
 
-use fs_store_core::{Details, Format, InstallState, Kind, SourceError, Version};
+use std::sync::Arc;
+
+use fs_store_core::{
+    CancelToken, Details, Format, InstallState, Kind, Progress, SourceError, Version,
+};
 
 /// The phase of a job; the same six as `JobPhase` in the contract.
 pub type Phase = InstallState;
@@ -135,6 +139,8 @@ pub enum JobError {
         /// Why the server could not be ended.
         reason: String,
     },
+    /// The person cancelled where nothing was left half done: the machine is as it was.
+    Cancelled,
     /// The new version IS installed, but a step after it failed (register, commands, menu entries).
     Incomplete {
         /// The version that was installed.
@@ -142,6 +148,32 @@ pub enum JobError {
         /// What did not work, one sentence per step.
         reason: String,
     },
+}
+
+/// What a job gets to look at while it works: the person's "Cancel" and a way to say how far a download is.
+#[derive(Clone)]
+pub struct JobControl {
+    /// Set by "Cancel"; looked at only where stopping leaves nothing half done.
+    pub cancel: CancelToken,
+    /// Told how far the release file is (bytes), from the worker thread.
+    pub progress: Arc<dyn Fn(Progress) + Send + Sync>,
+}
+
+impl JobControl {
+    /// A control nobody cancels and nobody listens to.
+    #[must_use]
+    pub fn none() -> Self {
+        Self {
+            cancel: CancelToken::new(),
+            progress: Arc::new(|_| {}),
+        }
+    }
+}
+
+impl std::fmt::Debug for JobControl {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("JobControl").finish_non_exhaustive()
+    }
 }
 
 /// A job whose download is done and checked; only the backend that made it can open it.
@@ -222,6 +254,18 @@ pub trait StoreBackend: Send + Sync {
     /// `JobError`.
     fn prepare(&self, kind: JobKind, name: &str) -> Result<Prepared, JobError> {
         Ok(Prepared(Box::new((kind, name.to_owned()))))
+    }
+    /// Like [`StoreBackend::prepare`], with a way to cancel and a report of the download. The default ignores both.
+    ///
+    /// # Errors
+    /// `JobError`, `Cancelled` when `control.cancel` was set.
+    fn prepare_controlled(
+        &self,
+        kind: JobKind,
+        name: &str,
+        _control: &JobControl,
+    ) -> Result<Prepared, JobError> {
+        self.prepare(kind, name)
     }
     /// Second half: installs everything prepared in ONE step (one password for all rpm), and tells `observe`
     /// `Installing` for each name. Returns one result per name; one failing does not stop the others.

@@ -62,7 +62,8 @@ pub struct Placeholder {
     pub rgb_end: (u8, u8, u8),
 }
 
-/// One program on the page.
+/// One program on the page. The flags are independent facts of the view-model (new, hovered, selected, can be cancelled).
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Card {
     /// Name (shown, and the key of every command).
@@ -103,6 +104,10 @@ pub struct Card {
     pub size: String,
     /// Signature level in a word; `unknown` when the catalog does not say.
     pub trust: &'static str,
+    /// How far the download is, in bytes, while the file is read.
+    pub bytes: Option<fs_store_core::Progress>,
+    /// "Cancel" can stop the running job now with nothing left half done.
+    pub can_cancel: bool,
 }
 
 impl Card {
@@ -282,6 +287,12 @@ impl StoreModel {
                 super::front_text::size_text,
             ),
             trust: super::front_text::trust_word(row.and_then(|r| r.package.details.trust)),
+            bytes: self
+                .jobs
+                .iter()
+                .find(|j| j.name == name && !j.is_finished())
+                .and_then(|j| j.progress),
+            can_cancel: self.can_cancel(name),
         }
     }
 }

@@ -168,8 +168,27 @@ fn actions(
         )
 }
 
+/// Cancel: pressable while the work can be stopped with nothing left half done (the model says), else locked with its reason.
+fn cancel_button(card: &Card, shared: &Shared) -> Div {
+    let (shared, name) = (Arc::clone(shared), card.name.clone());
+    cell_button(
+        &format!("cancel-{}", card.name),
+        Glyph::Close,
+        if card.can_cancel {
+            w::CANCEL_TIP
+        } else {
+            w::CANCEL_LOCKED
+        },
+        card.can_cancel,
+        Arc::new(move || {
+            locked(&shared).cancel_job(&name);
+            rebuild();
+        }),
+    )
+}
+
 /// While a job runs: its phase, the bar, and pause and cancel (locked: the store cannot stop a job yet).
-fn running(card: &Card, share: f32, line: &str, width: f32) -> Div {
+fn running(card: &Card, shared: &Shared, share: f32, line: &str, width: f32) -> Div {
     let a = accent(&card.name);
     div()
         .flex_col()
@@ -188,13 +207,7 @@ fn running(card: &Card, share: f32, line: &str, width: f32) -> Div {
                     false,
                     Arc::new(|| {}),
                 ))
-                .child(cell_button(
-                    &format!("cancel-{}", card.name),
-                    Glyph::Close,
-                    w::CANCEL_LOCKED,
-                    false,
-                    Arc::new(|| {}),
-                )),
+                .child(cancel_button(card, shared)),
         )
 }
 
@@ -226,7 +239,7 @@ pub(super) fn tile(
         body = body.child(text(why.clone()).class("craft-sub"));
     }
     body = match progress_view {
-        Some((share, line)) => body.child(running(card, share, line, inner)),
+        Some((share, line)) => body.child(running(card, shared, share, &line, inner)),
         None => body.child(actions(card, busy, inner, shared, launcher)),
     };
     tile_frame(

@@ -218,7 +218,9 @@ pub const LINK_DETAILS: &str = "Details";
 /// Locked pause button of a running job.
 pub const PAUSE_LOCKED: &str = "Pause: coming soon";
 /// Locked cancel button of a running job.
-pub const CANCEL_LOCKED: &str = "Cancel: coming soon";
+pub const CANCEL_LOCKED: &str = "Cannot be cancelled now: the system installs it";
+/// Cancel button tooltip.
+pub const CANCEL_TIP: &str = "Cancel";
 /// Button: update to a version. Placeholder: `{version}`.
 pub const BUTTON_UPDATE_TO: &str = "Update to {version}";
 

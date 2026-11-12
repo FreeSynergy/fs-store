@@ -3,6 +3,7 @@
 #![deny(missing_docs)]
 
 pub mod capability;
+pub mod control;
 pub mod details;
 pub mod names;
 pub mod package;
@@ -14,6 +15,7 @@ pub mod update;
 pub mod words;
 
 pub use capability::{Capability, Provider, Resolution, resolve};
+pub use control::{CANCELLED, CancelToken, Progress};
 pub use details::{Description, Details, Origin, ReleaseNote, Screenshot, TrustLevel};
 pub use names::display_name;
 pub use package::{Format, Kind, Package, PackageName, Pre, Stage, Version};

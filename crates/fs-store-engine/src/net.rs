@@ -6,6 +6,8 @@ use std::num::NonZeroU32;
 use std::path::Path;
 use std::sync::atomic::AtomicBool;
 
+use fs_store_core::{CANCELLED, CancelToken, Progress};
+
 use crate::service::Fetch;
 
 /// Largest file we download (a release archive), in bytes.
@@ -17,6 +19,15 @@ pub struct HttpsFetch;
 
 impl Fetch for HttpsFetch {
     fn get(&self, url: &str) -> Result<Vec<u8>, String> {
+        self.get_controlled(url, &CancelToken::new(), &|_| {})
+    }
+
+    fn get_controlled(
+        &self,
+        url: &str,
+        cancel: &CancelToken,
+        progress: &(dyn Fn(Progress) + Sync),
+    ) -> Result<Vec<u8>, String> {
         if !url.starts_with("https://") {
             return Err(format!("{url}: only https addresses are downloaded"));
         }
@@ -27,7 +38,10 @@ impl Fetch for HttpsFetch {
             if attempt > 0 {
                 std::thread::sleep(std::time::Duration::from_secs(2 * attempt));
             }
-            match once(url) {
+            if cancel.is_cancelled() {
+                return Err(CANCELLED.to_owned());
+            }
+            match once(url, cancel, progress) {
                 Ok(bytes) => return Ok(bytes),
                 Err((message, retry)) => {
                     last = message;
@@ -42,7 +56,11 @@ impl Fetch for HttpsFetch {
 }
 
 /// One download; the flag says whether trying again can help.
-fn once(url: &str) -> Result<Vec<u8>, (String, bool)> {
+fn once(
+    url: &str,
+    cancel: &CancelToken,
+    progress: &(dyn Fn(Progress) + Sync),
+) -> Result<Vec<u8>, (String, bool)> {
     // A server that does not answer must not hang the store (the window shows the error instead).
     let agent = ureq::AgentBuilder::new()
         .timeout_connect(std::time::Duration::from_secs(20))
@@ -55,11 +73,29 @@ fn once(url: &str) -> Result<Vec<u8>, (String, bool)> {
         };
         (format!("{url}: {e}"), retry)
     })?;
+    let total = resp
+        .header("Content-Length")
+        .and_then(|v| v.parse::<u64>().ok());
+    let mut reader = resp.into_reader().take(MAX_DOWNLOAD + 1);
     let mut out = Vec::new();
-    resp.into_reader()
-        .take(MAX_DOWNLOAD + 1)
-        .read_to_end(&mut out)
-        .map_err(|e| (format!("{url}: {e}"), true))?;
+    let mut piece = vec![0u8; 64 * 1024];
+    loop {
+        // Between two pieces: the person may have cancelled (nothing is on the machine yet, so stopping is safe)
+        if cancel.is_cancelled() {
+            return Err((CANCELLED.to_owned(), false));
+        }
+        let n = reader
+            .read(&mut piece)
+            .map_err(|e| (format!("{url}: {e}"), true))?;
+        if n == 0 {
+            break;
+        }
+        out.extend_from_slice(&piece[..n]);
+        progress(Progress {
+            done: out.len() as u64,
+            total,
+        });
+    }
     if out.len() as u64 > MAX_DOWNLOAD {
         return Err((
             format!("{url}: larger than the allowed {MAX_DOWNLOAD} bytes"),

@@ -83,6 +83,14 @@ impl Installer<'_> {
         let mut results = Vec::new();
         let mut stopped = Vec::new();
         let mut go = Vec::new();
+        // What the person cancelled before the install began is left alone: no server is ended for it, nothing is written.
+        let (cancelled, prepared): (Vec<_>, Vec<_>) =
+            prepared.into_iter().partition(|p| p.cancel.is_cancelled());
+        results.extend(
+            cancelled
+                .into_iter()
+                .map(|p| (p.name().to_owned(), Err(InstallFailure::Cancelled))),
+        );
         for p in prepared {
             let servers = find_servers(p.name(), std::process::id());
             if servers.is_empty() {
@@ -150,8 +158,9 @@ impl Installer<'_> {
             observe(&name, InstallState::Installing);
             let version = p.version();
             let mut files = p.files;
-            let mut strategy: Box<dyn InstallStrategy> =
-                Box::new(TarGz::from_bytes(&self.root, files.remove(0)));
+            let mut strategy: Box<dyn InstallStrategy> = Box::new(
+                TarGz::from_bytes(&self.root, files.remove(0)).with_cancel(p.cancel.clone()),
+            );
             let t = std::time::Instant::now();
             let result = run_update(
                 &Update {
@@ -164,7 +173,7 @@ impl Installer<'_> {
             timing("install", &name, t);
             results.push((
                 name,
-                result.map(|_| version).map_err(InstallFailure::Update),
+                result.map(|_| version).map_err(crate::service::failure_of),
             ));
         }
         results

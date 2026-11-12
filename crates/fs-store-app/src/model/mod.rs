@@ -17,6 +17,7 @@ mod front_text;
 mod front_types;
 mod job_end;
 mod jobs;
+mod jobs_cancel;
 mod menu;
 mod open;
 mod refresh;

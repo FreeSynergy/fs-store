@@ -5,7 +5,8 @@ use std::fs;
 use std::path::PathBuf;
 
 use fs_store_core::{
-    Format, InstallState, RunningCheck, SignaturePolicy, SignatureVerifier, UpdateError, Version,
+    CANCELLED, CancelToken, Format, InstallState, Progress, RunningCheck, SignaturePolicy,
+    SignatureVerifier, UpdateError, Version,
 };
 
 /// Gets the bytes behind an address.
@@ -13,6 +14,29 @@ pub trait Fetch: Sync {
     /// # Errors
     /// Text describing why the address could not be read.
     fn get(&self, url: &str) -> Result<Vec<u8>, String>;
+
+    /// Like [`Fetch::get`], and reports how far it is, and stops with [`CANCELLED`] when `cancel` is set. The default asks `cancel` once
+    /// before and reports the whole size once after; a fetch that reads in pieces does it in between.
+    ///
+    /// # Errors
+    /// Text describing why the address could not be read, or [`CANCELLED`].
+    fn get_controlled(
+        &self,
+        url: &str,
+        cancel: &CancelToken,
+        progress: &(dyn Fn(Progress) + Sync),
+    ) -> Result<Vec<u8>, String> {
+        if cancel.is_cancelled() {
+            return Err(CANCELLED.to_owned());
+        }
+        let bytes = self.get(url)?;
+        let len = bytes.len() as u64;
+        progress(Progress {
+            done: len,
+            total: Some(len),
+        });
+        Ok(bytes)
+    }
 }
 
 /// Reads `file://` addresses and plain paths (local catalogs and draft releases).
@@ -47,6 +71,8 @@ pub enum InstallFailure {
     ReleaseSignature,
     /// The update step failed or was rolled back.
     Update(UpdateError),
+    /// The person cancelled at a point where nothing was left half done: nothing on disk changed, or what was begun is gone again.
+    Cancelled,
     /// The new version IS installed, but a background server of the program could not be ended (job step "end
     /// server"). Not an install failure: callers note the install, and tell the person this.
     ServerNotEnded {
@@ -72,6 +98,14 @@ pub struct Installer<'a> {
     pub prefer: Format,
     /// Who may sign; `SignaturePolicy::default()` trusts only the FreeSynergy release key.
     pub policy: SignaturePolicy,
+}
+
+/// The failure of an update step: a stop the person asked for is `Cancelled`, anything else `Update`.
+pub(crate) fn failure_of(e: UpdateError) -> InstallFailure {
+    match e {
+        UpdateError::RolledBack(cause) if cause.0 == CANCELLED => InstallFailure::Cancelled,
+        other => InstallFailure::Update(other),
+    }
 }
 
 impl Installer<'_> {
@@ -154,6 +188,7 @@ impl std::fmt::Display for InstallFailure {
             Self::ReleaseSignature => {
                 f.write_str("the downloaded file is not signed by a trusted key")
             }
+            Self::Cancelled => f.write_str("cancelled; nothing was changed"),
             Self::Update(UpdateError::RolledBack(cause)) => {
                 write!(f, "installing failed and was rolled back: {}", cause.0)
             }

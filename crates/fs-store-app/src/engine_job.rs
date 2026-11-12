@@ -8,7 +8,7 @@ use fs_store_engine::ProcRunningCheck;
 use fs_store_engine::service::Installer;
 use fs_store_pgp::PgpVerifier;
 
-use crate::backend::{JobError, JobKind, Phase, Prepared};
+use crate::backend::{JobControl, JobError, JobKind, Phase, Prepared};
 use crate::engine::{AnyFetch, EngineBackend};
 use crate::engine_map::job_error;
 
@@ -37,7 +37,12 @@ impl EngineBackend {
     }
 
     /// Finds the package in the enabled sources, downloads it and checks sum and signature. Changes nothing.
-    pub(crate) fn prepare_job(&self, kind: JobKind, name: &str) -> Result<Prepared, JobError> {
+    pub(crate) fn prepare_job(
+        &self,
+        kind: JobKind,
+        name: &str,
+        control: &JobControl,
+    ) -> Result<Prepared, JobError> {
         let current = self.installed_version(name);
         if kind == JobKind::Update && current.is_none() {
             return Err(JobError::NotOffered);
@@ -63,7 +68,9 @@ impl EngineBackend {
             let plan = installer
                 .plan(&bytes, &sig, name, current)
                 .map_err(job_error)?;
-            let downloaded = installer.download(&plan).map_err(job_error)?;
+            let downloaded = installer
+                .download_controlled(&plan, &control.cancel, &*control.progress)
+                .map_err(job_error)?;
             let ready = installer.check(&plan, downloaded).map_err(job_error)?;
             let signer = ready.signer().to_owned();
             return Ok(Prepared(Box::new(Staged {

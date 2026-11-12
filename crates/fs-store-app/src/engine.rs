@@ -251,7 +251,16 @@ impl StoreBackend for EngineBackend {
     }
 
     fn prepare(&self, kind: JobKind, name: &str) -> Result<Prepared, JobError> {
-        self.prepare_job(kind, name)
+        self.prepare_job(kind, name, &crate::backend::JobControl::none())
+    }
+
+    fn prepare_controlled(
+        &self,
+        kind: JobKind,
+        name: &str,
+        control: &crate::backend::JobControl,
+    ) -> Result<Prepared, JobError> {
+        self.prepare_job(kind, name, control)
     }
 
     fn commit(
