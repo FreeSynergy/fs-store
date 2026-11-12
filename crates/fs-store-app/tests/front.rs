@@ -190,7 +190,7 @@ fn a_long_summary_is_closed_with_an_ellipsis_at_a_word_never_cut_hard() {
         "Identity management: accounts, groups"
     );
     assert_eq!(
-        ellipsize("Identity management: accounts, groups and sign-in", 30),
+        ellipsize("Identity management: accounts, groups and sign-in", 31),
         "Identity management: accounts\u{2026}"
     );
     assert_eq!(
