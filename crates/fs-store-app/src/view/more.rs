@@ -44,7 +44,7 @@ pub(super) fn more_menu(
         .align(DropdownAlign::End)
         .min_width(220.0)
         .item(words::MORE_DESCRIPTION, move || {
-            locked(&describe).select(&n1);
+            locked(&describe).open_page(&n1);
             rebuild();
         })
         .item(words::MORE_REPOSITORY, move || {
@@ -56,7 +56,7 @@ pub(super) fn more_menu(
         menu.item_disabled(words::MORE_UNINSTALL)
     } else {
         menu.item(words::MORE_UNINSTALL, move || {
-            locked(&remove).ask_uninstall(&n3);
+            locked(&remove).ask_remove_preview(&n3);
             rebuild();
         })
     }

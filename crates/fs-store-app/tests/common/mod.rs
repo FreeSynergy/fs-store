@@ -40,6 +40,8 @@ pub fn package(name: &str, version: Version) -> PackageRow {
         source: "freesynergy".to_owned(),
         description: String::new(),
         homepage: String::new(),
+        details: fs_store_core::Details::default(),
+        native: Vec::new(),
     }
 }
 

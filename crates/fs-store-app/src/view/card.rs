@@ -12,15 +12,15 @@ use fs_components::blinc::layout::image::img;
 use fs_components::blinc::layout::prelude::text;
 
 use crate::launcher::Launcher;
-use crate::model::{Card, OpenWidth, Working};
+use crate::model::{Card, CardState, OpenWidth, Working};
 use crate::words;
 
-use super::job::{start_job, start_uninstall};
+use super::job::start_uninstall;
 use super::more::more_menu;
 use super::shell::{Shared, button, locked, rebuild};
 
 /// Width of a card, in pixels.
-pub(super) const CARD_W: f32 = 240.0;
+pub(super) const CARD_W: f32 = 270.0;
 /// Width of the button row inside a card: the card without its padding.
 const ROW_W: f32 = CARD_W - 24.0;
 /// The three-dot menu, with the gap before it.
@@ -56,19 +56,29 @@ fn gradient(card: &Card) -> Gradient {
     }
 }
 
+/// The logo at table size.
+pub(super) fn logo_small(card: &Card) -> Div {
+    sized_logo(card, 36.0, 9.0, 18.0)
+}
+
 /// The logo: the stored icon (a PNG) when there is one, else a rounded square with a gradient from the name's
 /// colour and the first letter in the middle. Both have the same size.
 fn logo(card: &Card) -> Div {
+    sized_logo(card, LOGO, LOGO_RADIUS, 28.0)
+}
+
+/// The logo `side` pixels square with the given corner and letter size.
+pub(super) fn sized_logo(card: &Card, side: f32, radius: f32, letter: f32) -> Div {
     let frame = div()
-        .w(LOGO)
-        .h(LOGO)
+        .w(side)
+        .h(side)
         .flex_shrink_0()
-        .rounded(LOGO_RADIUS)
+        .rounded(radius)
         .overflow_clip();
     if let Some(path) = &card.icon {
         return frame.child(
             img(path.to_string_lossy().into_owned())
-                .size(LOGO, LOGO)
+                .size(side, side)
                 .cover(),
         );
     }
@@ -78,7 +88,7 @@ fn logo(card: &Card) -> Div {
         .justify_center()
         .child(
             text(card.placeholder.letter.to_string())
-                .size(28.0)
+                .size(letter)
                 .bold()
                 .color(Color::WHITE),
         )
@@ -100,7 +110,8 @@ fn head(card: &Card, shared: &Shared) -> Div {
         .min_w(0.0)
         .gap(0.5)
         .child(text(card.title.clone()).bold().no_wrap())
-        .child(text(card.version_line()).class("fs-store-sub").no_wrap());
+        .child(text(card.version_line()).class("fs-store-sub").no_wrap())
+        .child(text(card.meta_line()).class("fs-store-sub").no_wrap());
     if card.is_new {
         names = names.child(text(words::MARK_NEW).class("fs-card-badge"));
     }
@@ -111,9 +122,26 @@ fn head(card: &Card, shared: &Shared) -> Div {
         .child(logo(card))
         .child(names)
         .on_click(move |_| {
-            locked(&shared).select(&name);
+            locked(&shared).open_page(&name);
             rebuild();
         })
+}
+
+/// The state and the signature level as two small badges under the head.
+fn badges(card: &Card) -> Div {
+    let tone = match card.state {
+        CardState::NotInstalled => "fs-store-badge-info",
+        CardState::Installed => "fs-store-badge-ok",
+        CardState::UpdateAvailable => "fs-store-badge-warn",
+    };
+    div()
+        .flex_row()
+        .gap(1.5)
+        .child(super::front::widgets::badge(card.state_word(), tone))
+        .child(super::front::widgets::badge(
+            card.trust,
+            "fs-store-badge-quiet",
+        ))
 }
 
 fn actions(card: &Card, busy: bool, shared: &Shared, launcher: &Arc<dyn Launcher>) -> Div {
@@ -130,7 +158,10 @@ fn actions(card: &Card, busy: bool, shared: &Shared, launcher: &Arc<dyn Launcher
                 ButtonVariant::Primary,
                 !busy,
             )
-            .on_click(move |_| start_job(&shared, &name)),
+            .on_click(move |_| {
+                locked(&shared).ask_install(&name);
+                rebuild();
+            }),
         ));
     }
     if let Some(width) = card.buttons.open {
@@ -163,7 +194,10 @@ fn actions(card: &Card, busy: bool, shared: &Shared, launcher: &Arc<dyn Launcher
                 ButtonVariant::Primary,
                 !busy,
             )
-            .on_click(move |_| start_job(&shared, &name)),
+            .on_click(move |_| {
+                locked(&shared).ask_install(&name);
+                rebuild();
+            }),
         ));
     }
     row.child(more_menu(card, shared, launcher))
@@ -234,7 +268,8 @@ pub(super) fn card(card: &Card, busy: bool, shared: &Shared, launcher: &Arc<dyn 
         .w(CARD_W)
         .flex_col()
         .gap(3.0)
-        .child(head(card, shared));
+        .child(head(card, shared))
+        .child(badges(card));
     if let Some(why) = &card.failure {
         body = body.child(text(why.clone()).class("fs-store-sub"));
     }

@@ -397,3 +397,28 @@ additional cross-check (`fs-store owner`, only for a path that is none of ours),
   (it cannot see changes made before; always shown as "not the original").
 - Removing a package forgets its list. Not done yet: the install/update/remove activity log (history), per-file list for rpm/deb,
   the sha256 of the release file itself in the list, `blake3`.
+
+## Storefront, variant B (frontend-store, 2026-11-12)
+The window is a launcher-like storefront after the references in `.scratch/frontends/vorbilder-store/` (ArtCraft Launcher for the
+shape: grid or table, filter tabs with counts, sort, search; Flathub for the package page). Data first, then looks:
+- **Data:** `PackageRow` carries `details` (`fs_store_core::Details`: size, release date, changes per version, origin, trust level,
+  capabilities, pictures with a clear licence, description as text or wiki block) and `native` (rpm/deb offered). Everything the catalog
+  does not say is shown as "unknown", never guessed. Capabilities (offers, needs, can use) are kept apart from rights; each need is
+  answered by the resolver of the core (one provider, a choice, or nobody).
+- **Model (pure, tested):** `model/front*.rs`: `Layout`, `Tab`, `Sort`, `Section` (start page or one kind), `nav()` (a kind with no package is
+  locked with its reason; servers and icon sets are locked "Coming soon": the catalog has no such kind), `listing()`, `table_rows()`,
+  `start_blocks()`, `package_page()`, `capability_lines()`, and the question before any work (`ask_install`, `ask_update_all`,
+  `ask_remove_preview`: the fixed steps of the store core in plain words, each with its risk look < open < start < install < system-wide and
+  its actor; the system-wide step says that the person confirms the password).
+- **View:** `view/front/`: `bar` (layout switch, refresh, update all; tabs, sort), `nav`, `list` (grid, table, start page), `page`, `preview`,
+  `widgets` (icon button with tooltip, chip, badge), `styles`. Every clickable part is a tab stop that Enter and Space press; Escape closes
+  the question, then the page, then goes to the start. Jobs run on workers as before (`view/job.rs`), nothing blocks.
+- **Search:** the field is made once and kept; a key changes only its text, the list is narrowed when the typing pauses (180 ms), so the
+  key-to-picture time stays that of any text field.
+- **Sources:** the storefront has no source list of its own, only a footer line naming the sources "from the settings". The page
+  `--view sources` (settings) stays for now because the typing test types into its field; it moves when fs-components has the settings mechanism.
+- **Not built:** pictures are listed (caption, licence) but not loaded (needs the picture mirror and cache); the description of a wiki block is
+  named, not loaded; "Recommended" is locked (the catalog has no field for it); no Server and Icon-set kinds.
+- **Flags for pictures and tests:** `--layout`, `--section`, `--tab`, `--search`, `--open NAME`, `--preview NAME` (with `--demo`).
+- Builds against `fs-components` branch `frontend-files` (icon set, `FieldSize`) through an untracked `.cargo/config.toml` patch; the
+  committed `Cargo.toml` still names tag v0.0.8, so this branch builds only after the next fs-components tag.

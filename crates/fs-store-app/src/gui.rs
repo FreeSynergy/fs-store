@@ -20,6 +20,7 @@ pub fn run(argv: &[String]) -> Result<(), String> {
     let mut snapshot = None;
     let mut demo = false;
     let mut view = View::Cards;
+    let mut show: Vec<(String, String)> = Vec::new();
     let mut it = argv.iter();
     while let Some(arg) = it.next() {
         match arg.as_str() {
@@ -32,6 +33,15 @@ pub fn run(argv: &[String]) -> Result<(), String> {
                     Some("sources") => View::Sources,
                     _ => return Err("--view needs cards or sources".to_owned()),
                 };
+            }
+            // The state of the storefront to draw (pictures and tests of the window): `--layout grid|table`,
+            // `--section start|program|frontend|component|theme`, `--tab all|installed|updates|new`, `--search TEXT`,
+            // `--open NAME` (package page), `--preview NAME` (the question before an install).
+            flag @ ("--layout" | "--section" | "--tab" | "--search" | "--open" | "--preview") => {
+                show.push((
+                    flag.to_owned(),
+                    it.next().ok_or(format!("{flag} needs a value"))?.clone(),
+                ));
             }
             // The facet link convention (`fs-<facet>`, ADR 0063) is read by the one shared parser. The store has a
             // single view, so a valid facet is accepted and nothing else changes; a bad one is an error.
@@ -48,6 +58,9 @@ pub fn run(argv: &[String]) -> Result<(), String> {
     let mut model = StoreModel::new(parts.backend).with_updates(parts.updates);
     model.refresh();
     model.show(view);
+    for (flag, value) in &show {
+        crate::model::apply_show_flag(&mut model, flag, value)?;
+    }
     let launcher = parts.launcher;
     let wanted = parts.check_at_start_allowed && model.check_wanted_at_start();
     let shared = Arc::new(Mutex::new(model));

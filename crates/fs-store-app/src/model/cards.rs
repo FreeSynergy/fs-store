@@ -97,6 +97,12 @@ pub struct Card {
     pub placeholder: Placeholder,
     /// The stored icon (a PNG file), when the catalog entry has one and the engine kept it; it replaces the stand-in.
     pub icon: Option<std::path::PathBuf>,
+    /// Release date as the catalog gives it; empty when it does not say.
+    pub released: String,
+    /// Download size in words; `unknown` when the catalog does not say.
+    pub size: String,
+    /// Signature level in a word; `unknown` when the catalog does not say.
+    pub trust: &'static str,
 }
 
 impl Card {
@@ -268,6 +274,14 @@ impl StoreModel {
             buttons: buttons_for(state),
             placeholder: placeholder(name),
             icon: self.backend.icon_path(name),
+            released: row
+                .map(|r| r.package.details.released.clone())
+                .unwrap_or_default(),
+            size: row.and_then(|r| r.package.details.size).map_or_else(
+                || crate::words_front::UNKNOWN.to_owned(),
+                super::front_text::size_text,
+            ),
+            trust: super::front_text::trust_word(row.and_then(|r| r.package.details.trust)),
         }
     }
 }

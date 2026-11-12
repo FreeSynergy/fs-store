@@ -4,9 +4,17 @@
 //! the source list), `jobs` (the job of one package), `text` (the sentences the window shows).
 
 mod admin;
+mod card_text;
 mod cards;
 mod cards_ui;
 mod fetch;
+mod front;
+mod front_page;
+mod front_preview;
+mod front_start;
+mod front_steps;
+mod front_text;
+mod front_types;
 mod job_end;
 mod jobs;
 mod menu;
@@ -25,6 +33,13 @@ pub use cards::{
 };
 pub use cards_ui::CardsUi;
 pub use fetch::{Fetched, fetch};
+pub use front_page::{CapLine, CapabilityLines, DescriptionView, PackagePage, ReleaseLine};
+pub use front_start::apply_show_flag;
+pub use front_steps::{Actor, Preview, PreviewAction, Risk, Step};
+pub use front_text::{kind_text, size_text, trust_word};
+pub use front_types::{
+    FrontUi, Layout, NavEntry, NeedsState, Section, Sort, StartBlock, Tab, TableRow,
+};
 pub use jobs::{JobState, JobView, Ticket};
 pub use menu::{Command, Effect, help_url, is_help_key, is_quit_key};
 pub use refresh::{ReadTicket, RefreshState};

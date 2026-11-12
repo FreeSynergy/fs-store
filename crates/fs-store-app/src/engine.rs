@@ -107,47 +107,6 @@ impl EngineBackend {
         Ok((parsed, catalog, sig))
     }
 
-    /// After a good install: note it in the register and put the commands on the PATH, as the commands do. None of it
-    /// may undo the install that already happened, and none of it is swallowed: the problems come back as sentences.
-    pub(crate) fn remember(
-        &self,
-        name: &str,
-        version: Version,
-        source: &str,
-        signer: &str,
-        facets: &[String],
-    ) -> Vec<String> {
-        let path = self.root.join("installed.toml");
-        let settled = fs_store_engine::settle_install(
-            &self.root,
-            name,
-            facets,
-            &fs_store_engine::default_bin_dir(),
-            &fs_store_engine::default_apps_dir(),
-        );
-        let mut problems = settled.problems;
-        if let Err(e) =
-            fs_store_engine::record_install(&self.root, name, &version.to_string(), source, signer)
-        {
-            problems.push(e);
-        }
-        match fs_store_sources::Registry::load(&path) {
-            Ok(mut registry) => {
-                registry.record(name, &version.to_string(), source);
-                registry.set_facets(name, settled.made);
-                if let Err(e) = registry.save() {
-                    problems.push(format!(
-                        "{name}: the list of installed programs was not saved: {e:?}"
-                    ));
-                }
-            }
-            Err(e) => problems.push(format!(
-                "{name}: the list of installed programs cannot be read: {e:?}"
-            )),
-        }
-        problems
-    }
-
     pub(crate) fn installed_version(&self, name: &str) -> Option<Version> {
         let known = crate::installed::detect(
             &self.root,
@@ -208,14 +167,23 @@ impl StoreBackend for EngineBackend {
                 Ok((catalog, _, _)) => {
                     listing
                         .packages
-                        .extend(catalog.entries.into_iter().map(|e| PackageRow {
-                            name: e.name.as_str().to_owned(),
-                            title: e.title,
-                            kind: e.kind,
-                            version: e.version,
-                            source: source.id.0.clone(),
-                            description: e.description,
-                            homepage: e.homepage,
+                        .extend(catalog.entries.into_iter().map(|e| {
+                            let native = crate::engine_after::native_formats(&e);
+                            PackageRow {
+                                name: e.name.as_str().to_owned(),
+                                title: e.title,
+                                kind: e.kind,
+                                version: e.version,
+                                source: source.id.0.clone(),
+                                description: e.description,
+                                homepage: e.homepage,
+                                native,
+                                details: {
+                                    let mut d = e.details;
+                                    d.origin.source.clone_from(&source.url);
+                                    d
+                                },
+                            }
                         }));
                     listing
                         .skipped
@@ -240,6 +208,10 @@ impl StoreBackend for EngineBackend {
             &fs_store_engine::native_installed_version,
             &candidates,
         ))
+    }
+
+    fn system_format(&self) -> fs_store_core::Format {
+        fs_store_engine::preferred_format()
     }
 
     fn icon_path(&self, name: &str) -> Option<PathBuf> {

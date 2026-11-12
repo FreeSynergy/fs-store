@@ -39,6 +39,7 @@ pub struct StoreModel {
     pub(super) shown: Option<View>,
     pub(super) fresh: Vec<String>,
     pub(super) ui: CardsUi,
+    pub(super) front: super::front_types::FrontUi,
     pub(super) admin: AdminState,
 }
 
@@ -69,6 +70,7 @@ impl StoreModel {
             shown: None,
             fresh: Vec::new(),
             ui: CardsUi::default(),
+            front: super::front_types::FrontUi::default(),
             admin: AdminState::default(),
         }
     }

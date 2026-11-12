@@ -16,8 +16,7 @@ use crate::model::{StoreModel, View, is_help_key, is_quit_key};
 use crate::words;
 
 use super::admin::admin;
-use super::cards::cards;
-use super::job::job_list;
+use super::front::{search_field, storefront};
 use super::menu::{install_menus, open_help, quit};
 use super::pages::about;
 
@@ -34,6 +33,9 @@ pub(super) fn rebuild() {
         BlincContextState::get().request_rebuild();
     }
 }
+
+/// The Escape key of a window (DOM key code).
+const KEY_ESCAPE: u32 = 27;
 
 /// Id of the one screen.
 const SCREEN: &str = "store";
@@ -52,6 +54,7 @@ pub fn store_app(model: &Shared, launcher: &Arc<dyn Launcher>) -> Result<AppWidg
         Arc::new(StoreSurface {
             model: Arc::clone(model),
             launcher: Arc::clone(launcher),
+            search: search_field(model),
         }),
     );
     let app = AppWidget::new(title, vec![screen])?;
@@ -63,6 +66,8 @@ pub fn store_app(model: &Shared, launcher: &Arc<dyn Launcher>) -> Result<AppWidg
 struct StoreSurface {
     model: Shared,
     launcher: Arc<dyn Launcher>,
+    /// Made once: a redraw keeps what is typed into it.
+    search: fs_components_primitives::SearchField,
 }
 
 impl Surface for StoreSurface {
@@ -70,6 +75,27 @@ impl Surface for StoreSurface {
         let mut model = locked(&self.model);
         let view = model.view();
         model.show(view);
+        if view == View::Cards {
+            let keys = (Arc::clone(&self.model), Arc::clone(&self.launcher));
+            return Box::new(
+                storefront(
+                    &model,
+                    &self.model,
+                    &self.launcher,
+                    &self.search,
+                    (width, height),
+                )
+                .on_key_down(move |ctx| {
+                    if is_quit_key(ctx.key_code, ctx.ctrl) {
+                        quit(&keys.0);
+                    } else if is_help_key(ctx.key_code) {
+                        open_help(&keys.0, &keys.1);
+                    } else if ctx.key_code == KEY_ESCAPE && locked(&keys.0).escape() {
+                        rebuild();
+                    }
+                }),
+            );
+        }
         let mut page = div()
             .class("fs-store-page")
             .flex_col()
@@ -87,32 +113,32 @@ impl Surface for StoreSurface {
                 }
             });
         if !model.jobs().is_empty() {
-            page = page.child(job_list(&model, &self.model));
+            page = page.child(super::job::job_list(&model, &self.model));
         }
-        if view != View::Cards {
-            let back = Arc::clone(&self.model);
-            page = page.child(div().child(
-                button("back", words::BUTTON_BACK, ButtonVariant::Ghost, true).on_click(
-                    move |_| {
-                        locked(&back).show(View::Cards);
-                        rebuild();
-                    },
-                ),
-            ));
-        }
+        let back = Arc::clone(&self.model);
+        page = page.child(div().child(
+            button("back", words::BUTTON_BACK, ButtonVariant::Ghost, true).on_click(move |_| {
+                locked(&back).show(View::Cards);
+                rebuild();
+            }),
+        ));
         for line in model.problem_lines() {
             page = page.child(div().class("fs-store-problem").child(text(line)));
         }
         let body = match view {
-            View::Cards => cards(&model, &self.model, &self.launcher, width),
             View::Sources | View::Settings => admin(&model, &self.model, view == View::Sources),
-            View::About => about(),
+            _ => about(),
         };
         Box::new(page.child(body))
     }
 
     fn styles(&self) -> String {
-        STYLES.to_owned()
+        [
+            STYLES,
+            super::front::STYLES,
+            &fs_components_widgets::styles(),
+        ]
+        .concat()
     }
 }
 

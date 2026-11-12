@@ -57,5 +57,7 @@ fn demo_installs_nothing_and_the_model_never_wants_a_check_at_start() {
     model.refresh();
     // the window starts a check only when `check_at_start_allowed`; it is false, whatever the settings say
     assert!(!p.check_at_start_allowed);
-    assert!(model.installed().iter().all(|r| r.name == "fs-tasks"));
+    // the same three as before the run: nothing was installed or removed
+    let names: Vec<&str> = model.installed().iter().map(|r| r.name.as_str()).collect();
+    assert_eq!(names, ["fs-tasks", "fs-people", "kanidm"]);
 }

@@ -13,12 +13,11 @@
 
 use std::sync::{Arc, Mutex};
 
-use fs_store_core::{Kind, SourceError, Version};
+use fs_store_core::{SourceError, Version};
 use fs_store_sources::{Findings, Settings};
 
 use crate::backend::{
-    BackendError, InstalledRow, JobError, JobKind, Listing, PackageRow, Phase, SourceRow,
-    StoreBackend,
+    BackendError, InstalledRow, JobError, JobKind, Listing, Phase, SourceRow, StoreBackend,
 };
 use crate::engine::EngineBackend;
 use crate::launcher::{Launcher, ProcessLauncher};
@@ -40,18 +39,6 @@ impl Default for DemoBackend {
                 reference: true,
             }]),
         }
-    }
-}
-
-fn package(name: &str, title: &str, text: &str) -> PackageRow {
-    PackageRow {
-        name: name.into(),
-        title: title.into(),
-        kind: Kind::Program,
-        version: Version::new(0, 2, 0),
-        source: "freesynergy".into(),
-        description: text.into(),
-        homepage: "https://example.invalid".into(),
     }
 }
 
@@ -105,23 +92,12 @@ impl StoreBackend for DemoBackend {
     }
     fn available(&self) -> Result<Listing, BackendError> {
         Ok(Listing {
-            packages: vec![
-                package(
-                    "fs-tasks",
-                    "FreeSynergy.Tasks",
-                    "Tasks for people and groups.",
-                ),
-                package("fs-people", "FreeSynergy.People", "Contacts and members."),
-                package("fs-wiki", "FreeSynergy.Wiki", "Notes that belong together."),
-            ],
+            packages: crate::demo_data::offered(),
             ..Listing::default()
         })
     }
     fn installed(&self) -> Result<Vec<InstalledRow>, BackendError> {
-        Ok(vec![InstalledRow {
-            name: "fs-tasks".into(),
-            version: Version::new(0, 1, 0),
-        }])
+        Ok(crate::demo_data::installed())
     }
     fn uninstall(&self, _name: &str) -> Result<(), String> {
         Err("demo mode: nothing is installed, so nothing can be removed".to_owned())

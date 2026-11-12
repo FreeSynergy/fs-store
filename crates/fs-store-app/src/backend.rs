@@ -2,7 +2,7 @@
 //! (`sources`, `addSource`, `setEnabled`, `removeSource`, `available`, `installed`, `install`/`update` with
 //! phases). The in-process engine implements it now; a Cap'n Proto client can do it later.
 
-use fs_store_core::{InstallState, Kind, SourceError, Version};
+use fs_store_core::{Details, Format, InstallState, Kind, SourceError, Version};
 
 /// The phase of a job; the same six as `JobPhase` in the contract.
 pub type Phase = InstallState;
@@ -37,6 +37,10 @@ pub struct PackageRow {
     pub description: String,
     /// The project page, e.g. the Git repository (empty when it has none).
     pub homepage: String,
+    /// Size, date, changes, origin, trust level and capabilities as the signed catalog says them (ADR 0068).
+    pub details: Details,
+    /// The native package formats the release also comes in (rpm, deb), besides the unpacked archive.
+    pub native: Vec<Format>,
 }
 
 /// A package on this machine.
@@ -181,6 +185,11 @@ pub trait StoreBackend: Send + Sync {
     /// # Errors
     /// `BackendError` when the list cannot be read.
     fn installed(&self) -> Result<Vec<InstalledRow>, BackendError>;
+    /// The format this system takes: the package of the system (rpm, deb) when the store itself came that way, else
+    /// the archive. Only tells what an install will do (the preview), changes nothing. Default: the archive.
+    fn system_format(&self) -> Format {
+        Format::TarGz
+    }
     /// What is known about where the installed package `name` is. Default: nothing is known.
     fn details(&self, _name: &str) -> InstalledDetails {
         InstalledDetails::default()

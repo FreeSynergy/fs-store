@@ -16,5 +16,6 @@ fs-store-pgp = { path = "../fs-store-pgp" }
 fs-store-sources = { path = "../fs-store-sources" }
 fs-components = { git = "https://github.com/FreeSynergy/fs-components", tag = "v0.0.8" }
 fs-components-app = { git = "https://github.com/FreeSynergy/fs-components", tag = "v0.0.8" }
+fs-components-widgets = { git = "https://github.com/FreeSynergy/fs-components", tag = "v0.0.8" }
 fs-components-primitives = { git = "https://github.com/FreeSynergy/fs-components", tag = "v0.0.8" }
 fs-interfaces = { git = "https://github.com/FreeSynergy/fs-interfaces", tag = "v0.0.18", features = ["rpc"] }
