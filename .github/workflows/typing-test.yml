@@ -33,7 +33,9 @@ jobs:
       - uses: FreeSynergy/fs-release/actions/typing-test@main
         with:
           app-binary: target/release/fs-store
-          app-args: "--demo --view sources --size 900x640"
+          # `--look standard`: the typing test judges glyphs as dark ink on a light ground; the Craft look is light on dark and waits for
+          # a polarity check in the shared test (see DESIGN.md). The field is the same widget in both looks.
+          app-args: "--demo --look standard --view sources --size 900x640"
           # The field "Git address of a source" of the sources view: 300,190 from the window's top left corner
           # (the field is 40 px high at y 145..200 of the 900x640 picture; with or without a title bar the point lies inside).
           click-in-window: "300,190"

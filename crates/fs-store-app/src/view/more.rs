@@ -18,8 +18,9 @@ use super::shell::{Shared, locked, rebuild};
 fn trigger(open: bool) -> Div {
     let mut square = div()
         .class("fs-more")
-        .w(32.0)
-        .h(32.0)
+        .class("craft-btn")
+        .w(36.0)
+        .h(34.0)
         .flex_shrink_0()
         .items_center()
         .justify_center()

@@ -136,7 +136,10 @@ impl UpdateService for DemoUpdates {
         Ok(())
     }
     fn findings(&self) -> Result<Findings, String> {
-        Ok(held(&self.findings).clone())
+        // Demo data: the demo says it was checked three minutes ago, so the footer has a line to show.
+        let mut findings = held(&self.findings).clone();
+        findings.checked = self.now().saturating_sub(180);
+        Ok(findings)
     }
     fn save_findings(&self, findings: &Findings) -> Result<(), String> {
         *held(&self.findings) = findings.clone();

@@ -3,7 +3,6 @@
 
 use std::sync::Arc;
 
-use fs_components::blinc::cn::components::button::ButtonVariant;
 use fs_components::blinc::layout::div::{Div, div};
 use fs_components::blinc::layout::prelude::text;
 
@@ -11,32 +10,31 @@ use crate::backend::{JobError, JobKind, StoreBackend};
 use crate::model::StoreModel;
 use crate::words;
 
-use super::shell::{Shared, button, locked, rebuild};
+use super::shell::{Shared, locked, rebuild};
 
 /// The job list: one line per job of the queue, all at once; the finished ones can be cleared.
 pub(super) fn job_list(model: &StoreModel, shared: &Shared) -> Div {
     let clear = Arc::clone(shared);
     let mut list = div()
-        .class("fs-store-job")
-        .child(text(words::JOBS_HEADING).bold());
+        .class("craft-panel")
+        .flex_col()
+        .gap(2.0)
+        .p(4.0)
+        .child(super::front::widgets::label_dim(words::JOBS_HEADING));
     for line in model.job_lines() {
         list = list.child(text(line));
     }
     if model.jobs().iter().any(crate::model::JobView::is_finished) {
-        list = list.child(
-            div().child(
-                button(
-                    "clear-jobs",
-                    words::BUTTON_CLEAR_JOBS,
-                    ButtonVariant::Ghost,
-                    true,
-                )
-                .on_click(move |_| {
-                    locked(&clear).clear_finished_jobs();
-                    rebuild();
-                }),
-            ),
-        );
+        list = list.child(div().flex_row().child(super::front::widgets::button(
+            "clear-jobs",
+            words::BUTTON_CLEAR_JOBS,
+            super::front::widgets::Look::Line,
+            true,
+            Arc::new(move || {
+                locked(&clear).clear_finished_jobs();
+                rebuild();
+            }),
+        )));
     }
     list
 }

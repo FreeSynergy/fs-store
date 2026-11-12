@@ -21,12 +21,21 @@ pub fn run(argv: &[String]) -> Result<(), String> {
     let mut demo = false;
     let mut view = View::Cards;
     let mut show: Vec<(String, String)> = Vec::new();
+    let mut look = Some(fs_components_styles::StyleId::Craft);
     let mut it = argv.iter();
     while let Some(arg) = it.next() {
         match arg.as_str() {
             "--size" => size = parse_size(it.next().ok_or("--size needs WxH")?)?,
             "--snapshot" => snapshot = Some(it.next().ok_or("--snapshot needs a file")?.clone()),
             "--demo" => demo = true,
+            // The look: the store wears the Craft style; `--look standard` is the default theme of the platform.
+            "--look" => {
+                look = match it.next().map(String::as_str) {
+                    Some("craft") => Some(fs_components_styles::StyleId::Craft),
+                    Some("standard") => None,
+                    _ => return Err("--look needs craft or standard".to_owned()),
+                };
+            }
             "--view" => {
                 view = match it.next().map(String::as_str) {
                     Some("cards") => View::Cards,
@@ -37,7 +46,8 @@ pub fn run(argv: &[String]) -> Result<(), String> {
             // The state of the storefront to draw (pictures and tests of the window): `--layout grid|table`,
             // `--section start|program|frontend|component|theme`, `--tab all|installed|updates|new`, `--search TEXT`,
             // `--open NAME` (package page), `--preview NAME` (the question before an install).
-            flag @ ("--layout" | "--section" | "--tab" | "--search" | "--open" | "--preview") => {
+            flag @ ("--layout" | "--section" | "--tab" | "--search" | "--open" | "--preview"
+            | "--job") => {
                 show.push((
                     flag.to_owned(),
                     it.next().ok_or(format!("{flag} needs a value"))?.clone(),
@@ -54,6 +64,7 @@ pub fn run(argv: &[String]) -> Result<(), String> {
             other => return Err(format!("unknown argument {other}")),
         }
     }
+    fs_components_render::use_style(look);
     let parts = parts(demo);
     let mut model = StoreModel::new(parts.backend).with_updates(parts.updates);
     model.refresh();

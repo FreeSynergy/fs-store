@@ -9,6 +9,8 @@ mod nav;
 mod page;
 mod preview;
 mod styles;
+mod table;
+mod tile;
 pub(super) mod widgets;
 
 pub(super) use layout::{search_field, storefront};

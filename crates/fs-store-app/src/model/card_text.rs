@@ -13,6 +13,32 @@ impl Card {
         }
     }
 
+    /// The state of a running job in a word, for the badge ("Installing", "Waiting", ...).
+    #[must_use]
+    pub fn working_word(&self) -> &'static str {
+        use crate::backend::Phase;
+        match self.working {
+            Some(super::cards::Working::Job(_, Phase::Pending)) => "Waiting",
+            Some(super::cards::Working::Job(_, Phase::Verified)) => "Verified",
+            Some(super::cards::Working::Job(_, Phase::Installing)) => "Installing",
+            Some(super::cards::Working::Job(_, _)) => "Working",
+            Some(super::cards::Working::Removing | super::cards::Working::Asking) => "Removing",
+            None => "",
+        }
+    }
+
+    /// `0.1.0 installed -> 0.2.0 released`, or `Version 0.7.0`: the first line under the badge of a tile.
+    #[must_use]
+    pub fn version_line_long(&self) -> String {
+        match (self.installed, self.offered, self.state) {
+            (Some(old), Some(new), CardState::UpdateAvailable) => {
+                format!("{old} installed -> {new} released")
+            }
+            (Some(v), _, _) | (None, Some(v), _) => format!("Version {v}"),
+            (None, None, _) => String::new(),
+        }
+    }
+
     /// The line `0.7.0 - 2026-11-09 - 13 MiB`, with `unknown` where the catalog is silent.
     #[must_use]
     pub fn meta_line(&self) -> String {
@@ -22,5 +48,25 @@ impl Card {
             self.released.as_str()
         };
         format!("{date} - {}", self.size)
+    }
+
+    /// How far a running job is, as a share 0..1 and the sentence under the bar (nothing is invented: the store reports
+    /// phases, not bytes). `None` when the card is not busy with a job.
+    #[must_use]
+    pub fn progress(&self) -> Option<(f32, &'static str)> {
+        use crate::backend::Phase;
+        let super::cards::Working::Job(_, phase) = self.working? else {
+            return None;
+        };
+        Some(match phase {
+            Phase::Pending => (0.1, "Waiting for the download and the checks"),
+            Phase::Verified => (
+                0.45,
+                "Checksum and signature are good; waiting for the others",
+            ),
+            Phase::Installing => (0.8, "Installing"),
+            Phase::Installed => (1.0, "Installed"),
+            Phase::Failed | Phase::RolledBack => (1.0, "Something went wrong; going back"),
+        })
     }
 }

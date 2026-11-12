@@ -12,6 +12,7 @@ use crate::model::StoreModel;
 use crate::words_front as w;
 
 use super::super::shell::{Shared, locked, rebuild};
+use super::widgets::label_dim;
 use super::{bar, list, nav, page, preview};
 
 /// How long the window waits after the last key before it narrows the list: a key changes only the text of the field
@@ -36,15 +37,25 @@ pub(in crate::view) fn search_field(shared: &Shared) -> SearchField {
     }))
 }
 
-/// The footer line: where the packages come from (chosen in the settings) and how many there are.
+/// The footer: when the last look for updates was and where the packages come from (left), how many and in what form they are
+/// installed (right); 33 px high with a line above.
 fn footer(model: &StoreModel) -> Div {
     div()
-        .class("fs-store-footer")
+        .class("craft-footer")
         .flex_row()
-        .gap(4.0)
-        .child(text(model.footer_sources()).class("fs-store-sub"))
+        .items_center()
+        .gap(16.0)
+        .child(label_dim(&model.footer_checked()))
+        .child(
+            div()
+                .flex_shrink()
+                .min_w(0.0)
+                .overflow_clip()
+                .child(label_dim(&model.footer_sources())),
+        )
         .child(div().flex_grow())
-        .child(text(model.footer_count()).class("fs-store-sub"))
+        .child(label_dim(&model.footer_count()))
+        .child(label_dim(&model.footer_format()))
 }
 
 /// The whole storefront for a window `width` x `height`.
@@ -55,7 +66,7 @@ pub(in crate::view) fn storefront(
     search: &SearchField,
     (width, height): (f32, f32),
 ) -> Div {
-    let room = width - nav::NAV_W - 64.0;
+    let room = width - nav::NAV_W - 48.0 - 1.0;
     let mut main = div()
         .class("fs-store-main")
         .flex_col()
@@ -79,13 +90,15 @@ pub(in crate::view) fn storefront(
         } else {
             list::start(model, shared, launcher, room)
         };
-        main = main.child(bar::filter_bar(model, shared)).child(body);
+        main = main
+            .child(bar::filter_bar(model, shared, search))
+            .child(body);
     }
     div()
         .flex_col()
         .w(width)
         .h(height)
-        .child(bar::top_bar(model, shared, search))
+        .child(bar::top_bar(model, shared))
         .child(
             div()
                 .class("fs-store-body")

@@ -1,173 +1,52 @@
-//! Pattern: Adapter (the list of packages as a grid of cards or as a table, and the start page of blocks).
+//! Pattern: Adapter (the list of packages as a grid of tiles that share their lines, or as a table, and the start page of numbered
+//! sections in the Craft look).
 
 use std::sync::Arc;
 
-use fs_components::blinc::cn::components::button::ButtonVariant;
 use fs_components::blinc::layout::div::{Div, div};
 use fs_components::blinc::layout::prelude::text;
+use fs_components_styles::styles::craft_sheet::caps;
 
 use crate::launcher::Launcher;
-use crate::model::{
-    Card, CardState, Layout, NeedsState, Section, StartBlock, StoreModel, TableRow, columns,
-};
-use crate::view::card::{CARD_W, card, logo_small};
+use crate::model::{Card, Layout, Section, StartBlock, StoreModel, columns};
 use crate::view::shell::{Shared, locked, rebuild};
 use crate::words;
 use crate::words_front as w;
 
-use super::widgets::badge;
+use super::tile::tile;
+use super::widgets::label_dim;
 
-/// Space between cards.
-const GAP: f32 = 12.0;
+/// The least width of a tile before the grid takes one column fewer.
+const TILE_MIN: f32 = 300.0;
 
+/// A grid of tiles: the lines are shared, the row is as wide as the room, the numbers start at `first`.
 fn grid(
     cards: &[Card],
+    first: usize,
     model: &StoreModel,
     shared: &Shared,
     launcher: &Arc<dyn Launcher>,
     room: f32,
 ) -> Div {
-    let mut grid = div().flex_col().gap(GAP / 2.0);
-    for chunk in cards.chunks(columns(room, CARD_W, GAP / 2.0)) {
-        let mut row = div().flex_row().gap(GAP / 2.0);
-        for one in chunk {
-            row = row.child(card(one, model.is_removing(), shared, launcher));
+    let cols = columns(room, TILE_MIN, 0.0);
+    #[allow(clippy::cast_precision_loss)]
+    let width = (room / cols as f32).floor();
+    let mut grid = div().class("craft-grid").flex_col().flex_shrink_0();
+    for (r, chunk) in cards.chunks(cols).enumerate() {
+        let mut row = div().flex_row();
+        for (i, one) in chunk.iter().enumerate() {
+            row = row.child(tile(
+                one,
+                first + r * cols + i,
+                width,
+                model.is_removing(),
+                shared,
+                launcher,
+            ));
         }
         grid = grid.child(row);
     }
     grid
-}
-
-fn needs_tone(state: NeedsState) -> &'static str {
-    match state {
-        NeedsState::None | NeedsState::Met => "fs-store-badge-ok",
-        NeedsState::Choice => "fs-store-badge-warn",
-        NeedsState::Missing => "fs-store-badge-bad",
-    }
-}
-
-/// Width of the column of buttons.
-const ACTION_W: f32 = 100.0;
-
-const COLS: [(&str, f32); 6] = [
-    (w::COL_INSTALLED, 76.0),
-    (w::COL_LATEST, 76.0),
-    (w::COL_RELEASED, 96.0),
-    (w::COL_SIZE, 72.0),
-    (w::COL_SIGNATURE, 124.0),
-    (w::COL_CAPABILITIES, 70.0),
-];
-
-fn cell(width: f32, child: Div) -> Div {
-    div().w(width).flex_shrink_0().child(child)
-}
-
-fn head() -> Div {
-    let mut row = div()
-        .class("fs-store-thead")
-        .flex_row()
-        .items_center()
-        .gap(2.0)
-        .child(
-            div()
-                .flex_grow()
-                .min_w(0.0)
-                .child(text(w::COL_PACKAGE).class("fs-store-sub")),
-        );
-    for (label, width) in COLS {
-        row = row.child(cell(
-            width,
-            div().child(text(label).class("fs-store-sub").no_wrap()),
-        ));
-    }
-    row.child(div().w(ACTION_W).flex_shrink_0())
-}
-
-fn action(row: &TableRow, busy: bool, shared: &Shared, launcher: &Arc<dyn Launcher>) -> Div {
-    let name = row.card.name.clone();
-    let (label, variant, id) = match row.card.state {
-        CardState::NotInstalled => (words::BUTTON_INSTALL, ButtonVariant::Primary, "install"),
-        CardState::UpdateAvailable => (words::BUTTON_UPDATE, ButtonVariant::Primary, "update"),
-        CardState::Installed => (words::BUTTON_OPEN, ButtonVariant::Secondary, "open"),
-    };
-    let (shared, launcher) = (Arc::clone(shared), Arc::clone(launcher));
-    let state = row.card.state;
-    div().w(ACTION_W).flex_shrink_0().child(
-        crate::view::shell::button(
-            &format!("{id}-{name}"),
-            label,
-            variant,
-            !busy || state == CardState::Installed,
-        )
-        .on_click(move |_| {
-            if state == CardState::Installed {
-                locked(&shared).open(&name, None, launcher.as_ref());
-            } else {
-                locked(&shared).ask_install(&name);
-            }
-            rebuild();
-        }),
-    )
-}
-
-fn table_row(row: &TableRow, busy: bool, shared: &Shared, launcher: &Arc<dyn Launcher>) -> Div {
-    let name = row.card.name.clone();
-    let open = Arc::clone(shared);
-    let who = div()
-        .id(format!("row-{name}"))
-        .flex_row()
-        .items_center()
-        .gap(2.0)
-        .flex_grow()
-        .min_w(0.0)
-        .cursor_pointer()
-        .attr("tabindex", "0")
-        .child(logo_small(&row.card))
-        .child(
-            div()
-                .flex_col()
-                .min_w(0.0)
-                .overflow_clip()
-                .child(text(row.card.title.clone()).bold().no_wrap())
-                .child(
-                    text(if row.summary.is_empty() {
-                        row.kind.clone()
-                    } else {
-                        format!("{} - {}", row.kind, row.summary)
-                    })
-                    .class("fs-store-sub")
-                    .no_wrap(),
-                ),
-        )
-        .on_click(move |_| {
-            locked(&open).open_page(&name);
-            rebuild();
-        });
-    let plain = |t: &str| div().child(text(t.to_owned()).no_wrap());
-    div()
-        .class("fs-store-trow")
-        .flex_row()
-        .items_center()
-        .gap(2.0)
-        .child(who)
-        .child(cell(COLS[0].1, plain(&row.installed)))
-        .child(cell(COLS[1].1, plain(&row.latest)))
-        .child(cell(COLS[2].1, plain(&row.released)))
-        .child(cell(COLS[3].1, plain(&row.size)))
-        .child(cell(COLS[4].1, plain(&row.signature)))
-        .child(cell(
-            COLS[5].1,
-            div().child(badge(&row.needs, needs_tone(row.needs_state))),
-        ))
-        .child(action(row, busy, shared, launcher))
-}
-
-fn table(model: &StoreModel, shared: &Shared, launcher: &Arc<dyn Launcher>) -> Div {
-    let mut table = div().class("fs-store-table").flex_col().child(head());
-    for row in model.table_rows() {
-        table = table.child(table_row(&row, model.is_removing(), shared, launcher));
-    }
-    table
 }
 
 /// The list of the section as the person chose it, or a sentence when nothing matches.
@@ -188,57 +67,90 @@ pub(super) fn listing(
             }));
     }
     match model.front().layout() {
-        Layout::Grid => grid(&cards, model, shared, launcher, room),
-        Layout::Table => table(model, shared, launcher),
+        Layout::Grid => div()
+            .flex_col()
+            .gap(3.5)
+            .child(section_title(1, w::SECTION_ALL, cards.len(), None, shared))
+            .child(grid(&cards, 1, model, shared, launcher, room)),
+        Layout::Table => super::table::table(model, shared, launcher),
     }
 }
 
+/// `01 / PROGRAMS` on the left, the count (or "Show all") on the right.
+fn section_title(
+    number: usize,
+    title: &str,
+    total: usize,
+    more: Option<Section>,
+    shared: &Shared,
+) -> Div {
+    let mut row = div()
+        .flex_row()
+        .items_center()
+        .child(label_dim(&words::fill(
+            w::SECTION_TITLE,
+            &[("number", &format!("{number:02}")), ("title", title)],
+        )))
+        .child(div().flex_grow());
+    row = match more {
+        Some(section) => {
+            let shared = Arc::clone(shared);
+            row.child(
+                div()
+                    .id(format!("more-{title}"))
+                    .class("craft-link")
+                    .attr("tabindex", "0")
+                    .child(
+                        text(format!(
+                            "{} \u{2197}",
+                            caps(&words::fill(w::SHOW_ALL, &[("count", &total.to_string())]))
+                        ))
+                        .class("craft-caps-dim")
+                        .no_wrap(),
+                    )
+                    .on_click(move |_| {
+                        locked(&shared).open_section(section);
+                        rebuild();
+                    }),
+            )
+        }
+        None => row.child(label_dim(&words::fill(
+            w::SECTION_COUNT,
+            &[("count", &total.to_string())],
+        ))),
+    };
+    row
+}
+
 fn block(
+    number: usize,
     b: &StartBlock,
     model: &StoreModel,
     shared: &Shared,
     launcher: &Arc<dyn Launcher>,
     room: f32,
 ) -> Div {
-    let mut top = div()
-        .flex_row()
-        .items_center()
-        .gap(3.0)
-        .child(text(b.title.clone()).bold())
-        .child(text(b.total.to_string()).class("fs-store-sub"))
-        .child(div().flex_grow());
-    if let Some(section) = b.more.filter(|_| b.total > b.cards.len()) {
-        let shared = Arc::clone(shared);
-        top = top.child(
-            div()
-                .id(format!("more-{}", b.title))
-                .class("fs-store-link")
-                .attr("tabindex", "0")
-                .child(text(words::fill(
-                    w::SHOW_ALL,
-                    &[("count", &b.total.to_string())],
-                )))
-                .on_click(move |_| {
-                    locked(&shared).open_section(section);
-                    rebuild();
-                }),
-        );
-    }
     div()
         .flex_col()
-        .gap(GAP / 2.0)
-        .child(top)
-        .child(grid(&b.cards, model, shared, launcher, room))
+        .gap(3.5)
+        .child(section_title(
+            number,
+            &b.title,
+            b.total,
+            b.more.filter(|_| b.total > b.cards.len()),
+            shared,
+        ))
+        .child(grid(&b.cards, 1, model, shared, launcher, room))
 }
 
-/// The start page: updates, what is new, the recommended block (locked, with its reason), one block per kind.
+/// The start page: updates, what is new, the recommended block (locked, with its reason), one section per kind.
 pub(super) fn start(
     model: &StoreModel,
     shared: &Shared,
     launcher: &Arc<dyn Launcher>,
     room: f32,
 ) -> Div {
-    let mut page = div().flex_col().gap(GAP);
+    let mut page = div().flex_col().gap(7.0);
     let blocks = model.start_blocks();
     if blocks.is_empty() {
         return page.child(
@@ -249,14 +161,15 @@ pub(super) fn start(
     }
     page = page.child(
         div()
-            .class("fs-store-locked")
+            .class("craft-panel")
             .flex_col()
             .gap(1.0)
-            .child(text(w::START_RECOMMENDED).bold())
-            .child(text(w::START_RECOMMENDED_WHY).class("fs-store-sub")),
+            .p(4.0)
+            .child(text(caps(w::START_RECOMMENDED)).class("craft-caps"))
+            .child(text(w::START_RECOMMENDED_WHY).class("craft-sub")),
     );
-    for b in &blocks {
-        page = page.child(block(b, model, shared, launcher, room));
+    for (i, b) in blocks.iter().enumerate() {
+        page = page.child(block(i + 1, b, model, shared, launcher, room));
     }
     page
 }

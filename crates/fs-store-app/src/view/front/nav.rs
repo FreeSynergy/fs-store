@@ -1,82 +1,80 @@
-//! Pattern: Adapter (the navigation at the left: the start page and one entry per kind of package; an entry the catalog
-//! cannot fill yet is locked and says why).
+//! Pattern: Adapter (the navigation at the left in the Craft look: capital mono labels with their counts; the one shown is white
+//! with black capitals; an entry that cannot be chosen is dim and says why, so it stays visible).
+
+use std::sync::Arc;
 
 use fs_components::blinc::layout::div::{Div, div};
 use fs_components::blinc::layout::prelude::text;
-use fs_components_widgets::{Glyph, Tone, icon};
+use fs_components_styles::styles::craft_sheet::caps;
 
-use crate::model::{NavEntry, Section, StoreModel};
+use crate::model::{NavEntry, StoreModel};
 use crate::view::shell::{Shared, locked, rebuild};
-use crate::words_front as w;
 
-use fs_store_core::Kind;
-
-fn glyph(entry: &NavEntry) -> Glyph {
-    match entry.section {
-        Some(Section::Start) => Glyph::Home,
-        Some(Section::Kind(Kind::Program)) => Glyph::FileCode,
-        Some(Section::Kind(Kind::Frontend)) => Glyph::ViewGrid,
-        Some(Section::Kind(Kind::Component)) => Glyph::FileArchive,
-        Some(Section::Kind(Kind::Theme)) => Glyph::FileImage,
-        None if entry.label == w::NAV_SERVERS => Glyph::Drive,
-        None => Glyph::Info,
-    }
-}
+use super::widgets::label_dim;
 
 /// Width of the navigation.
-pub(super) const NAV_W: f32 = 200.0;
+pub(super) const NAV_W: f32 = 190.0;
+
+fn item(entry: &NavEntry, i: usize, shared: &Shared) -> Div {
+    let mut line = div()
+        .id(format!("nav-{i}"))
+        .class("craft-nav-item")
+        .flex_col()
+        .gap(0.5)
+        .attr("tabindex", "0");
+    let mut head = div().flex_row().items_center().gap(2.0);
+    if entry.current {
+        line = line.class("craft-tab-on");
+        head = head
+            .child(
+                div()
+                    .flex_grow()
+                    .child(text(caps(entry.label)).class("craft-pill-text").no_wrap()),
+            )
+            .child(
+                text(entry.count.to_string())
+                    .class("craft-pill-text")
+                    .no_wrap(),
+            );
+    } else if entry.enabled {
+        head = head
+            .child(
+                div()
+                    .flex_grow()
+                    .child(text(caps(entry.label)).class("craft-caps").no_wrap()),
+            )
+            .child(
+                text(entry.count.to_string())
+                    .class("craft-caps-dim")
+                    .no_wrap(),
+            );
+    } else {
+        line = line.class("craft-nav-off");
+        head = head.child(div().flex_grow().child(label_dim(entry.label)));
+    }
+    line = line.child(head);
+    if let Some(note) = entry.note {
+        line = line.child(text(caps(note)).class("craft-note").no_wrap());
+    }
+    if let (true, Some(section)) = (entry.enabled, entry.section) {
+        let shared = Arc::clone(shared);
+        line = line.on_click(move |_| {
+            locked(&shared).open_section(section);
+            rebuild();
+        });
+    }
+    line
+}
 
 pub(super) fn nav(model: &StoreModel, shared: &Shared) -> Div {
     let mut column = div()
-        .class("fs-store-nav")
+        .class("craft-nav")
         .flex_col()
         .flex_shrink_0()
         .w(NAV_W)
         .gap(1.0);
-    for (i, entry) in model.nav().into_iter().enumerate() {
-        let tone = if entry.enabled {
-            Tone::Normal
-        } else {
-            Tone::Muted
-        };
-        let mut label = div()
-            .flex_col()
-            .flex_grow()
-            .min_w(0.0)
-            .child(text(entry.label).no_wrap());
-        if let Some(note) = entry.note {
-            label = label.child(text(note).class("fs-store-sub").size(11.0).no_wrap());
-        }
-        let mut line = div()
-            .id(format!("nav-{i}"))
-            .class("fs-store-nav-item")
-            .flex_row()
-            .items_center()
-            .gap(2.0)
-            .attr("tabindex", "0")
-            .child(
-                div()
-                    .pointer_events_none()
-                    .child(icon(glyph(&entry), 18.0, tone)),
-            )
-            .child(label);
-        if entry.enabled {
-            line = line.child(text(entry.count.to_string()).class("fs-store-sub"));
-        }
-        if entry.current {
-            line = line.class("fs-store-nav-current");
-        }
-        if !entry.enabled {
-            line = line.class("fs-store-nav-off");
-        }
-        if let (true, Some(section)) = (entry.enabled, entry.section) {
-            let shared = std::sync::Arc::clone(shared);
-            line = line.on_click(move |_| {
-                locked(&shared).open_section(section);
-                rebuild();
-            });
-        }
-        column = column.child(line);
+    for (i, entry) in model.nav().iter().enumerate() {
+        column = column.child(item(entry, i, shared));
     }
     column
 }

@@ -202,3 +202,32 @@ pub const BUTTON_DO_REMOVE: &str = "Remove";
 pub const BUTTON_NOT_NOW: &str = "Not now";
 /// Open the project page.
 pub const BUTTON_WEBSITE: &str = "Website";
+
+/// Footer: when the last look for updates was. Placeholder: `{ago}`.
+pub const FOOTER_CHECKED: &str = "Checked {ago}";
+/// Footer: never looked.
+pub const FOOTER_NEVER_CHECKED: &str = "Never checked";
+/// Footer: what the store installs. Placeholder: `{format}`.
+pub const FOOTER_FORMAT: &str = "Installing as {format}";
+/// Number of the section on the start page. Placeholders: `{number}`, `{title}`.
+pub const SECTION_TITLE: &str = "{number} / {title}";
+/// Number of packages in a section. Placeholder: `{count}`.
+pub const SECTION_COUNT: &str = "{count} packages";
+/// Tile link: open the project page.
+pub const LINK_WEBSITE: &str = "Website";
+/// Tile link: open the page of the package.
+pub const LINK_DETAILS: &str = "Details";
+/// Locked pause button of a running job.
+pub const PAUSE_LOCKED: &str = "Pause: coming soon";
+/// Locked cancel button of a running job.
+pub const CANCEL_LOCKED: &str = "Cancel: coming soon";
+/// Button: update to a version. Placeholder: `{version}`.
+pub const BUTTON_UPDATE_TO: &str = "Update to {version}";
+
+/// The pill in the top bar.
+pub const BAR_PILL: &str = "Store";
+/// The line after the pill in the top bar.
+pub const BAR_SUB: &str = "FreeSynergy packages";
+
+/// Title of the section that lists everything (a section, a search or a filter shows it).
+pub const SECTION_ALL: &str = "Packages";

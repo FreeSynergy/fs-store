@@ -1,21 +1,22 @@
-//! Pattern: Adapter (the top bar: layout switch, refresh, update all; below it the filter tabs, the sort choice and the search
-//! field). The search field is made once and kept, so typing is not lost when the window draws again.
+//! Pattern: Adapter (the top bar and the filter row in the Craft look). The bar: the name, a pill, then on the right the
+//! layout switch and refresh in cells with a line between them. The filter row: joined tabs with counts, the sort tabs, the search
+//! field, "Update all". The search field is made once and kept, so typing is not lost when the window draws again.
 
 use std::sync::Arc;
 
-use fs_components::blinc::cn::components::button::ButtonVariant;
 use fs_components::blinc::layout::div::{Div, div};
 use fs_components::blinc::layout::prelude::text;
 use fs_components_primitives::SearchField;
+use fs_components_styles::styles::craft_sheet::caps;
 use fs_components_widgets::Glyph;
 
 use crate::model::{Layout, Sort, StoreModel, Tab};
 use crate::view::job::start_refresh;
-use crate::view::shell::{Shared, button, locked, rebuild};
+use crate::view::shell::{Shared, locked, rebuild};
 use crate::words;
 use crate::words_front as w;
 
-use super::widgets::{Act, chip, icon_button};
+use super::widgets::{Act, Look, button, cell_button, label_dim, tab, tabs};
 
 fn act(shared: &Shared, f: impl Fn(&mut StoreModel) + Send + Sync + 'static) -> Act {
     let shared = Arc::clone(shared);
@@ -42,36 +43,91 @@ fn sort_word(sort: Sort) -> &'static str {
     }
 }
 
-/// The first row: the name of the window on the left, the layout switch, refresh and "Update all" on the right.
-pub(super) fn top_bar(model: &StoreModel, shared: &Shared, search: &SearchField) -> Div {
-    let layout = model.front().layout();
-    let waiting = model.updates_waiting();
-    let busy = model.is_removing() || model.is_refreshing();
-    let refresh = Arc::clone(shared);
-    let mut bar = div()
-        .class("fs-store-top")
+/// A cell of the bar: content with a line on its left.
+fn cell(child: Div) -> Div {
+    div()
+        .class("craft-cell")
         .flex_row()
         .items_center()
-        .gap(2.0)
-        .child(text(words::TITLE).bold().size(18.0))
-        .child(div().w(36.0).flex_shrink_0())
-        .child(div().w(320.0).flex_shrink_0().child(search.build()))
+        .px(3.5)
+        .child(child)
+}
+
+/// "Update all (n)" in the bar, when updates wait: a white button, the question comes first.
+fn update_all(model: &StoreModel, shared: &Shared) -> Div {
+    let waiting = model.updates_waiting();
+    let mut slot = div().px(3.0);
+    if waiting > 0 {
+        let busy = model.is_removing() || model.is_refreshing();
+        let shared = Arc::clone(shared);
+        slot = slot.child(button(
+            "update-all",
+            &words::fill(words::BUTTON_UPDATE_ALL, &[("count", &waiting.to_string())]),
+            Look::Fill,
+            !busy,
+            Arc::new(move || {
+                locked(&shared).ask_update_all();
+                rebuild();
+            }),
+        ));
+    }
+    slot
+}
+
+/// The first row: 47 px high with a line below.
+pub(super) fn top_bar(model: &StoreModel, shared: &Shared) -> Div {
+    let layout = model.front().layout();
+    let refresh = Arc::clone(shared);
+    let busy = model.is_removing() || model.is_refreshing();
+    let mut toggle = div().flex_row().items_center().gap(0.5);
+    for (which, word) in [(Layout::Grid, w::VIEW_GRID), (Layout::Table, w::VIEW_TABLE)] {
+        let on = layout == which;
+        let mut item = div()
+            .id(format!("layout-{word}"))
+            .class("craft-pill")
+            .attr("tabindex", "0");
+        item = if on {
+            item.child(text(caps(word)).class("craft-pill-text").no_wrap())
+        } else {
+            item.class("craft-pill-off").child(label_dim(word))
+        };
+        toggle = toggle.child(item.on_click({
+            let shared = Arc::clone(shared);
+            move |_| {
+                locked(&shared).set_layout(which);
+                rebuild();
+            }
+        }));
+    }
+    div()
+        .class("craft-bar")
+        .flex_row()
+        .items_center()
+        .h(47.0)
+        .child(
+            div().px(5.0).child(
+                text(caps(words::TITLE))
+                    .class("craft-caps")
+                    .size(14.0)
+                    .no_wrap(),
+            ),
+        )
+        .child(cell(
+            div()
+                .flex_row()
+                .items_center()
+                .gap(2.5)
+                .child(
+                    div()
+                        .class("craft-pill")
+                        .child(text(caps(w::BAR_PILL)).class("craft-pill-text").no_wrap()),
+                )
+                .child(label_dim(w::BAR_SUB)),
+        ))
         .child(div().flex_grow())
-        .child(icon_button(
-            "layout-grid",
-            Glyph::ViewGrid,
-            w::VIEW_GRID,
-            (layout == Layout::Grid, true),
-            act(shared, |m| m.set_layout(Layout::Grid)),
-        ))
-        .child(icon_button(
-            "layout-table",
-            Glyph::ViewList,
-            w::VIEW_TABLE,
-            (layout == Layout::Table, true),
-            act(shared, |m| m.set_layout(Layout::Table)),
-        ))
-        .child(icon_button(
+        .child(update_all(model, shared))
+        .child(cell(toggle))
+        .child(div().class("craft-cell").child(cell_button(
             "refresh",
             Glyph::Reload,
             if model.is_refreshing() {
@@ -79,61 +135,54 @@ pub(super) fn top_bar(model: &StoreModel, shared: &Shared, search: &SearchField)
             } else {
                 words::BUTTON_REFRESH
             },
-            (model.is_refreshing(), !busy),
+            !busy,
             Arc::new(move || start_refresh(&refresh)),
-        ));
-    if waiting > 0 {
-        bar = bar.child(
-            button(
-                "update-all",
-                &words::fill(words::BUTTON_UPDATE_ALL, &[("count", &waiting.to_string())]),
-                ButtonVariant::Primary,
-                !busy,
-            )
-            .on_click({
-                let shared = Arc::clone(shared);
-                move |_| {
-                    locked(&shared).ask_update_all();
-                    rebuild();
-                }
-            }),
-        );
-    }
-    bar
+        )))
 }
 
-/// The second row: tabs with their counts, the sort choice, the search field.
-pub(super) fn filter_bar(model: &StoreModel, shared: &Shared) -> Div {
-    let mut tabs = div().flex_row().items_center().gap(1.0);
-    for (tab, count) in model.tab_counts() {
-        let label = format!("{} {count}", tab_word(tab));
-        tabs = tabs.child(chip(
-            &format!("tab-{tab:?}"),
-            &label,
-            (model.front().tab() == tab, true),
-            act(shared, move |m| m.set_tab(tab)),
-        ));
-    }
-    let mut sort = div()
-        .flex_row()
-        .items_center()
-        .gap(1.0)
-        .child(text(w::SORT_LABEL).class("fs-store-sub"));
-    for choice in Sort::ALL {
-        sort = sort.child(chip(
-            &format!("sort-{choice:?}"),
-            sort_word(choice),
-            (model.front().sort() == choice, true),
-            act(shared, move |m| m.set_sort(choice)),
-        ));
-    }
+/// The second row: tabs with counts, sort, search, "Update all".
+pub(super) fn filter_bar(model: &StoreModel, shared: &Shared, search: &SearchField) -> Div {
+    let counts = model.tab_counts();
+    let items: Vec<Div> = counts
+        .iter()
+        .map(|(t, count)| {
+            let t = *t;
+            tab(
+                &format!("tab-{t:?}"),
+                tab_word(t),
+                Some(*count),
+                model.front().tab() == t,
+                act(shared, move |m| m.set_tab(t)),
+            )
+        })
+        .collect();
+    let sorts: Vec<Div> = Sort::ALL
+        .iter()
+        .map(|s| {
+            let s = *s;
+            tab(
+                &format!("sort-{s:?}"),
+                sort_word(s),
+                None,
+                model.front().sort() == s,
+                act(shared, move |m| m.set_sort(s)),
+            )
+        })
+        .collect();
     div()
-        .class("fs-store-filters")
         .flex_row()
         .flex_wrap()
         .items_center()
         .gap(3.0)
-        .child(tabs)
+        .child(tabs(items))
         .child(div().flex_grow())
-        .child(sort)
+        .child(
+            div()
+                .flex_row()
+                .items_center()
+                .gap(3.0)
+                .child(label_dim(w::SORT_LABEL))
+                .child(tabs(sorts)),
+        )
+        .child(div().w(210.0).flex_shrink_0().child(search.build()))
 }

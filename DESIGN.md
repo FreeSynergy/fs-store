@@ -422,3 +422,16 @@ shape: grid or table, filter tabs with counts, sort, search; Flathub for the pac
 - **Flags for pictures and tests:** `--layout`, `--section`, `--tab`, `--search`, `--open NAME`, `--preview NAME` (with `--demo`).
 - Builds against `fs-components` branch `frontend-files` (icon set, `FieldSize`) through an untracked `.cargo/config.toml` patch; the
   committed `Cargo.toml` still names tag v0.0.8, so this branch builds only after the next fs-components tag.
+
+## Craft look (frontend-store, 2026-11-12)
+The store wears the **Craft** style of `fs-components-styles` (branch `theme-craft` of fs-components): dark, square corners, 1 px lines,
+tiles that share their lines, small capitals in JetBrains Mono (SIL OFL 1.1, shipped with `fs-components-render`), white square buttons.
+The store only chooses it (`fs_components_render::use_style(Some(StyleId::Craft))` in `gui.rs`) and puts the `craft-*` classes on its
+elements; the numbers are in `fs-components-styles/CRAFT-MEASUREMENT.md` (measured on the public pictures of the ArtCraft Launcher).
+- Pieces: numbered tiles (the number box and the second half of the name take the accent of the package, chosen by a hash of its name),
+  section titles `01 / PROGRAMS`, joined filter tabs, the white `UPDATE TO 0.2.0` / `INSTALL` / outline `OPEN` buttons with the three dots,
+  progress in the tile (phases, not bytes; pause and cancel are visible and locked: ADR 0066), footer `CHECKED 3 MIN AGO ... INSTALLING AS TAR.GZ`.
+- `--look standard` gives the platform theme (the Craft classes then do nothing). The typing test runs with it: the shared test judges
+  glyphs as dark ink on a light ground and finds the caret by blinking; with the white-on-dark Craft look it reads the (correct) text
+  as wrong. Need to `fs-release`: a polarity check. The text field is the same widget in both looks (checked by eye on the Craft picture).
+- Demo flags for pictures: `--job NAME:waiting|verified|installing` shows a running tile.

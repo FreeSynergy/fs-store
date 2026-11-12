@@ -83,6 +83,34 @@ impl StoreModel {
         )
     }
 
+    /// "Checked 3 min ago", or that the store never looked: what the footer says about the last look for updates.
+    #[must_use]
+    pub fn footer_checked(&self) -> String {
+        let last = self.last_checked();
+        if last == 0 {
+            return w::FOOTER_NEVER_CHECKED.to_owned();
+        }
+        let secs = self.updates.now().saturating_sub(last);
+        let ago = match secs {
+            0..=59 => "just now".to_owned(),
+            60..=3599 => format!("{} min ago", secs / 60),
+            3600..=86_399 => format!("{} h ago", secs / 3600),
+            _ => format!("{} d ago", secs / 86_400),
+        };
+        words::fill(w::FOOTER_CHECKED, &[("ago", &ago)])
+    }
+
+    /// What the store installs on this system: the archive, or the package of the system.
+    #[must_use]
+    pub fn footer_format(&self) -> String {
+        let word = match self.backend.system_format() {
+            fs_store_core::Format::Rpm => "rpm",
+            fs_store_core::Format::Deb => "deb",
+            _ => "tar.gz",
+        };
+        words::fill(w::FOOTER_FORMAT, &[("format", word)])
+    }
+
     /// `(word, state)` of what the package needs.
     pub(super) fn needs_of(&self, name: &str) -> (String, NeedsState) {
         let lines = self.capability_lines(name);
@@ -130,6 +158,18 @@ pub fn apply_show_flag(model: &mut StoreModel, flag: &str, value: &str) -> Resul
         ("--search", text) => model.set_search(text),
         ("--open", name) => model.open_page(name),
         ("--preview", name) => model.ask_install(name),
+        ("--job", spec) => {
+            // `NAME:PHASE` (waiting, verified, installing): a job in that phase, for the picture of a tile that is busy
+            let (name, phase) = spec.split_once(':').unwrap_or((spec, "installing"));
+            let phase = match phase {
+                "waiting" => crate::backend::Phase::Pending,
+                "verified" => crate::backend::Phase::Verified,
+                "installing" => crate::backend::Phase::Installing,
+                _ => return Err(format!("{flag}: `{phase}` is not a phase")),
+            };
+            let _ = model.begin_job(name);
+            model.observe_job(name, phase);
+        }
         _ => return Err(format!("{flag}: `{value}` is not a choice")),
     }
     Ok(())
