@@ -78,6 +78,11 @@ fn picture_of_the_cards() {
         m.select(&name.to_string_lossy());
     }
     let launcher: Arc<dyn Launcher> = Arc::new(NoLauncher);
-    let app = store_app(&Arc::new(Mutex::new(m)), &launcher).unwrap();
+    let app = store_app(
+        &Arc::new(Mutex::new(m)),
+        &launcher,
+        fs_store_app::view::Variant::Storefront,
+    )
+    .unwrap();
     app.picture(1000, 700, std::path::Path::new(&path)).unwrap();
 }

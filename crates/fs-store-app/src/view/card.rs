@@ -56,3 +56,35 @@ pub(super) fn sized_logo(card: &Card, side: f32, radius: f32, letter: f32) -> Di
                 .color(Color::BLACK),
         )
 }
+
+/// The logo of variant C: the stored icon, or a rounded square in the colour of the name with its first letter in white.
+pub(super) fn logo_plain(card: &Card, side: f32) -> Div {
+    let frame = div()
+        .w(side)
+        .h(side)
+        .flex_shrink_0()
+        .rounded(side / 6.0)
+        .overflow_clip();
+    if let Some(path) = &card.icon {
+        return frame.child(
+            img(path.to_string_lossy().into_owned())
+                .size(side, side)
+                .cover(),
+        );
+    }
+    let (r, g, b) = card.placeholder.rgb;
+    frame
+        .background(Brush::Solid(Color::rgb(
+            f32::from(r) / 255.0,
+            f32::from(g) / 255.0,
+            f32::from(b) / 255.0,
+        )))
+        .items_center()
+        .justify_center()
+        .child(
+            text(card.placeholder.letter.to_string())
+                .size(side * 0.5)
+                .bold()
+                .color(Color::WHITE),
+        )
+}

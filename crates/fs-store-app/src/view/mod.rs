@@ -7,6 +7,7 @@
 mod admin;
 mod card;
 mod check;
+mod compact;
 mod front;
 mod job;
 mod menu;
@@ -17,4 +18,4 @@ mod shell;
 mod sources;
 
 pub use check::start_check;
-pub use shell::{Shared, store_app};
+pub use shell::{Shared, Variant, store_app};

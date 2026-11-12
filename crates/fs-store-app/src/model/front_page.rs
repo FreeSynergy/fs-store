@@ -154,6 +154,12 @@ impl StoreModel {
         }
     }
 
+    /// The page of the selected package (`None` when none is selected or it is gone).
+    #[must_use]
+    pub fn package_page_selected(&self) -> Option<PackagePage> {
+        self.package_page(self.page_name()?)
+    }
+
     /// The page of `name`, as it is now; `None` when no source offers it and it is not installed.
     #[must_use]
     pub fn package_page(&self, name: &str) -> Option<PackagePage> {

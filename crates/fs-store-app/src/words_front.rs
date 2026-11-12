@@ -235,3 +235,6 @@ pub const WARN_CHOICE: &str = "Choice";
 pub use crate::words_lang::{
     EmptyBlocks, Lang, choice_need, missing_need, no_window, nothing_line,
 };
+
+/// Filter chip of variant C: offered, not installed (the short word that fits the narrow list).
+pub const TAB_AVAILABLE: &str = "Available";

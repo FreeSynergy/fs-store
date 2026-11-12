@@ -45,7 +45,11 @@ const SCREEN: &str = "store";
 ///
 /// # Errors
 /// [`AppError`] if the shell cannot be made.
-pub fn store_app(model: &Shared, launcher: &Arc<dyn Launcher>) -> Result<AppWidget, AppError> {
+pub fn store_app(
+    model: &Shared,
+    launcher: &Arc<dyn Launcher>,
+    variant: Variant,
+) -> Result<AppWidget, AppError> {
     locked(model).defer_refresh();
     let title = locked(model).window_title();
     let screen = Screen::new(
@@ -55,11 +59,22 @@ pub fn store_app(model: &Shared, launcher: &Arc<dyn Launcher>) -> Result<AppWidg
             model: Arc::clone(model),
             launcher: Arc::clone(launcher),
             search: search_field(model),
+            variant,
         }),
     );
     let app = AppWidget::new(title, vec![screen])?;
     install_menus(&app, model, launcher)?;
     Ok(app)
+}
+
+/// Which look of the window: B (the storefront with tiles and tables) or C (compact: list at the left, page at the right).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Variant {
+    /// The storefront (Craft).
+    #[default]
+    Storefront,
+    /// The compact list and page (Breeze).
+    Compact,
 }
 
 /// One of the views as a surface.
@@ -68,6 +83,7 @@ struct StoreSurface {
     launcher: Arc<dyn Launcher>,
     /// Made once: a redraw keeps what is typed into it.
     search: fs_components_primitives::SearchField,
+    variant: Variant,
 }
 
 impl Surface for StoreSurface {
@@ -75,6 +91,25 @@ impl Surface for StoreSurface {
         let mut model = locked(&self.model);
         let view = model.view();
         model.show(view);
+        if view == View::Cards && self.variant == Variant::Compact {
+            let keys = (Arc::clone(&self.model), Arc::clone(&self.launcher));
+            return Box::new(
+                super::compact::compact(
+                    &mut model,
+                    &self.model,
+                    &self.launcher,
+                    &self.search,
+                    (width, height),
+                )
+                .on_key_down(move |ctx| {
+                    if is_quit_key(ctx.key_code, ctx.ctrl) {
+                        quit(&keys.0);
+                    } else if is_help_key(ctx.key_code) {
+                        open_help(&keys.0, &keys.1);
+                    }
+                }),
+            );
+        }
         if view == View::Cards {
             let keys = (Arc::clone(&self.model), Arc::clone(&self.launcher));
             return Box::new(
@@ -138,7 +173,8 @@ impl Surface for StoreSurface {
         _width: f32,
     ) -> Option<(fs_components::blinc::layout::div::Div, f32)> {
         let model = locked(&self.model);
-        (model.view() == View::Cards).then(|| (top_bar(&model, &self.model, menus), BAR_H))
+        (model.view() == View::Cards && self.variant == Variant::Storefront)
+            .then(|| (top_bar(&model, &self.model, menus), BAR_H))
     }
 
     fn status_line(&self) -> bool {
@@ -149,6 +185,7 @@ impl Surface for StoreSurface {
         [
             STYLES,
             super::front::STYLES,
+            super::compact::STYLES,
             &fs_components_widgets::styles(),
         ]
         .concat()

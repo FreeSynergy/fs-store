@@ -123,3 +123,13 @@ fn update_all_is_one_question_naming_how_many() {
     assert_eq!(p.names.len(), 2);
     assert_eq!(p.title, "Update 2 programs: what will happen to each");
 }
+
+#[test]
+fn the_selected_page_is_the_one_that_was_opened_and_none_before() {
+    let mut m = model();
+    assert!(m.package_page_selected().is_none());
+    m.open_page("kanidm");
+    assert_eq!(m.package_page_selected().unwrap().card.name, "kanidm");
+    m.open_page("gone");
+    assert!(m.package_page_selected().is_none());
+}
