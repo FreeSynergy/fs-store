@@ -88,3 +88,23 @@ impl Card {
         Some((share, line.to_owned()))
     }
 }
+
+/// Why "Open" is locked for a package of this kind: a component or a theme has no window of its own. `None` for everything else.
+#[must_use]
+pub(super) fn open_blocked(kind: Option<fs_store_core::Kind>) -> Option<&'static str> {
+    use fs_store_core::Kind;
+    matches!(kind, Some(Kind::Component | Kind::Theme))
+        .then(|| crate::words_front::no_window(crate::words_front::Lang::current()))
+}
+
+/// How many cards of width `item` with `gap` between them fit in a row of `room` pixels (at least one).
+#[must_use]
+pub fn columns(room: f32, item: f32, gap: f32) -> usize {
+    let fit = ((room + gap) / (item + gap)).floor();
+    if fit < 1.0 {
+        return 1;
+    }
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    let fit = fit as usize;
+    fit
+}

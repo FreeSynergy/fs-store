@@ -1,0 +1,115 @@
+//! Pattern: none (the few words that have an English and a German version; the rest of the window is English until the whole dictionary
+//! exists). `words_front` re-exports them.
+
+/// The language of the words that have a German version: `de` when `FS_LANG` (else `LANG`) starts with `de`, else English. Only the
+/// words below have both; the rest of the window is English until the whole dictionary exists.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Lang {
+    /// English.
+    En,
+    /// German.
+    De,
+}
+
+impl Lang {
+    /// The language of the person's environment.
+    #[must_use]
+    pub fn current() -> Self {
+        let v = std::env::var("FS_LANG")
+            .or_else(|_| std::env::var("LANG"))
+            .unwrap_or_default();
+        if v.to_ascii_lowercase().starts_with("de") {
+            Lang::De
+        } else {
+            Lang::En
+        }
+    }
+}
+
+/// Why "Open" is locked for a package that has no window of its own (a component, a theme).
+#[must_use]
+pub fn no_window(lang: Lang) -> &'static str {
+    match lang {
+        Lang::En => "A component has no window of its own, so there is nothing to open.",
+        Lang::De => "Eine Komponente hat kein eigenes Fenster, es gibt nichts zu \u{f6}ffnen.",
+    }
+}
+
+/// The warning line of the question before an install when a need has no provider. Placeholders: `{need}`, `{title}`.
+#[must_use]
+pub fn missing_need(lang: Lang) -> &'static str {
+    match lang {
+        Lang::En => {
+            "Missing: {need} is offered by no package. {title} may not work until one is installed."
+        }
+        Lang::De => {
+            "Fehlt: {need} bietet kein Paket an. {title} funktioniert vielleicht nicht, bis eines installiert ist."
+        }
+    }
+}
+
+/// The note when a need can be met by several packages. Placeholders: `{need}`, `{by}`.
+#[must_use]
+pub fn choice_need(lang: Lang) -> &'static str {
+    match lang {
+        Lang::En => "Choice: {need} is offered by {by}; you choose which one to install.",
+        Lang::De => "Auswahl: {need} bieten {by}; Sie w\u{e4}hlen, welches Sie installieren.",
+    }
+}
+
+/// Which blocks of a package page have nothing to show (four independent facts).
+#[allow(clippy::struct_excessive_bools)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct EmptyBlocks {
+    /// Nothing offered.
+    pub offers: bool,
+    /// Nothing needed.
+    pub needs: bool,
+    /// Nothing it can use.
+    pub uses: bool,
+    /// No pictures.
+    pub pictures: bool,
+}
+
+/// The one line for the blocks that have nothing to show. The parts are only those that are empty.
+#[must_use]
+pub fn nothing_line(lang: Lang, empty: EmptyBlocks) -> Option<String> {
+    let EmptyBlocks {
+        offers,
+        needs,
+        uses,
+        pictures,
+    } = empty;
+    let mut parts: Vec<&str> = Vec::new();
+    match lang {
+        Lang::En => {
+            if offers {
+                parts.push("Offers nothing");
+            }
+            if needs {
+                parts.push("Needs nothing");
+            }
+            if uses {
+                parts.push("Uses nothing extra");
+            }
+            if pictures {
+                parts.push("No pictures");
+            }
+        }
+        Lang::De => {
+            if offers {
+                parts.push("Bietet nichts an");
+            }
+            if needs {
+                parts.push("Braucht nichts");
+            }
+            if uses {
+                parts.push("Nutzt nichts zus\u{e4}tzlich");
+            }
+            if pictures {
+                parts.push("Keine Bilder");
+            }
+        }
+    }
+    (!parts.is_empty()).then(|| parts.join(" \u{b7} "))
+}

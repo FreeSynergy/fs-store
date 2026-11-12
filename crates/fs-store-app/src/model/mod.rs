@@ -29,8 +29,9 @@ mod types;
 mod update_text;
 mod updates;
 
+pub use card_text::columns;
 pub use cards::{
-    Buttons, Card, CardState, OpenWidth, Placeholder, Working, buttons_for, columns, placeholder,
+    Buttons, Card, CardState, OpenWidth, Placeholder, Working, buttons_for, placeholder,
 };
 pub use cards_ui::CardsUi;
 pub use fetch::{Fetched, fetch};

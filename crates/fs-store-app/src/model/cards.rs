@@ -62,7 +62,7 @@ pub struct Placeholder {
     pub rgb_end: (u8, u8, u8),
 }
 
-/// One program on the page. The flags are independent facts of the view-model (new, hovered, selected, can be cancelled).
+/// One program on the page; the flags are independent facts of the view-model.
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Card {
@@ -104,11 +104,11 @@ pub struct Card {
     pub size: String,
     /// Signature level in a word; `unknown` when the catalog does not say.
     pub trust: &'static str,
-    /// How far the download is, in bytes, while the file is read.
+    /// How far the download is (bytes).
     pub bytes: Option<fs_store_core::Progress>,
-    /// "Cancel" can stop the running job now with nothing left half done.
+    /// "Cancel" can stop the running job now.
     pub can_cancel: bool,
-    /// Why "Open" is locked (a component or a theme has no window of its own); `None` when it can be pressed.
+    /// Why "Open" is locked (no window of its own); `None` when it can be pressed.
     pub open_blocked: Option<&'static str>,
 }
 
@@ -184,18 +184,6 @@ pub fn placeholder(name: &str) -> Placeholder {
         rgb: hsl(hue, 0.52, 0.52),
         rgb_end: hsl((hue + 16.0) % 360.0, 0.58, 0.36),
     }
-}
-
-/// How many cards of width `item` with `gap` between them fit in a row of `room` pixels (at least one).
-#[must_use]
-pub fn columns(room: f32, item: f32, gap: f32) -> usize {
-    let fit = ((room + gap) / (item + gap)).floor();
-    if fit < 1.0 {
-        return 1;
-    }
-    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-    let fit = fit as usize;
-    fit
 }
 
 /// Hue 0..360, saturation and lightness 0..1, to rgb.
@@ -295,12 +283,7 @@ impl StoreModel {
                 .find(|j| j.name == name && !j.is_finished())
                 .and_then(|j| j.progress),
             can_cancel: self.can_cancel(name),
-            open_blocked: match row.map(|r| r.package.kind) {
-                Some(Kind::Component | Kind::Theme) => Some(crate::words_front::no_window(
-                    crate::words_front::Lang::current(),
-                )),
-                _ => None,
-            },
+            open_blocked: super::card_text::open_blocked(row.map(|r| r.package.kind)),
         }
     }
 }
