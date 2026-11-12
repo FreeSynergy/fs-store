@@ -10,7 +10,7 @@ use fs_components_styles::styles::craft_sheet::caps;
 use crate::model::{NavEntry, StoreModel};
 use crate::view::shell::{Shared, locked, rebuild};
 
-use super::widgets::label_dim;
+use fs_components_widgets::craft::label_dim;
 
 /// Width of the navigation.
 pub(super) const NAV_W: f32 = 190.0;

@@ -16,7 +16,9 @@ use crate::view::shell::{Shared, locked, rebuild};
 use crate::words;
 use crate::words_front as w;
 
-use super::widgets::{Act, Look, button, cell_button, label_dim, tab, tabs};
+use fs_components_widgets::craft::{
+    Act, BAR_HEIGHT, Look, bar, bar_cell, button, cell_button, label_dim, tab, tabs,
+};
 
 fn act(shared: &Shared, f: impl Fn(&mut StoreModel) + Send + Sync + 'static) -> Act {
     let shared = Arc::clone(shared);
@@ -43,16 +45,6 @@ fn sort_word(sort: Sort) -> &'static str {
     }
 }
 
-/// A cell of the bar: content with a line on its left.
-fn cell(child: Div) -> Div {
-    div()
-        .class("craft-cell")
-        .flex_row()
-        .items_center()
-        .px(3.5)
-        .child(child)
-}
-
 /// "Update all (n)" in the bar, when updates wait: a white button, the question comes first.
 fn update_all(model: &StoreModel, shared: &Shared) -> Div {
     let waiting = model.updates_waiting();
@@ -75,7 +67,7 @@ fn update_all(model: &StoreModel, shared: &Shared) -> Div {
 }
 
 /// Height of the top bar.
-pub(in crate::view) const BAR_H: f32 = 47.0;
+pub(in crate::view) const BAR_H: f32 = BAR_HEIGHT;
 
 /// The one top line: the name, the program's menus in their own cell, then on the right "Update all", the layout switch and refresh;
 /// 47 px high with a line below. The menus come from the shell, so the keyboard reaches them here (Tab, arrows, Enter, Escape).
@@ -103,36 +95,35 @@ pub(in crate::view) fn top_bar(model: &StoreModel, shared: &Shared, menus: Optio
             }
         }));
     }
-    let mut bar = div()
-        .class("craft-bar")
-        .flex_row()
-        .items_center()
-        .h(BAR_H)
-        .child(
-            div().px(5.0).child(
-                text(caps(words::TITLE))
-                    .class("craft-caps")
-                    .size(14.0)
-                    .no_wrap(),
-            ),
-        );
+    let mut left = vec![
+        div().px(5.0).child(
+            text(caps(words::TITLE))
+                .class("craft-caps")
+                .size(14.0)
+                .no_wrap(),
+        ),
+    ];
     if let Some(menus) = menus {
-        bar = bar.child(cell(menus));
+        left.push(bar_cell(menus));
     }
-    bar.child(div().flex_grow())
-        .child(update_all(model, shared))
-        .child(cell(toggle))
-        .child(div().class("craft-cell").child(cell_button(
-            "refresh",
-            Glyph::Reload,
-            if model.is_refreshing() {
-                words::REFRESHING
-            } else {
-                words::BUTTON_REFRESH
-            },
-            !busy,
-            Arc::new(move || start_refresh(&refresh)),
-        )))
+    bar(
+        left,
+        vec![
+            update_all(model, shared),
+            bar_cell(toggle),
+            div().class("craft-cell").child(cell_button(
+                "refresh",
+                Glyph::Reload,
+                if model.is_refreshing() {
+                    words::REFRESHING
+                } else {
+                    words::BUTTON_REFRESH
+                },
+                !busy,
+                Arc::new(move || start_refresh(&refresh)),
+            )),
+        ],
+    )
 }
 
 /// The second row: tabs with counts, sort, search, "Update all".

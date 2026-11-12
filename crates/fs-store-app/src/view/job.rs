@@ -20,15 +20,15 @@ pub(super) fn job_list(model: &StoreModel, shared: &Shared) -> Div {
         .flex_col()
         .gap(2.0)
         .p(4.0)
-        .child(super::front::widgets::label_dim(words::JOBS_HEADING));
+        .child(fs_components_widgets::craft::label_dim(words::JOBS_HEADING));
     for line in model.job_lines() {
         list = list.child(text(line));
     }
     if model.jobs().iter().any(crate::model::JobView::is_finished) {
-        list = list.child(div().flex_row().child(super::front::widgets::button(
+        list = list.child(div().flex_row().child(fs_components_widgets::craft::button(
             "clear-jobs",
             words::BUTTON_CLEAR_JOBS,
-            super::front::widgets::Look::Line,
+            fs_components_widgets::craft::Look::Line,
             true,
             Arc::new(move || {
                 locked(&clear).clear_finished_jobs();

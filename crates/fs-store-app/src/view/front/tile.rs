@@ -4,12 +4,14 @@
 
 use std::sync::Arc;
 
-use fs_components::blinc::core::Color;
 use fs_components::blinc::layout::div::{Div, div};
 use fs_components::blinc::layout::prelude::text;
-use fs_components_styles::styles::craft::{ACCENTS, ACCENTS_TEXT, accent_index};
 use fs_components_styles::styles::craft_sheet::caps;
 use fs_components_widgets::Glyph;
+use fs_components_widgets::craft::{
+    BadgeTone, Look, TILE_PADDING, accent, accent_text, badge, blinc_colour, button, cell_button,
+    link, progress, tile as tile_frame, tile_head, with_tip,
+};
 
 use crate::launcher::Launcher;
 use crate::model::{Card, CardState};
@@ -19,66 +21,31 @@ use crate::view::shell::{Shared, locked, rebuild};
 use crate::words;
 use crate::words_front as w;
 
-use super::widgets::{Look, badge, button, cell_button, number_box, progress};
-
-/// The accent colour of a package as bytes: the same name has the same colour every time.
-pub(super) fn accent(name: &str) -> (u8, u8, u8) {
-    let c = ACCENTS[accent_index(name)];
-    (c.r, c.g, c.b)
-}
-
-fn accent_text(name: &str) -> Color {
-    let c = ACCENTS_TEXT[accent_index(name)];
-    Color::rgb(
-        f32::from(c.r) / 255.0,
-        f32::from(c.g) / 255.0,
-        f32::from(c.b) / 255.0,
-    )
-}
-
-/// A link in the head of a tile: dim capitals with an arrow.
-fn link(id: String, words: &str, act: impl Fn() + Send + Sync + 'static) -> Div {
-    div()
-        .id(id)
-        .class("craft-link")
-        .attr("tabindex", "0")
-        .child(
-            text(format!("{} \u{2197}", caps(words)))
-                .class("craft-caps-dim")
-                .no_wrap(),
-        )
-        .on_click(move |_| act())
-}
-
-fn head(card: &Card, number: usize, shared: &Shared, launcher: &Arc<dyn Launcher>) -> Div {
-    let mut head = div()
-        .class("craft-tile-head")
-        .flex_row()
-        .items_center()
-        .gap(3.5)
-        .child(number_box(number, accent(&card.name)))
-        .child(div().flex_grow());
+/// The links in the head of a tile: the project page (when there is one) and the page of the package.
+fn links(card: &Card, shared: &Shared, launcher: &Arc<dyn Launcher>) -> Vec<Div> {
+    let mut out = Vec::new();
     if !card.homepage.is_empty() {
         let (shared, launcher, name) =
             (Arc::clone(shared), Arc::clone(launcher), card.name.clone());
-        head = head.child(link(
-            format!("site-{}", card.name),
+        out.push(link(
+            &format!("site-{}", card.name),
             w::LINK_WEBSITE,
-            move || {
+            Arc::new(move || {
                 locked(&shared).open_repository(&name, launcher.as_ref());
                 rebuild();
-            },
+            }),
         ));
     }
     let (shared, name) = (Arc::clone(shared), card.name.clone());
-    head.child(link(
-        format!("details-{}", card.name),
+    out.push(link(
+        &format!("details-{}", card.name),
         w::LINK_DETAILS,
-        move || {
+        Arc::new(move || {
             locked(&shared).open_page(&name);
             rebuild();
-        },
-    ))
+        }),
+    ));
+    out
 }
 
 /// The name in two tones: what comes before the first dot in white, the rest in the accent of the package.
@@ -96,7 +63,7 @@ fn title(card: &Card) -> Div {
             text(second)
                 .size(18.0)
                 .bold()
-                .color(accent_text(&card.name))
+                .color(blinc_colour(accent_text(&card.name)))
                 .no_wrap(),
         );
     }
@@ -106,7 +73,7 @@ fn title(card: &Card) -> Div {
 /// About how many characters of the summary fit beside the logo in a tile `width` pixels wide (a little less than the room, so the
 /// ellipsis closes the text and the clip never cuts it).
 fn summary_room(width: f32) -> usize {
-    let room = (width - 41.0 - 56.0 - 14.0).max(60.0);
+    let room = (width - TILE_PADDING - 56.0 - 14.0).max(60.0);
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     let chars = (room / 7.2) as usize;
     chars
@@ -134,14 +101,14 @@ fn summary_line(name: &str, shown: &str, full: &str) -> Div {
     if shown == full || full.is_empty() {
         return div().child(text(shown.to_owned()).class("craft-sub").no_wrap());
     }
-    super::widgets::with_tip(&format!("sum-{name}"), shown, full)
+    with_tip(&format!("sum-{name}"), shown, full)
 }
 
-fn state_tone(state: CardState) -> &'static str {
+fn state_tone(state: CardState) -> BadgeTone {
     match state {
-        CardState::NotInstalled => "fs-t-info",
-        CardState::Installed => "fs-t-ok",
-        CardState::UpdateAvailable => "fs-t-warn",
+        CardState::NotInstalled => BadgeTone::Info,
+        CardState::Installed => BadgeTone::Ok,
+        CardState::UpdateAvailable => BadgeTone::Warn,
     }
 }
 
@@ -240,15 +207,11 @@ pub(super) fn tile(
     shared: &Shared,
     launcher: &Arc<dyn Launcher>,
 ) -> Div {
-    let inner = width - 41.0;
-    let mut body = div()
-        .class("craft-tile-body")
-        .flex_col()
-        .gap(3.5)
-        .child(identity(card, width));
+    let inner = width - TILE_PADDING;
+    let mut body = div().flex_col().gap(3.5).child(identity(card, width));
     let progress_view = card.progress();
     let state_badge = match card.working {
-        Some(_) => badge(card.working_word(), "fs-t-info"),
+        Some(_) => badge(card.working_word(), BadgeTone::Info),
         None => badge(card.state_word(), state_tone(card.state)),
     };
     body = body.child(div().flex_row().child(state_badge));
@@ -266,11 +229,9 @@ pub(super) fn tile(
         Some((share, line)) => body.child(running(card, share, line, inner)),
         None => body.child(actions(card, busy, inner, shared, launcher)),
     };
-    div()
-        .class("craft-tile")
-        .w(width)
-        .flex_shrink_0()
-        .flex_col()
-        .child(head(card, number, shared, launcher))
-        .child(body)
+    tile_frame(
+        width,
+        tile_head(number, accent(&card.name), links(card, shared, launcher)),
+        body,
+    )
 }

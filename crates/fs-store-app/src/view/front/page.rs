@@ -17,16 +17,16 @@ use crate::view::shell::{Shared, locked, rebuild};
 use crate::words;
 use crate::words_front as w;
 
-use super::widgets::{Act, Look, badge, button, fact, heading, label_dim};
+use fs_components_widgets::craft::{Act, BadgeTone, Look, badge, button, fact, heading, label_dim};
 
 /// Width of the column of facts.
 const SIDE_W: f32 = 330.0;
 
-fn tone(state: NeedsState) -> &'static str {
+fn tone(state: NeedsState) -> BadgeTone {
     match state {
-        NeedsState::None | NeedsState::Met => "fs-t-ok",
-        NeedsState::Choice => "fs-t-warn",
-        NeedsState::Missing => "fs-t-bad",
+        NeedsState::None | NeedsState::Met => BadgeTone::Ok,
+        NeedsState::Choice => BadgeTone::Warn,
+        NeedsState::Missing => BadgeTone::Bad,
     }
 }
 
@@ -157,7 +157,11 @@ fn side(p: &PackagePage) -> Div {
                 .flex_col()
                 .gap(1.5)
                 .child(heading(w::PAGE_SIGNATURE))
-                .child(div().flex_row().child(badge(p.trust_word, "fs-t-quiet")))
+                .child(
+                    div()
+                        .flex_row()
+                        .child(badge(p.trust_word, BadgeTone::Quiet)),
+                )
                 .child(text(p.trust_text).class("craft-sub")),
         )
         .child(caps_block(

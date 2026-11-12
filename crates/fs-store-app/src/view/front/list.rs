@@ -8,13 +8,15 @@ use fs_components::blinc::layout::prelude::text;
 use fs_components_styles::styles::craft_sheet::caps;
 
 use crate::launcher::Launcher;
-use crate::model::{Card, Layout, Section, StartBlock, StoreModel, columns};
+use crate::model::{Card, Layout, Section, StartBlock, StoreModel};
 use crate::view::shell::{Shared, locked, rebuild};
 use crate::words;
 use crate::words_front as w;
 
 use super::tile::tile;
-use super::widgets::label_dim;
+use fs_components_widgets::craft::{
+    grid as craft_grid, label_dim, link, section_title as craft_section, tile_columns,
+};
 
 /// The least width of a tile before the grid takes one column fewer.
 const TILE_MIN: f32 = 300.0;
@@ -28,25 +30,26 @@ fn grid(
     launcher: &Arc<dyn Launcher>,
     room: f32,
 ) -> Div {
-    let cols = columns(room, TILE_MIN, 0.0);
-    #[allow(clippy::cast_precision_loss)]
-    let width = (room / cols as f32).floor();
-    let mut grid = div().class("craft-grid").flex_col().flex_shrink_0();
-    for (r, chunk) in cards.chunks(cols).enumerate() {
-        let mut row = div().flex_row();
-        for (i, one) in chunk.iter().enumerate() {
-            row = row.child(tile(
-                one,
-                first + r * cols + i,
-                width,
-                model.is_removing(),
-                shared,
-                launcher,
-            ));
-        }
-        grid = grid.child(row);
-    }
-    grid
+    let (cols, width) = tile_columns(room, TILE_MIN);
+    let rows = cards
+        .chunks(cols)
+        .enumerate()
+        .map(|(r, chunk)| {
+            let mut row = div().flex_row();
+            for (i, one) in chunk.iter().enumerate() {
+                row = row.child(tile(
+                    one,
+                    first + r * cols + i,
+                    width,
+                    model.is_removing(),
+                    shared,
+                    launcher,
+                ));
+            }
+            row
+        })
+        .collect();
+    craft_grid(rows)
 }
 
 /// The list of the section as the person chose it, or a sentence when nothing matches.
@@ -84,42 +87,24 @@ fn section_title(
     more: Option<Section>,
     shared: &Shared,
 ) -> Div {
-    let mut row = div()
-        .flex_row()
-        .items_center()
-        .child(label_dim(&words::fill(
-            w::SECTION_TITLE,
-            &[("number", &format!("{number:02}")), ("title", title)],
-        )))
-        .child(div().flex_grow());
-    row = match more {
+    let right = match more {
         Some(section) => {
             let shared = Arc::clone(shared);
-            row.child(
-                div()
-                    .id(format!("more-{title}"))
-                    .class("craft-link")
-                    .attr("tabindex", "0")
-                    .child(
-                        text(format!(
-                            "{} \u{2197}",
-                            caps(&words::fill(w::SHOW_ALL, &[("count", &total.to_string())]))
-                        ))
-                        .class("craft-caps-dim")
-                        .no_wrap(),
-                    )
-                    .on_click(move |_| {
-                        locked(&shared).open_section(section);
-                        rebuild();
-                    }),
+            link(
+                &format!("more-{title}"),
+                &words::fill(w::SHOW_ALL, &[("count", &total.to_string())]),
+                Arc::new(move || {
+                    locked(&shared).open_section(section);
+                    rebuild();
+                }),
             )
         }
-        None => row.child(label_dim(&words::fill(
+        None => div().child(label_dim(&words::fill(
             w::SECTION_COUNT,
             &[("count", &total.to_string())],
         ))),
     };
-    row
+    craft_section(number, title, right)
 }
 
 fn block(

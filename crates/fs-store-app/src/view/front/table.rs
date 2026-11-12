@@ -12,13 +12,13 @@ use crate::view::shell::{Shared, locked, rebuild};
 use crate::words;
 use crate::words_front as w;
 
-use super::widgets::{Look, badge, button, label_dim};
+use fs_components_widgets::craft::{BadgeTone, Look, badge, button, label_dim};
 
-fn needs_tone(state: NeedsState) -> &'static str {
+fn needs_tone(state: NeedsState) -> BadgeTone {
     match state {
-        NeedsState::None | NeedsState::Met => "fs-t-ok",
-        NeedsState::Choice => "fs-t-warn",
-        NeedsState::Missing => "fs-t-bad",
+        NeedsState::None | NeedsState::Met => BadgeTone::Ok,
+        NeedsState::Choice => BadgeTone::Warn,
+        NeedsState::Missing => BadgeTone::Bad,
     }
 }
 

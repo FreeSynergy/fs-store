@@ -209,8 +209,6 @@ pub const FOOTER_CHECKED: &str = "Checked {ago}";
 pub const FOOTER_NEVER_CHECKED: &str = "Never checked";
 /// Footer: what the store installs. Placeholder: `{format}`.
 pub const FOOTER_FORMAT: &str = "Installing as {format}";
-/// Number of the section on the start page. Placeholders: `{number}`, `{title}`.
-pub const SECTION_TITLE: &str = "{number} / {title}";
 /// Number of packages in a section. Placeholder: `{count}`.
 pub const SECTION_COUNT: &str = "{count} packages";
 /// Tile link: open the project page.

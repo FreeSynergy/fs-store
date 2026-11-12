@@ -11,14 +11,14 @@ use crate::view::job::{start_all_updates, start_job, start_uninstall};
 use crate::view::shell::{Shared, locked, rebuild};
 use crate::words_front as w;
 
-use super::widgets::{Look, badge, button, label_dim};
+use fs_components_widgets::craft::{BadgeTone, Look, badge, button, label_dim};
 
-fn risk_tone(risk: Risk) -> &'static str {
+fn risk_tone(risk: Risk) -> BadgeTone {
     match risk {
-        Risk::Look | Risk::Open => "fs-t-quiet",
-        Risk::Start => "fs-t-info",
-        Risk::Install => "fs-t-warn",
-        Risk::System => "fs-t-bad",
+        Risk::Look | Risk::Open => BadgeTone::Quiet,
+        Risk::Start => BadgeTone::Info,
+        Risk::Install => BadgeTone::Warn,
+        Risk::System => BadgeTone::Bad,
     }
 }
 

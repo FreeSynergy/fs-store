@@ -12,8 +12,8 @@ use crate::model::StoreModel;
 use crate::words_front as w;
 
 use super::super::shell::{Shared, locked, rebuild};
-use super::widgets::label_dim;
 use super::{bar, list, nav, page, preview};
+use fs_components_widgets::craft::footer;
 
 /// How long the window waits after the last key before it narrows the list: a key changes only the text of the field
 /// (fast); the list is drawn again once the typing pauses, not once per key.
@@ -35,27 +35,6 @@ pub(in crate::view) fn search_field(shared: &Shared) -> SearchField {
             }
         });
     }))
-}
-
-/// The footer: when the last look for updates was and where the packages come from (left), how many and in what form they are
-/// installed (right); 33 px high with a line above.
-fn footer(model: &StoreModel) -> Div {
-    div()
-        .class("craft-footer")
-        .flex_row()
-        .items_center()
-        .gap(4.0)
-        .child(label_dim(&model.footer_checked()))
-        .child(
-            div()
-                .flex_shrink()
-                .min_w(0.0)
-                .overflow_clip()
-                .child(label_dim(&model.footer_sources())),
-        )
-        .child(div().flex_grow())
-        .child(label_dim(&model.footer_count()))
-        .child(label_dim(&model.footer_format()))
 }
 
 /// The whole storefront for a window `width` x `height`.
@@ -107,5 +86,8 @@ pub(in crate::view) fn storefront(
                 .child(nav::nav(model, shared))
                 .child(main),
         )
-        .child(footer(model))
+        .child(footer(
+            &[model.footer_checked(), model.footer_sources()],
+            &[model.footer_count(), model.footer_format()],
+        ))
 }
