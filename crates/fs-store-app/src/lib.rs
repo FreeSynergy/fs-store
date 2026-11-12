@@ -20,5 +20,5 @@ pub mod model;
 pub mod updates;
 pub mod view;
 pub mod words;
-mod words_front;
+pub mod words_front;
 mod words_job;

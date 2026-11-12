@@ -80,7 +80,10 @@ fn action(row: &TableRow, busy: bool, shared: &Shared, launcher: &Arc<dyn Launch
             &id,
             &label,
             look,
-            !busy || state == CardState::Installed,
+            match state {
+                CardState::Installed => row.card.open_blocked.is_none(),
+                _ => !busy && row.card.working.is_none(),
+            },
             Arc::new(move || {
                 if state == CardState::Installed {
                     locked(&shared).open(&name, None, launcher.as_ref());

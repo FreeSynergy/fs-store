@@ -88,6 +88,17 @@ pub struct Preview {
     pub title: String,
     /// The steps, in order.
     pub steps: Vec<Step>,
+    /// What the person must read before saying yes: a need that nobody offers (a warning), a need with a choice of providers.
+    pub warnings: Vec<Warning>,
+}
+
+/// A line of the question that is more than a step: it says something may not work, or that the person must choose.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Warning {
+    /// What to read.
+    pub text: String,
+    /// `true`: something is missing (red); `false`: a choice is open (amber).
+    pub missing: bool,
 }
 
 impl Preview {

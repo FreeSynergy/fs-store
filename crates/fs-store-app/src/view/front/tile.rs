@@ -158,7 +158,10 @@ fn actions(
             &format!("do-{name}"),
             &label,
             look,
-            !busy || state == CardState::Installed,
+            match state {
+                CardState::Installed => card.open_blocked.is_none(),
+                _ => !busy && card.working.is_none(),
+            },
             go,
         )))
         .child(
@@ -238,10 +241,14 @@ pub(super) fn tile(
     if let Some(why) = &card.failure {
         body = body.child(text(why.clone()).class("craft-sub"));
     }
-    body = match progress_view {
-        Some((share, line)) => body.child(running(card, shared, share, &line, inner)),
-        None => body.child(actions(card, busy, inner, shared, launcher)),
-    };
+    if let Some((share, line)) = progress_view {
+        body = body.child(running(card, shared, share, &line, inner));
+    } else {
+        body = body.child(actions(card, busy, inner, shared, launcher));
+        if let Some(why) = card.open_blocked.filter(|_| card.installed.is_some()) {
+            body = body.child(text(why).class("craft-sub"));
+        }
+    }
     tile_frame(
         width,
         tile_head(number, accent(&card.name), links(card, shared, launcher)),

@@ -111,7 +111,7 @@ fn actions(p: &PackagePage, busy: bool, shared: &Shared, launcher: &Arc<dyn Laun
                 &format!("page-open-{n1}"),
                 words::BUTTON_OPEN,
                 Look::Line,
-                true,
+                p.card.open_blocked.is_none(),
                 Arc::new(move || {
                     locked(&open).open(&n1, None, launcher.as_ref());
                     rebuild();
@@ -235,6 +235,10 @@ pub(super) fn page(
     if p.icon_missing {
         title = title.child(label_dim(w::ICON_MISSING));
     }
+    // A locked Open says why, in words, right under the name
+    if let Some(why) = p.card.open_blocked.filter(|_| p.card.installed.is_some()) {
+        title = title.child(text(why).class("craft-sub"));
+    }
     let mut links = div().flex_row().gap(2.0);
     if !p.homepage.is_empty() {
         let n = p.card.name.clone();
@@ -268,7 +272,12 @@ pub(super) fn page(
                 .gap(5.0)
                 .child(sized_logo(&p.card, 72.0, 14.0, 34.0))
                 .child(title)
-                .child(actions(&p, model.is_removing(), shared, launcher)),
+                .child(actions(
+                    &p,
+                    model.is_removing() || p.card.working.is_some(),
+                    shared,
+                    launcher,
+                )),
         )
         .child(
             div()

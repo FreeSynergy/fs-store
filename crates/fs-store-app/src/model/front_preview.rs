@@ -7,7 +7,7 @@ use crate::words;
 use crate::words_front as w;
 
 use super::cards::CardState;
-use super::front_steps::{Actor, Preview, PreviewAction, Risk, Step};
+use super::front_steps::{Actor, Preview, PreviewAction, Risk, Step, Warning};
 use super::store::StoreModel;
 
 fn step(text: String, risk: Risk, actor: Actor) -> Step {
@@ -107,6 +107,35 @@ impl StoreModel {
         steps
     }
 
+    /// What the person must read about the needs of `name` before the install: a need nobody offers is a warning, a need with several
+    /// providers is a note. Nothing for a package that needs nothing or whose needs are all met by one package.
+    fn need_warnings(&self, name: &str) -> Vec<Warning> {
+        use super::front_types::NeedsState;
+        let lang = w::Lang::current();
+        let title = self.title(name);
+        self.capability_lines(name)
+            .requires
+            .iter()
+            .filter_map(|l| match l.state {
+                NeedsState::Missing => Some(Warning {
+                    text: words::fill(
+                        w::missing_need(lang),
+                        &[("need", &l.text), ("title", &title)],
+                    ),
+                    missing: true,
+                }),
+                NeedsState::Choice => Some(Warning {
+                    text: words::fill(
+                        w::choice_need(lang),
+                        &[("need", &l.text), ("by", &l.answer)],
+                    ),
+                    missing: false,
+                }),
+                _ => None,
+            })
+            .collect()
+    }
+
     /// The steps of taking `name` away.
     fn remove_steps(&self, name: &str) -> Vec<Step> {
         let title = self.title(name);
@@ -150,6 +179,12 @@ impl StoreModel {
 
     /// Asks before an install or update: the steps, the highest risk, the two answers. Not while something runs.
     pub fn ask_install(&mut self, name: &str) {
+        // A package that is being installed is not installed a second time.
+        if self.jobs.iter().any(|j| j.name == name && !j.is_finished()) {
+            self.problems
+                .push(super::types::Problem::Busy(name.to_owned()));
+            return;
+        }
         let update = self
             .cards()
             .iter()
@@ -173,6 +208,7 @@ impl StoreModel {
             names: vec![name.to_owned()],
             title: words::fill(heading, &[("title", &self.title(name))]),
             steps,
+            warnings: self.need_warnings(name),
         });
     }
 
@@ -182,15 +218,23 @@ impl StoreModel {
             .available
             .iter()
             .filter(|r| r.action == super::types::Action::Update)
+            .filter(|r| {
+                !self
+                    .jobs
+                    .iter()
+                    .any(|j| j.name == r.package.name && !j.is_finished())
+            })
             .map(|r| r.package.name.clone())
             .collect();
         let Some(first) = names.first() else {
             return;
         };
+        let warnings: Vec<Warning> = names.iter().flat_map(|n| self.need_warnings(n)).collect();
         let steps = self.install_steps(first, true);
         self.front.preview = Some(Preview {
             action: PreviewAction::Update,
             title: words::fill(w::PREVIEW_MANY, &[("count", &names.len().to_string())]),
+            warnings,
             names,
             steps,
         });
@@ -206,6 +250,7 @@ impl StoreModel {
             names: vec![name.to_owned()],
             title: words::fill(w::PREVIEW_REMOVE, &[("title", &self.title(name))]),
             steps: self.remove_steps(name),
+            warnings: Vec::new(),
         });
     }
 

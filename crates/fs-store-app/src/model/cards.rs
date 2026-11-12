@@ -108,6 +108,8 @@ pub struct Card {
     pub bytes: Option<fs_store_core::Progress>,
     /// "Cancel" can stop the running job now with nothing left half done.
     pub can_cancel: bool,
+    /// Why "Open" is locked (a component or a theme has no window of its own); `None` when it can be pressed.
+    pub open_blocked: Option<&'static str>,
 }
 
 impl Card {
@@ -293,6 +295,12 @@ impl StoreModel {
                 .find(|j| j.name == name && !j.is_finished())
                 .and_then(|j| j.progress),
             can_cancel: self.can_cancel(name),
+            open_blocked: match row.map(|r| r.package.kind) {
+                Some(Kind::Component | Kind::Theme) => Some(crate::words_front::no_window(
+                    crate::words_front::Lang::current(),
+                )),
+                _ => None,
+            },
         }
     }
 }

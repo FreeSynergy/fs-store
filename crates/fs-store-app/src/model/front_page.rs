@@ -87,6 +87,8 @@ pub struct PackagePage {
     pub source_code: String,
     /// The catalog has no icon.
     pub icon_missing: bool,
+    /// One line for the blocks that have nothing to show ("Offers nothing \u{b7} Uses nothing extra"); `None` when every block has something.
+    pub nothing_line: Option<String>,
     /// The stand-in for the logo.
     pub placeholder: Placeholder,
 }
@@ -233,6 +235,18 @@ impl StoreModel {
             homepage: card.homepage.clone(),
             source_code: d.map(|d| d.origin.source_code.clone()).unwrap_or_default(),
             icon_missing: card.icon.is_none() && row.is_some(),
+            nothing_line: {
+                let caps = self.capability_lines(name);
+                crate::words_front::nothing_line(
+                    crate::words_front::Lang::current(),
+                    crate::words_front::EmptyBlocks {
+                        offers: caps.provides.is_empty(),
+                        needs: caps.requires.is_empty(),
+                        uses: caps.recommends.is_empty(),
+                        pictures: shown == 0,
+                    },
+                )
+            },
             placeholder: card.placeholder,
             card,
         })

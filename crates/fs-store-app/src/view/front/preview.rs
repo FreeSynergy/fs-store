@@ -44,6 +44,34 @@ fn confirm(shared: &Shared) {
     rebuild();
 }
 
+/// What the person must read before saying yes: a need nobody offers (red), a need with a choice (amber). Own lines above the steps.
+fn warnings(p: &crate::model::Preview) -> Div {
+    let mut col = div().flex_col().gap(2.0);
+    for wn in &p.warnings {
+        let tone = if wn.missing {
+            BadgeTone::Bad
+        } else {
+            BadgeTone::Warn
+        };
+        col = col.child(
+            div()
+                .flex_row()
+                .items_center()
+                .gap(3.0)
+                .child(badge(
+                    if wn.missing {
+                        w::WARN_MISSING
+                    } else {
+                        w::WARN_CHOICE
+                    },
+                    tone,
+                ))
+                .child(div().flex_grow().min_w(0.0).child(text(wn.text.clone()))),
+        );
+    }
+    col
+}
+
 /// The panel, when a question waits.
 pub(super) fn preview(model: &StoreModel, shared: &Shared) -> Option<Div> {
     let p: &Preview = model.preview()?;
@@ -89,6 +117,7 @@ pub(super) fn preview(model: &StoreModel, shared: &Shared) -> Option<Div> {
             .gap(3.5)
             .p(5.0)
             .child(text(p.title.clone()).bold().size(16.0))
+            .child(warnings(p))
             .child(steps)
             .child(label_dim(&p.risk_line()))
             .child(
