@@ -13,5 +13,6 @@ mod table;
 mod tile;
 pub(super) mod widgets;
 
+pub(super) use bar::{BAR_H, top_bar};
 pub(super) use layout::{search_field, storefront};
 pub(super) use styles::STYLES;

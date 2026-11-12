@@ -36,7 +36,7 @@ pub use fetch::{Fetched, fetch};
 pub use front_page::{CapLine, CapabilityLines, DescriptionView, PackagePage, ReleaseLine};
 pub use front_start::apply_show_flag;
 pub use front_steps::{Actor, Preview, PreviewAction, Risk, Step};
-pub use front_text::{kind_text, size_text, summary, trust_word};
+pub use front_text::{ellipsize, kind_text, size_text, summary, trust_word};
 pub use front_types::{
     FrontUi, Layout, NavEntry, NeedsState, Section, Sort, StartBlock, Tab, TableRow,
 };

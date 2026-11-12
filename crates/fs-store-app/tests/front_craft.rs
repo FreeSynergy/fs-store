@@ -21,7 +21,7 @@ fn a_tile_tells_version_and_date_and_size_in_two_lines() {
     assert_eq!(update.state, CardState::UpdateAvailable);
     assert_eq!(
         update.version_line_long(),
-        "0.1.0 installed -> 0.2.0 released"
+        "0.1.0 installed \u{2192} 0.2.0 released"
     );
     assert_eq!(update.meta_line(), "2026-11-09 - 14 MiB");
     let offered = card(&m, "fs-wiki");

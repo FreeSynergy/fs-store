@@ -44,7 +44,7 @@ fn footer(model: &StoreModel) -> Div {
         .class("craft-footer")
         .flex_row()
         .items_center()
-        .gap(16.0)
+        .gap(4.0)
         .child(label_dim(&model.footer_checked()))
         .child(
             div()
@@ -98,7 +98,6 @@ pub(in crate::view) fn storefront(
         .flex_col()
         .w(width)
         .h(height)
-        .child(bar::top_bar(model, shared))
         .child(
             div()
                 .class("fs-store-body")

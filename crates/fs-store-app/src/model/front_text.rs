@@ -63,14 +63,36 @@ pub fn or_unknown(text: &str) -> String {
     }
 }
 
-/// The first sentence of a description, at most `max` characters; the one line under a name.
+/// `text` cut at the last word that fits `max` characters, closed with an ellipsis; never in the middle of a word, and as it is when
+/// it fits. A word longer than the room is cut and closed the same way.
+#[must_use]
+pub fn ellipsize(text: &str, max: usize) -> String {
+    let text = text.trim();
+    if text.chars().count() <= max {
+        return text.to_owned();
+    }
+    let keep = max.saturating_sub(1).max(1);
+    let head: String = text.chars().take(keep).collect();
+    // back to the end of a whole word when the cut fell inside one
+    let cut = if text.chars().nth(keep).is_some_and(char::is_whitespace) {
+        head
+    } else {
+        match head.rfind(char::is_whitespace) {
+            Some(at) if at > 0 => head[..at].to_owned(),
+            _ => head,
+        }
+    };
+    format!(
+        "{}\u{2026}",
+        cut.trim_end_matches([' ', ',', ';', ':', '.', '-'])
+    )
+}
+
+/// The first sentence of a description, at most `max` characters, closed with an ellipsis when it is longer (at a word); the one line
+/// under a name.
 #[must_use]
 pub fn summary(text: &str, max: usize) -> String {
     let text = text.trim();
     let first = text.split_inclusive(['.', '!', '?']).next().unwrap_or(text);
-    if first.chars().count() <= max {
-        return first.trim().to_owned();
-    }
-    let cut: String = first.chars().take(max.saturating_sub(1)).collect();
-    format!("{}...", cut.trim_end())
+    ellipsize(first, max)
 }

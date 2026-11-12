@@ -181,3 +181,26 @@ fn the_footer_names_the_sources_from_the_settings() {
     );
     assert_eq!(m.footer_count(), "10 packages");
 }
+
+#[test]
+fn a_long_summary_is_closed_with_an_ellipsis_at_a_word_never_cut_hard() {
+    use fs_store_app::model::{ellipsize, summary};
+    assert_eq!(
+        ellipsize("Identity management: accounts, groups", 40),
+        "Identity management: accounts, groups"
+    );
+    assert_eq!(
+        ellipsize("Identity management: accounts, groups and sign-in", 30),
+        "Identity management: accounts\u{2026}"
+    );
+    assert_eq!(
+        ellipsize("Identity management: accounts, groups", 22),
+        "Identity management\u{2026}"
+    );
+    assert_eq!(ellipsize("Supercalifragilistic", 8), "Superca\u{2026}");
+    assert_eq!(
+        summary("First sentence is here. Second one.", 100),
+        "First sentence is here."
+    );
+    assert!(summary("A long first sentence that does not fit at all.", 20).ends_with('\u{2026}'));
+}

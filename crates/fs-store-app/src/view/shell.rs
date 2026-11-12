@@ -16,7 +16,7 @@ use crate::model::{StoreModel, View, is_help_key, is_quit_key};
 use crate::words;
 
 use super::admin::admin;
-use super::front::{search_field, storefront};
+use super::front::{BAR_H, search_field, storefront, top_bar};
 use super::menu::{install_menus, open_help, quit};
 use super::pages::about;
 
@@ -130,6 +130,19 @@ impl Surface for StoreSurface {
             _ => about(),
         };
         Box::new(page.child(body))
+    }
+
+    fn bar(
+        &self,
+        menus: Option<fs_components::blinc::layout::div::Div>,
+        _width: f32,
+    ) -> Option<(fs_components::blinc::layout::div::Div, f32)> {
+        let model = locked(&self.model);
+        (model.view() == View::Cards).then(|| (top_bar(&model, &self.model, menus), BAR_H))
+    }
+
+    fn status_line(&self) -> bool {
+        locked(&self.model).view() != View::Cards
     }
 
     fn styles(&self) -> String {

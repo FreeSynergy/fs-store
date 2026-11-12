@@ -65,6 +65,14 @@ pub(in crate::view) fn button(id: &str, words: &str, look: Look, enabled: bool, 
     })
 }
 
+/// A line of sub text (`shown`) with `tip` as its tooltip: the whole text when the line was cut.
+pub(in crate::view) fn with_tip(id: &str, shown: &str, tip: &str) -> Div {
+    let key = InstanceKey::explicit(format!("fs-store-sum-{id}"));
+    let shown = shown.to_owned();
+    let trigger = move || div().child(text(shown.clone()).class("craft-sub").no_wrap());
+    div().child(TooltipBuilder::with_key(trigger, key).text(tip.to_owned()))
+}
+
 /// A square cell that holds an icon or a few characters (refresh, pause, the three dots), 34 px high.
 pub(in crate::view) fn cell_button(
     id: &str,

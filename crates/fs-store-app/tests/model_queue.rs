@@ -107,11 +107,14 @@ fn the_catalog_title_is_used_for_the_name() {
 fn update_lines_say_the_display_name_and_the_queue() {
     let f = fake(vec![installed("fs-tasks", v(0, 6, 0))], None);
     let mut m = model(&f);
-    assert_eq!(m.update_lines(), ["FreeSynergy.Tasks: 0.6.0 -> 0.6.1"]);
+    assert_eq!(
+        m.update_lines(),
+        ["FreeSynergy.Tasks: 0.6.0 \u{2192} 0.6.1"]
+    );
     m.begin_job("fs-tasks");
     assert_eq!(
         m.update_lines(),
-        ["FreeSynergy.Tasks: 0.6.0 -> 0.6.1 (in the queue)"]
+        ["FreeSynergy.Tasks: 0.6.0 \u{2192} 0.6.1 (in the queue)"]
     );
 }
 

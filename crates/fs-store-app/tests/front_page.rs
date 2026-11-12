@@ -15,7 +15,7 @@ fn model() -> StoreModel {
 fn a_page_shows_version_with_date_size_origin_trust_changes_and_pictures() {
     let m = model();
     let p = m.package_page("fs-tasks").unwrap();
-    assert_eq!(p.version, "0.1.0 -> 0.2.0 (2026-11-09)");
+    assert_eq!(p.version, "0.1.0 \u{2192} 0.2.0 (2026-11-09)");
     assert_eq!(p.size, "14 MiB");
     assert_eq!(p.trust_word, "Our key only");
     assert!(p.trust_text.contains("maker gives no signature"));

@@ -224,10 +224,6 @@ pub const CANCEL_LOCKED: &str = "Cancel: coming soon";
 /// Button: update to a version. Placeholder: `{version}`.
 pub const BUTTON_UPDATE_TO: &str = "Update to {version}";
 
-/// The pill in the top bar.
-pub const BAR_PILL: &str = "Store";
-/// The line after the pill in the top bar.
-pub const BAR_SUB: &str = "FreeSynergy packages";
 
 /// Title of the section that lists everything (a section, a search or a filter shows it).
 pub const SECTION_ALL: &str = "Packages";

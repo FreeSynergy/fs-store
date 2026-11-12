@@ -127,7 +127,7 @@ impl Card {
     pub fn version_line(&self) -> String {
         match (self.installed, self.offered, self.state) {
             (Some(old), Some(new), CardState::UpdateAvailable) => {
-                format!("{old} -> {new}")
+                format!("{old} \u{2192} {new}")
             }
             (Some(v), _, _) | (None, Some(v), _) => v.to_string(),
             (None, None, _) => String::new(),

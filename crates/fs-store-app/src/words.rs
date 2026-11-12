@@ -199,7 +199,7 @@ pub const CHECK_DONE: &str = "Done looking for updates.";
 /// The check did not work. Placeholder: `{detail}`.
 pub const CHECK_FAILED: &str = "Looking for updates did not work: {detail}";
 /// Updates page: line of an update. Placeholders: `{name}`, `{from}`, `{to}`.
-pub const UPDATE_LINE: &str = "{name}: {from} -> {to}";
+pub const UPDATE_LINE: &str = "{name}: {from} \u{2192} {to}";
 /// Heading of the update block on the start page.
 pub const UPDATES_HEADING: &str = "Updates";
 pub use crate::words_job::{JOB_NO_ANSWER, REFRESHING, job_problem, job_state};

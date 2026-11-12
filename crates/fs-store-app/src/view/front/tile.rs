@@ -103,8 +103,18 @@ fn title(card: &Card) -> Div {
     row
 }
 
-fn identity(card: &Card) -> Div {
-    let summary = crate::model::summary(&card.description, 64);
+/// About how many characters of the summary fit beside the logo in a tile `width` pixels wide (a little less than the room, so the
+/// ellipsis closes the text and the clip never cuts it).
+fn summary_room(width: f32) -> usize {
+    let room = (width - 41.0 - 56.0 - 14.0).max(60.0);
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    let chars = (room / 7.2) as usize;
+    chars
+}
+
+fn identity(card: &Card, width: f32) -> Div {
+    let full = crate::model::summary(&card.description, usize::MAX);
+    let summary = crate::model::summary(&card.description, summary_room(width));
     div().flex_row().gap(3.5).child(logo(card)).child(
         div()
             .flex_col()
@@ -113,17 +123,18 @@ fn identity(card: &Card) -> Div {
             .min_w(0.0)
             .overflow_clip()
             .child(title(card))
-            .child(
-                text(if summary.is_empty() {
-                    w::UNKNOWN.to_owned()
-                } else {
-                    summary
-                })
-                .class("craft-sub")
-                .no_wrap(),
-            )
+            .child(summary_line(&card.name, &summary, &full))
             .child(text(caps(card.trust)).class("craft-caps-dim").no_wrap()),
     )
+}
+
+/// The summary line; when it was cut the whole sentence is the tooltip, and the page has the whole description.
+fn summary_line(name: &str, shown: &str, full: &str) -> Div {
+    let shown = if shown.is_empty() { w::UNKNOWN } else { shown };
+    if shown == full || full.is_empty() {
+        return div().child(text(shown.to_owned()).class("craft-sub").no_wrap());
+    }
+    super::widgets::with_tip(&format!("sum-{name}"), shown, full)
 }
 
 fn state_tone(state: CardState) -> &'static str {
@@ -234,7 +245,7 @@ pub(super) fn tile(
         .class("craft-tile-body")
         .flex_col()
         .gap(3.5)
-        .child(identity(card));
+        .child(identity(card, width));
     let progress_view = card.progress();
     let state_badge = match card.working {
         Some(_) => badge(card.working_word(), "fs-t-info"),

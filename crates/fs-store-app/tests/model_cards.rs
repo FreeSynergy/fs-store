@@ -83,7 +83,7 @@ fn card_states_and_button_layout() {
     assert_eq!(tasks.state, CardState::UpdateAvailable);
     assert_eq!(tasks.buttons.open, Some(OpenWidth::Half));
     assert!(tasks.buttons.update && !tasks.buttons.install);
-    assert_eq!(tasks.version_line(), "0.6.0 -> 0.6.1");
+    assert_eq!(tasks.version_line(), "0.6.0 \u{2192} 0.6.1");
     assert_eq!(buttons_for(CardState::Installed), store.buttons);
 }
 
