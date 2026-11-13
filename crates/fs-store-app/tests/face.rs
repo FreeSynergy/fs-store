@@ -124,8 +124,5 @@ fn a_broken_settings_file_gives_the_default_face_and_a_warning_and_no_crash() {
     .unwrap();
     let m = model_in(tmp.path());
     assert_eq!(m.face(), Face::Storefront);
-    assert_eq!(
-        m.settings().check,
-        fs_store_sources::CheckEvery::Hourly
-    );
+    assert_eq!(m.settings().check, fs_store_sources::CheckEvery::Hourly);
 }

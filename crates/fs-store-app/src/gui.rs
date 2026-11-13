@@ -8,9 +8,9 @@ use std::sync::{Arc, Mutex};
 use crate::demo::parts;
 use crate::model::{StoreModel, View};
 use crate::view::{start_check, store_app};
-use fs_store_sources::Face;
 use fs_components_app::{WindowOptions, launch, parse_size};
 use fs_interfaces::rpc::facet_from_args;
+use fs_store_sources::Face;
 
 /// Opens the window, or draws a picture with `--snapshot`.
 ///
