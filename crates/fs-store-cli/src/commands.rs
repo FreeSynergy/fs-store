@@ -7,7 +7,8 @@
 //! fs-store update  <name> [<source>]     # only if the catalog offers a newer version
 //! fs-store installed
 //! fs-store owner <path>                  # which package a file belongs to (our own list, with proof)
-//! fs-store verify [<name>]               # checksums against our own list; exit 1 when changed or missing
+//! fs-store relink [<name>]               # make the commands again for the active form (repair after verify)
+//! fs-store verify [<name>]             # checksums against our own list; exit 1 when changed or missing
 //! Option: --trust-key <file>             # also trust this public key for this run (test key of a local source)
 //! ```
 //! A source is a Git address (https or file://) holding `catalog.xml` and `catalog.xml.asc`.
@@ -216,12 +217,14 @@ pub fn run(all: &[String]) -> Result<(), String> {
         [c, p] if c == "owner" => crate::own::owner(&root, p),
         [c] if c == "verify" => crate::own::verify(&root, None),
         [c, n] if c == "verify" => crate::own::verify(&root, Some(n)),
+        [c] if c == "relink" => crate::relink::relink(&root, None),
+        [c, n] if c == "relink" => crate::relink::relink(&root, Some(n)),
         [c] if c == "background" => crate::background::background(&root, extra),
         [c, rest @ ..] if c == "settings" => crate::background::settings(&root, rest),
         [c] if c == "check" => crate::updates::check(&root, extra),
         [c, n, m] if c == "auto" => crate::updates::auto(&root, n, m),
         [c, rest @ ..] if c == "timer" => crate::updates::timer(rest),
         [c, n, s] if c == "update" => cmd_install(&root, n, Some(s), extra, true),
-        _ => Err("usage: fs-store sources | available [source] | install <name> [source] | update <name> [source] | check | background | settings | update --all | auto <name> on|off | timer enable|disable|status | uninstall <name> | installed | owner <path> | verify [name]".into()),
+        _ => Err("usage: fs-store sources | available [source] | install <name> [source] | update <name> [source] | check | background | settings | update --all | auto <name> on|off | timer enable|disable|status | uninstall <name> | installed | owner <path> | verify [name] | relink [name]".into()),
     }
 }

@@ -182,6 +182,7 @@ fn finish(root: &Path, f: &Found, v: fs_store_core::Version, signer: &str) -> Ve
     let settled = fs_store_engine::settle_install(
         root,
         &f.name,
+        &v.to_string(),
         &f.entry.facets,
         &fs_store_engine::default_bin_dir(),
         &fs_store_engine::default_apps_dir(),

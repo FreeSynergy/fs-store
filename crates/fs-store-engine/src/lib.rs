@@ -20,16 +20,19 @@ mod owner;
 mod prepare;
 mod proc;
 mod remove;
+mod retire;
 mod rpm;
 mod servers;
 pub mod service;
 mod targz;
 
-pub use after::{Settled, settle_install, settle_remove};
+pub use after::{Settled, settle_install, settle_install_with, settle_remove};
 pub use batch::{CommitObserver, Observer};
 pub use deb::{Deb, remove_deb, remove_native};
 pub use end::{CALL_LIMIT, Ended, end_server, end_servers, server_info, socket_of, stop_servers};
-pub use facets::{default_apps_dir, ensure_own_menu_entry, link_facets, unlink_facets};
+pub use facets::{
+    Form, default_apps_dir, ensure_own_menu_entry, link_facets, link_facets_for, unlink_facets,
+};
 pub use icons::store_icon;
 pub use links::{default_bin_dir, link_programs, unlink_programs};
 pub use lock::PackageLock;
@@ -43,6 +46,7 @@ pub use owner::{Owner, owner, system_owner};
 pub use prepare::{Downloaded, Plan, Prepared};
 pub use proc::ProcRunningCheck;
 pub use remove::{RemoveError, remove};
+pub use retire::check_links;
 pub use rpm::{Commander, Rpm, SystemCommander, remove_rpm};
 pub use servers::{Server, find_servers, is_alive, is_server_of, program_of, start_server};
 pub use targz::TarGz;

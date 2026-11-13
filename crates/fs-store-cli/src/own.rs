@@ -56,7 +56,13 @@ fn or_unknown(text: &str) -> &str {
 
 /// `fs-store verify [name]`: our own installations against their lists; exit code 1 when a listed file changed, is missing, has other permission bits, is no regular file any more or cannot be read; a stranger in the folder is only a warning.
 pub(crate) fn verify(root: &Path, only: Option<&str>) -> Result<(), String> {
-    let reports = fs_store_engine::verify(root, only, &source_of(root))?;
+    let registry = fs_store_sources::Registry::load(&root.join("installed.toml")).ok();
+    let in_register = |n: &str| registry.as_ref().is_some_and(|r| r.get(n).is_some());
+    let reports = match fs_store_engine::verify(root, only, &source_of(root)) {
+        // an rpm has no list of files here, but its commands are still checked below
+        Err(_) if only.is_some_and(in_register) => Vec::new(),
+        other => other?,
+    };
     let mut bad = 0usize;
     for r in &reports {
         let m = &r.manifest;
@@ -85,12 +91,34 @@ pub(crate) fn verify(root: &Path, only: Option<&str>) -> Result<(), String> {
             println!("  extra      {path}  (not in the list; warning only)");
         }
     }
-    if bad == 0 {
-        println!("all {} packages intact", reports.len());
-        Ok(())
-    } else {
-        Err(red(&format!(
+    let installed: Vec<_> = registry
+        .iter()
+        .flat_map(|r| r.list().iter())
+        .filter(|e| only.is_none_or(|o| o == e.name))
+        .cloned()
+        .collect();
+    let wrong_links = fs_store_engine::check_links(
+        root,
+        &fs_store_engine::default_bin_dir(),
+        &installed,
+        Path::new("/usr/bin"),
+    );
+    for w in &wrong_links {
+        println!("  {}", red(&format!("link      {w}")));
+    }
+    match (bad, wrong_links.len()) {
+        (0, 0) => {
+            println!("all {} packages intact", reports.len());
+            Ok(())
+        }
+        (0, n) => Err(red(&format!(
+            "{n} commands start another version than the register says"
+        ))),
+        (bad, 0) => Err(red(&format!(
             "{bad} files differ from the list (changed, missing, mode, type or unreadable)"
-        )))
+        ))),
+        (bad, n) => Err(red(&format!(
+            "{bad} files differ from the list (changed, missing, mode, type or unreadable); {n} commands start another version than the register says"
+        ))),
     }
 }

@@ -19,6 +19,7 @@ impl EngineBackend {
         let settled = fs_store_engine::settle_install(
             self.root(),
             name,
+            &version.to_string(),
             facets,
             &fs_store_engine::default_bin_dir(),
             &fs_store_engine::default_apps_dir(),

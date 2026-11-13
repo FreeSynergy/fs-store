@@ -7,21 +7,31 @@ use std::io;
 use std::os::unix::fs::symlink;
 use std::path::{Path, PathBuf};
 
-/// The executable a facet link points to: `<package>` or `<package>-app` in the unpacked package, else the same
-/// in `/usr/bin` (rpm installs).
-fn main_program(root: &Path, package: &str) -> Option<PathBuf> {
-    let dirs = [
-        root.join("current").join(package),
-        PathBuf::from("/usr/bin"),
-    ];
-    dirs.iter()
+/// Where the program of a package lives: in the unpacked package (`tar.gz`, no root), or where the package manager
+/// put it (`rpm`, `deb`: usually `/usr/bin`). A facet link follows the form that is active, never the other one.
+#[derive(Debug, Clone, Copy)]
+pub enum Form<'a> {
+    /// `current/<package>/` below the store's folder.
+    Unpacked,
+    /// The folder of the package manager.
+    System(&'a Path),
+}
+
+/// The executable a facet link points to: `<package>` or `<package>-app` in the folder of the active form.
+fn main_program(root: &Path, package: &str, form: Form<'_>) -> Option<PathBuf> {
+    let dir = match form {
+        Form::Unpacked => root.join("current").join(package),
+        Form::System(d) => d.to_owned(),
+    };
+    [dir]
+        .iter()
         .flat_map(|d| ["", "-app"].map(|suffix| d.join(format!("{package}{suffix}"))))
         .find(|p| p.is_file())
 }
 
-fn ours(root: &Path, package: &str, target: &Path) -> bool {
+fn ours(root: &Path, package: &str, target: &Path, system: &Path) -> bool {
     target.starts_with(root.join("current").join(package))
-        || (target.starts_with("/usr/bin")
+        || (target.starts_with(system)
             && target
                 .file_name()
                 .and_then(|n| n.to_str())
@@ -70,7 +80,32 @@ pub fn link_facets(
     bin_dir: &Path,
     apps_dir: &Path,
 ) -> io::Result<Vec<String>> {
-    let Some(target) = main_program(root, package) else {
+    link_facets_for(
+        root,
+        package,
+        facets,
+        bin_dir,
+        apps_dir,
+        Form::Unpacked,
+        Path::new("/usr/bin"),
+    )
+}
+
+/// Like [`link_facets`], for the active `form`. `system` is the folder of the package manager (`/usr/bin`); a link
+/// into it or into `current/<package>` counts as ours and is replaced.
+///
+/// # Errors
+/// `io::Error` when a directory or file cannot be written.
+pub fn link_facets_for(
+    root: &Path,
+    package: &str,
+    facets: &[String],
+    bin_dir: &Path,
+    apps_dir: &Path,
+    form: Form<'_>,
+    system: &Path,
+) -> io::Result<Vec<String>> {
+    let Some(target) = main_program(root, package, form) else {
         return Ok(Vec::new());
     };
     fs::create_dir_all(bin_dir)?;
@@ -86,7 +121,7 @@ pub fn link_facets(
         }
         let link = bin_dir.join(facet);
         match fs::read_link(&link) {
-            Ok(old) if ours(root, package, &old) => fs::remove_file(&link)?,
+            Ok(old) if ours(root, package, &old, system) => fs::remove_file(&link)?,
             Ok(_) => continue,
             Err(_) if fs::symlink_metadata(&link).is_ok() => continue,
             Err(_) => {}
@@ -129,7 +164,7 @@ pub fn unlink_facets(
 ) -> io::Result<()> {
     for facet in facets.iter().filter(|f| plain(f)) {
         let link = bin_dir.join(facet);
-        if fs::read_link(&link).is_ok_and(|t| ours(root, package, &t)) {
+        if fs::read_link(&link).is_ok_and(|t| ours(root, package, &t, Path::new("/usr/bin"))) {
             fs::remove_file(&link)?;
         }
     }

@@ -2106,7 +2106,7 @@ dependencies = [
 
 [[package]]
 name = "fs-store"
-version = "0.0.14"
+version = "0.0.15"
 dependencies = [
  "fs-store-app",
  "fs-store-cli",
@@ -2117,7 +2117,7 @@ dependencies = [
 
 [[package]]
 name = "fs-store-app"
-version = "0.0.14"
+version = "0.0.15"
 dependencies = [
  "fs-components",
  "fs-components-app",
@@ -2135,7 +2135,7 @@ dependencies = [
 
 [[package]]
 name = "fs-store-catalog"
-version = "0.0.14"
+version = "0.0.15"
 dependencies = [
  "fs-store-core",
  "roxmltree",
@@ -2143,7 +2143,7 @@ dependencies = [
 
 [[package]]
 name = "fs-store-cli"
-version = "0.0.14"
+version = "0.0.15"
 dependencies = [
  "fs-store-catalog",
  "fs-store-core",
@@ -2156,7 +2156,7 @@ dependencies = [
 
 [[package]]
 name = "fs-store-client"
-version = "0.0.14"
+version = "0.0.15"
 dependencies = [
  "fs-store-sources",
  "tempfile",
@@ -2164,11 +2164,11 @@ dependencies = [
 
 [[package]]
 name = "fs-store-core"
-version = "0.0.14"
+version = "0.0.15"
 
 [[package]]
 name = "fs-store-engine"
-version = "0.0.14"
+version = "0.0.15"
 dependencies = [
  "capnp",
  "capnp-rpc",
@@ -2191,7 +2191,7 @@ dependencies = [
 
 [[package]]
 name = "fs-store-pgp"
-version = "0.0.14"
+version = "0.0.15"
 dependencies = [
  "fs-store-core",
  "pgp",
@@ -2200,7 +2200,7 @@ dependencies = [
 
 [[package]]
 name = "fs-store-server"
-version = "0.0.14"
+version = "0.0.15"
 dependencies = [
  "capnp",
  "capnp-rpc",
@@ -2216,7 +2216,7 @@ dependencies = [
 
 [[package]]
 name = "fs-store-sources"
-version = "0.0.14"
+version = "0.0.15"
 dependencies = [
  "fs-store-core",
  "serde",
@@ -2226,7 +2226,7 @@ dependencies = [
 
 [[package]]
 name = "fs-store-tuf"
-version = "0.0.14"
+version = "0.0.15"
 dependencies = [
  "tempfile",
  "tokio",
@@ -2236,7 +2236,7 @@ dependencies = [
 
 [[package]]
 name = "fs-store-tuf-publish"
-version = "0.0.14"
+version = "0.0.15"
 dependencies = [
  "aws-lc-rs",
  "fs-store-tuf",

@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.0.15
+
+### English
+- **Fix: commands follow the active install form.** A package unpacked by the store (tar.gz) and later installed as rpm kept its facet commands (`~/.local/bin/fs-tasks`, `fs-people`) on the old unpacked program (0.0.2) although the register said 0.0.7. Now facet commands point to `/usr/bin` when the package manager owns the program, and through `current/<name>` when the store unpacked it.
+- **tar.gz → rpm/deb cleans up** the store's own leftovers: command links into `current/<name>`, the `current` link, old `packages/<name>/` versions and the list of files. A folder with a file the store did not put there stays and is reported; other packages and foreign commands are never touched.
+- **`fs-store verify` finds "register says X, command starts Y"** (also a link to a gone file, or into the system folder while the unpacked form is active): exit code not zero, the message names the command and the repair. New **`fs-store relink [name]`** makes the commands again for the active form.
+- **Known limits:** the rpm side is tested with a folder in place of `/usr/bin`, not with a real `dnf`; `relink` trusts `installed.toml`; a link that points straight into `packages/` (not through `current/`) is not checked.
+
+### Deutsch
+- **Korrektur: Befehle folgen der aktiven Installationsform.** Ein vom Store entpacktes Paket (tar.gz), das später als rpm installiert wurde, ließ seine Facetten-Befehle (`~/.local/bin/fs-tasks`, `fs-people`) auf dem alten entpackten Programm (0.0.2), obwohl die Liste 0.0.7 sagte. Jetzt zeigen Facetten-Befehle nach `/usr/bin`, wenn die Paketverwaltung das Programm besitzt, und über `current/<name>`, wenn der Store es entpackt hat.
+- **tar.gz → rpm/deb räumt auf**, nur Eigenes: Befehls-Links nach `current/<name>`, den `current`-Link, alte `packages/<name>/`-Stände und die Dateiliste. Ein Ordner mit einer Datei, die der Store nicht angelegt hat, bleibt und wird gemeldet; andere Pakete und fremde Befehle bleiben unberührt.
+- **`fs-store verify` findet „Liste sagt X, Befehl startet Y“** (auch Link auf eine fehlende Datei oder in den Systemordner bei aktiver entpackter Form): Exit-Code ungleich null, die Meldung nennt Befehl und Reparatur. Neu: **`fs-store relink [name]`** legt die Befehle für die aktive Form neu an.
+- **Bekannte Grenzen:** Die rpm-Seite ist mit einem Ordner statt `/usr/bin` getestet, nicht mit echtem `dnf`; `relink` vertraut `installed.toml`; ein Link, der direkt in `packages/` zeigt (nicht über `current/`), wird nicht geprüft.
+
 ## 0.0.14
 
 ### English
