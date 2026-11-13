@@ -79,6 +79,27 @@ fn a_foreign_file_in_the_way_is_said() {
 }
 
 #[test]
+fn a_hand_edited_name_cannot_make_the_cleanup_leave_packages() {
+    let tmp = tempfile::tempdir().unwrap();
+    let root = tmp.path().join("root");
+    let (bin, apps) = dirs(tmp.path());
+    fs::create_dir_all(root.join("packages/people/1.0.0")).unwrap();
+    fs::write(root.join("installed.toml"), "mine").unwrap();
+    fs::write(root.join("packages/other"), "mine").unwrap();
+    for name in ["..", "", ".", "../people", "a/b"] {
+        let s = settle_install(&root, name, "1.0.0", &[], &bin, &apps);
+        assert!(
+            s.problems.iter().any(|p| p.contains("not a package name")),
+            "{name:?}: {:?}",
+            s.problems
+        );
+    }
+    assert!(root.join("installed.toml").is_file());
+    assert!(root.join("packages/other").is_file());
+    assert!(root.join("packages/people/1.0.0").is_dir());
+}
+
+#[test]
 fn a_package_of_the_package_manager_gets_no_program_links_and_no_false_problem() {
     let tmp = tempfile::tempdir().unwrap();
     let root = tmp.path().join("root");

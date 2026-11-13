@@ -34,7 +34,7 @@ pub use facets::{
     Form, default_apps_dir, ensure_own_menu_entry, link_facets, link_facets_for, unlink_facets,
 };
 pub use icons::store_icon;
-pub use links::{default_bin_dir, link_programs, unlink_programs};
+pub use links::{default_bin_dir, default_system_dir,link_programs, unlink_programs};
 pub use lock::PackageLock;
 pub use mode::{
     System, deb_installed_version, detect_system, format_for, native_installed_version, own_exe,

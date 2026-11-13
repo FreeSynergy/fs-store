@@ -10,9 +10,16 @@ use crate::own_files::package_dir;
 use crate::own_judge::stray;
 
 /// Takes away what the store itself made for the unpacked form of `name`: links into `current/<name>`, the `current`
-/// link, the version folders below `packages/<name>/` and the list of files. A folder that holds a file the store did
-/// not put there stays and is reported. Returns the problems, one sentence each.
+/// link, the version folders below `packages/<name>/` and the list of files. A version folder that has a list and holds
+/// a file the list does not name stays and is reported; a version folder without a matching list is removed as a whole
+/// (everything below `packages/<name>/` is the store's own place). Returns the problems, one sentence each.
 pub(crate) fn retire_unpacked(root: &Path, name: &str, bin_dir: &Path) -> Vec<String> {
+    // the name comes from `installed.toml`, which can be edited by hand: never let it leave `packages/`
+    if name.is_empty() || name == "." || name == ".." || name.contains(['/', '\\', '\0']) {
+        return vec![format!(
+            "{name:?}: not a package name, nothing was removed"
+        )];
+    }
     let mut problems = Vec::new();
     let mut say = |what: &str, e: &dyn std::fmt::Display| {
         problems.push(format!("{name}: old unpacked {what} not removed: {e}"));

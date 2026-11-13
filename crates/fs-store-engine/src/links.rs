@@ -18,6 +18,15 @@ pub fn default_bin_dir() -> std::path::PathBuf {
     )
 }
 
+/// Where the package manager puts programs: `FS_STORE_SYSTEM` (tests), else `/usr/bin`.
+#[must_use]
+pub fn default_system_dir() -> std::path::PathBuf {
+    std::env::var_os("FS_STORE_SYSTEM").map_or_else(
+        || std::path::PathBuf::from("/usr/bin"),
+        std::path::PathBuf::from,
+    )
+}
+
 /// Links every executable file at the top of `current/<name>/` into `bin_dir`. Returns the names linked.
 /// A name that exists and is not one of our links is left alone and reported in `skipped`.
 ///

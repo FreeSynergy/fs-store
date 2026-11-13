@@ -59,8 +59,10 @@ pub(crate) fn verify(root: &Path, only: Option<&str>) -> Result<(), String> {
     let registry = fs_store_sources::Registry::load(&root.join("installed.toml")).ok();
     let in_register = |n: &str| registry.as_ref().is_some_and(|r| r.get(n).is_some());
     let reports = match fs_store_engine::verify(root, only, &source_of(root)) {
-        // an rpm has no list of files here, but its commands are still checked below
-        Err(_) if only.is_some_and(in_register) => Vec::new(),
+        // an rpm has no list of files here, but its commands are still checked below; any other error stays an error
+        Err(e) if only.is_some_and(|n| in_register(n) && e == format!("{n} is not installed by this store")) => {
+            Vec::new()
+        }
         other => other?,
     };
     let mut bad = 0usize;
@@ -101,7 +103,7 @@ pub(crate) fn verify(root: &Path, only: Option<&str>) -> Result<(), String> {
         root,
         &fs_store_engine::default_bin_dir(),
         &installed,
-        Path::new("/usr/bin"),
+        &fs_store_engine::default_system_dir(),
     );
     for w in &wrong_links {
         println!("  {}", red(&format!("link      {w}")));

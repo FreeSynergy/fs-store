@@ -40,9 +40,22 @@ fn verify_is_red_for_a_command_that_starts_the_old_version_and_green_after_relin
     assert!(err.contains("another version"), "{err}");
     assert!(run(&["verify", "fsprog"]).is_err());
 
+    // neither 0.0.7 unpacked nor a program in the system folder: relink must not take away the only installation
+    let sys = tmp.path().join("sys");
+    fs::create_dir_all(&sys).unwrap();
+    // SAFETY: see above.
+    unsafe { std::env::set_var("FS_STORE_SYSTEM", &sys) };
+    let err = run(&["relink", "fsprog"]).unwrap_err();
+    assert!(err.contains("nothing was changed"), "{err}");
+    assert!(old.join("fsprog-app").is_file());
+    assert!(fs::symlink_metadata(bin.join("fsprog")).is_ok());
+    assert!(fs::symlink_metadata(root.join("current/fsprog")).is_ok());
+
+    // the rpm brought the program: now the old unpacked form is retired
+    fs::write(sys.join("fsprog-app"), "x").unwrap();
     run(&["relink", "fsprog"]).unwrap();
     assert!(!root.join("packages/fsprog").exists());
-    assert!(fs::symlink_metadata(bin.join("fsprog")).is_err());
+    assert_eq!(fs::read_link(bin.join("fsprog")).unwrap(), sys.join("fsprog-app"));
     run(&["verify"]).unwrap();
     run(&["verify", "fsprog"]).unwrap();
     assert!(run(&["relink", "nothing"]).is_err());
