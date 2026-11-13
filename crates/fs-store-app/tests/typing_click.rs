@@ -42,9 +42,7 @@ struct Window {
 
 /// The window as `fs-store --demo --look standard --view sources --size 900x640` builds it.
 fn window() -> Window {
-    let serial = ONE_AT_A_TIME
-        .lock()
-        .unwrap_or_else(PoisonError::into_inner);
+    let serial = ONE_AT_A_TIME.lock().unwrap_or_else(PoisonError::into_inner);
     // the field of a test before may still have the keyboard (process-wide in Blinc)
     blur_all_text_inputs();
     let parts = parts(true);
@@ -201,7 +199,10 @@ fn a_point_that_misses_the_field_is_refused() {
     // the check itself: the corner of the window and a point past the field are no points of it, and a click there
     // leaves the keyboard alone
     assert!(!holds_for_every_title_bar(field, (2.0, 2.0)));
-    assert!(!holds_for_every_title_bar(field, (field.2 + 1.0, field.3 + 1.0)));
+    assert!(!holds_for_every_title_bar(
+        field,
+        (field.2 + 1.0, field.3 + 1.0)
+    ));
     // the point of 0.0.16 before the fix (300,190) sat on the field's top border once a title bar was added
     assert!(!holds_for_every_title_bar(field, (300.0, 190.0)));
     w.click((2.0, 2.0));
