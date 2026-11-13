@@ -7,7 +7,8 @@ use std::sync::{Arc, Mutex};
 
 use crate::demo::parts;
 use crate::model::{StoreModel, View};
-use crate::view::{Variant, start_check, store_app};
+use crate::view::{start_check, store_app};
+use fs_store_sources::Face;
 use fs_components_app::{WindowOptions, launch, parse_size};
 use fs_interfaces::rpc::facet_from_args;
 
@@ -22,7 +23,7 @@ pub fn run(argv: &[String]) -> Result<(), String> {
     let mut view = View::Cards;
     let mut show: Vec<(String, String)> = Vec::new();
     let mut look = None;
-    let mut variant = Variant::Storefront;
+    let mut variant = None;
     let mut look_given = false;
     let mut it = argv.iter();
     while let Some(arg) = it.next() {
@@ -39,11 +40,12 @@ pub fn run(argv: &[String]) -> Result<(), String> {
                     _ => return Err("--look needs craft or standard".to_owned()),
                 };
             }
-            // The window: `b` the storefront (tiles, table; Craft look), `c` compact (list and page; platform look for now)
+            // The face for this run only (not saved): `b` the storefront (tiles, table; Craft look), `c` compact (list and page; platform
+            // look for now). Without it the saved choice of the View menu counts (the storefront on a new install).
             "--variant" => {
                 variant = match it.next().map(String::as_str) {
-                    Some("b") => Variant::Storefront,
-                    Some("c") => Variant::Compact,
+                    Some("b") => Some(Face::Storefront),
+                    Some("c") => Some(Face::Compact),
                     _ => return Err("--variant needs b or c".to_owned()),
                 };
             }
@@ -75,16 +77,19 @@ pub fn run(argv: &[String]) -> Result<(), String> {
             other => return Err(format!("unknown argument {other}")),
         }
     }
+    let parts = parts(demo);
+    let mut model = StoreModel::new(parts.backend).with_updates(parts.updates);
+    // `--variant` wins over the saved face and is not saved
+    model.override_face(variant);
     if !look_given {
-        // Variant C wears the platform theme until fs-components has the Breeze style (a request to the shared layer)
-        look = match variant {
-            Variant::Storefront => Some(fs_components_styles::StyleId::Craft),
-            Variant::Compact => None,
+        // The compact face wears the platform theme until fs-components has the Breeze style (a request to the shared layer). The look
+        // is chosen once at the start (fs-components-render), so a face chosen in the menu takes the look of its kind at the next start.
+        look = match model.face() {
+            Face::Storefront => Some(fs_components_styles::StyleId::Craft),
+            Face::Compact => None,
         };
     }
     fs_components_render::use_style(look);
-    let parts = parts(demo);
-    let mut model = StoreModel::new(parts.backend).with_updates(parts.updates);
     model.refresh();
     model.show(view);
     for (flag, value) in &show {
@@ -93,7 +98,7 @@ pub fn run(argv: &[String]) -> Result<(), String> {
     let launcher = parts.launcher;
     let wanted = parts.check_at_start_allowed && model.check_wanted_at_start();
     let shared = Arc::new(Mutex::new(model));
-    let app = store_app(&shared, &launcher, variant).map_err(|e| e.to_string())?;
+    let app = store_app(&shared, &launcher).map_err(|e| e.to_string())?;
     if let Some(file) = snapshot {
         app.picture(size.0, size.1, std::path::Path::new(&file))
             .map_err(|e| e.to_string())?;

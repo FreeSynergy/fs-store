@@ -135,7 +135,7 @@ impl StoreModel {
         }
     }
 
-    fn save_settings(&mut self) {
+    pub(super) fn save_settings(&mut self) {
         if let Err(detail) = self.updates.save_settings(&self.settings) {
             self.problems.push(Problem::Backend(detail));
         }

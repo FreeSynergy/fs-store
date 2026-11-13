@@ -1,4 +1,4 @@
-use fs_store_sources::{CheckEvery, Findings, InstallMode, Novelty, Settings, Update};
+use fs_store_sources::{CheckEvery, Face, Findings, InstallMode, Novelty, Settings, Update};
 
 #[test]
 fn defaults_are_daily_ask_and_notify_and_survive_a_restart() {
@@ -9,13 +9,37 @@ fn defaults_are_daily_ask_and_notify_and_survive_a_restart() {
         (s.check, s.install, s.notify),
         (CheckEvery::Daily, InstallMode::Ask, true)
     );
+    assert_eq!(s.face, Face::Storefront);
     let s = Settings {
+        face: Face::Compact,
         check: CheckEvery::Hourly,
         install: InstallMode::Auto,
         notify: false,
     };
     s.save(&path).unwrap();
     assert_eq!(Settings::load(&path).unwrap(), s);
+    // the face is written by name, and no temporary file is left behind
+    assert!(
+        std::fs::read_to_string(&path)
+            .unwrap()
+            .contains("face = \"compact\"")
+    );
+    assert!(!tmp.path().join("settings.toml.new").exists());
+}
+
+#[test]
+fn an_old_file_without_a_face_and_a_face_of_a_newer_store_give_the_default_face() {
+    let tmp = tempfile::tempdir().unwrap();
+    let path = tmp.path().join("settings.toml");
+    std::fs::write(&path, "check = 'hourly'").unwrap();
+    let s = Settings::load(&path).unwrap();
+    assert_eq!((s.face, s.check), (Face::Storefront, CheckEvery::Hourly));
+    // an unknown face does not cost the other settings
+    std::fs::write(&path, "face = 'holo'\ncheck = 'hourly'").unwrap();
+    let s = Settings::load(&path).unwrap();
+    assert_eq!((s.face, s.check), (Face::Storefront, CheckEvery::Hourly));
+    assert_eq!(Face::from_id("compact"), Some(Face::Compact));
+    assert_eq!(Face::from_id("holo"), None);
 }
 
 #[test]

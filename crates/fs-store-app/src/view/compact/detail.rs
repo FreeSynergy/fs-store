@@ -259,7 +259,7 @@ pub(super) fn pane(
     if let Some(why) = p.card.open_blocked.filter(|_| p.card.installed.is_some()) {
         pane = pane.child(text(why).class("fs-c-sub"));
     }
-    if let Some(why) = p.card.install_blocked {
+    if let Some(why) = &p.card.install_blocked {
         pane = pane.child(text(why).class("fs-c-sub"));
     }
     if let Some(r) = running(&p, shared, width) {

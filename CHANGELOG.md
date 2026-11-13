@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.0.14
+
+### English
+- **Faces in the window.** Menu **View** lists the faces the code has (Storefront: Craft tiles and table; Compact: list at the left, page at the right), a dot marks the one worn. Choosing one changes
+  the window at once and is remembered in `settings.toml` (`face = "storefront" | "compact"`, written atomically with the other settings). Default for a new install: the Storefront.
+  `--variant b|c` stays as an override for one run (not saved). A settings file that cannot be read gives the default face and the usual warning; a face name from a newer store gives the default face and keeps the other settings.
+- **Locked by `fs:min-store`, also for a program.** The reason now names the store ("needs store 9.1.0"); the window says "Needs Store 9.1.0 or newer: ..." (DE+EN) on the tile, the package page and the compact page, the
+  button is off, and install is refused by the model and the engine as before (test for a program).
+- `fs-components` v0.0.13 (was v0.0.11), `fs-interfaces` v0.0.19, Blinc `fs-blinc-3.1`. No `match` on `Glyph` in the store, so the five new glyphs need nothing.
+- **Known limits:** the look (Craft or platform) is applied at the start, so a face chosen in the menu takes its look at the next start; there is only the Storefront and the Compact face (no third); the table of the
+  Storefront shows the lock only as an off button (the reason is on the tile and the page); the menu cannot be looked at here without a window: the choice is tested through the real menu handler of the window, not by eye.
+
+### Deutsch
+- **Gesichter im Fenster.** Das Menü **Ansicht** führt die Gesichter auf, die es im Code gibt (Schaufenster: Craft-Kacheln und Tabelle; Kompakt: Liste links, Seite rechts), ein Punkt markiert das getragene. Die Wahl
+  ändert das Fenster sofort und wird in `settings.toml` gemerkt (`face = "storefront" | "compact"`, atomar mit den anderen Einstellungen geschrieben). Standard bei Neuinstallation: das Schaufenster.
+  `--variant b|c` bleibt als Überschreibung für einen Lauf (nicht gemerkt). Eine unlesbare Einstellungsdatei gibt das Standard-Gesicht und die übliche Warnung; ein Gesichtsname eines neueren Stores gibt das Standard-Gesicht und lässt die übrigen Einstellungen.
+- **Gesperrt durch `fs:min-store`, auch bei einem Programm.** Der Grund nennt jetzt den Store („needs store 9.1.0“); das Fenster sagt „Braucht Store 9.1.0 oder neuer: ...“ (DE+EN) auf Kachel, Paketseite und kompakter Seite, der
+  Knopf ist aus, und Installieren wird wie bisher von Modell und Engine verweigert (Test für ein Programm).
+- `fs-components` v0.0.13 (vorher v0.0.11), `fs-interfaces` v0.0.19, Blinc `fs-blinc-3.1`. Der Store hat kein `match` auf `Glyph`, die fünf neuen Glyphen brauchen nichts.
+- **Bekannte Grenzen:** Das Aussehen (Craft oder Plattform) gilt ab dem Start, ein im Menü gewähltes Gesicht bekommt sein Aussehen beim nächsten Start; es gibt nur das Schaufenster und das kompakte Gesicht (kein drittes); die Tabelle
+  des Schaufensters zeigt die Sperre nur als ausgegrauten Knopf (den Grund nennen Kachel und Seite); das Menü ist hier ohne Fenster nicht anzusehen: Die Wahl ist über den echten Menü-Handler des Fensters getestet, nicht per Auge.
+
 ## 0.0.13
 
 ### English

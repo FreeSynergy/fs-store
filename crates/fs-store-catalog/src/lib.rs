@@ -14,4 +14,4 @@ mod title;
 pub use catalog::{
     Catalog, CatalogEntry, CatalogError, Icon, RpmFile, Skipped, parse_catalog, parse_catalog_in,
 };
-pub use entry::{COMING_SOON, NOT_SUPPORTED, UNREADABLE_MIN_STORE};
+pub use entry::{COMING_SOON, NEEDS_STORE, NOT_SUPPORTED, UNREADABLE_MIN_STORE};

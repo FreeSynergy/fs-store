@@ -7,6 +7,8 @@ use std::sync::Arc;
 use crate::launcher::Launcher;
 use crate::model::{Command, Effect, help_url};
 use crate::words;
+use crate::words_lang::{self, Lang};
+use fs_store_sources::Face;
 
 use super::shell::{Shared, locked, rebuild};
 
@@ -40,6 +42,8 @@ fn label(command: Command) -> &'static str {
         Command::Settings => words::MENU_SETTINGS,
         Command::About => words::MENU_ABOUT,
         Command::Help => words::MENU_HELP_PAGE,
+        // the line of a face is made in `menus`
+        Command::Face(_) => "",
     }
 }
 
@@ -47,16 +51,20 @@ fn entry(command: Command) -> MenuEntry {
     MenuEntry::new(command.id(), label(command))
 }
 
-/// Puts the menus into the title bar of `app`.
-///
-/// # Errors
-/// [`AppError`] if the menu cannot be set.
-pub(super) fn install_menus(
-    app: &AppWidget,
-    model: &Shared,
-    launcher: &Arc<dyn Launcher>,
-) -> Result<(), AppError> {
-    let menus = vec![
+/// The menus of the title bar; the View menu lists every face, a dot marks the one worn now. Only faces the code has are listed.
+#[must_use]
+pub fn menus(face: Face, lang: Lang) -> Vec<Menu> {
+    let faces = Face::ALL
+        .into_iter()
+        .map(|f| {
+            let mark = if f == face { "\u{25cf}" } else { "\u{25cb}" };
+            MenuEntry::new(
+                Command::Face(f).id(),
+                words_lang::face_line(lang, f).replace("{mark}", mark),
+            )
+        })
+        .collect();
+    vec![
         Menu::new(
             words::MENU_STORE,
             vec![
@@ -66,14 +74,28 @@ pub(super) fn install_menus(
                 entry(Command::Quit),
             ],
         ),
+        Menu::new(words_lang::menu_view(lang), faces),
         Menu::new(
             words::MENU_HELP,
             vec![entry(Command::Help), entry(Command::About)],
         ),
-    ];
+    ]
+}
+
+/// Puts the menus into the title bar of `app`. Choosing a face puts them in again, with the dot on the new face.
+///
+/// # Errors
+/// [`AppError`] if the menu cannot be set.
+pub(super) fn install_menus(
+    app: &AppWidget,
+    model: &Shared,
+    launcher: &Arc<dyn Launcher>,
+) -> Result<(), AppError> {
+    let face = locked(model).face();
     let shared = Arc::clone(model);
     let launcher = Arc::clone(launcher);
-    app.set_menus(menus, move |id| {
+    let again = app.clone();
+    app.set_menus(menus(face, Lang::current()), move |id| {
         let Some(command) = Command::from_id(id) else {
             return;
         };
@@ -83,6 +105,10 @@ pub(super) fn install_menus(
             Effect::Quit => std::process::exit(0),
             Effect::Help => open_help(&shared, &launcher),
             Effect::Nothing => {}
+        }
+        if matches!(command, Command::Face(_)) {
+            // the dot moves to the face now worn
+            let _ = install_menus(&again, &shared, &launcher);
         }
         rebuild();
     })

@@ -25,6 +25,9 @@ fn fits_this_machine(platform: &str) -> bool {
 /// The native package formats a release may carry next to its main artifact.
 const NATIVE: [&str; 3] = ["rpm", "deb", "exe"];
 
+/// What a locked offer says when its `fs:min-store` is newer than this store: this text and the wanted version (`needs store 0.9.0`).
+pub const NEEDS_STORE: &str = "needs store ";
+
 /// What a locked offer says when its `fs:min-store` is not `MAJOR.MINOR.PATCH`.
 pub const UNREADABLE_MIN_STORE: &str = "unreadable min-store";
 
@@ -45,21 +48,22 @@ fn kind_of(written: Option<&str>) -> (Kind, String) {
 }
 
 /// Why this store cannot install the offer, or `None`: its kind is not installable, or `fs:min-store` is newer than this store.
-fn lock_reason(kind: Kind, min_store: Option<&str>) -> Option<&'static str> {
+fn lock_reason(kind: Kind, min_store: Option<&str>) -> Option<String> {
     let own = Version::parse(env!("CARGO_PKG_VERSION"));
     // A `fs:min-store` that cannot be read locks the entry: what the entry wants is not known, so it is not guessed.
     let wanted = min_store.filter(|m| !m.is_empty());
     if wanted.is_some_and(|m| Version::parse(m).is_none()) && kind.is_installable() {
-        return Some(UNREADABLE_MIN_STORE);
+        return Some(UNREADABLE_MIN_STORE.to_owned());
     }
     let too_new = wanted
         .and_then(Version::parse)
         .zip(own)
         .is_some_and(|(want, own)| want > own);
     match kind {
-        Kind::Server | Kind::IconTheme => Some(COMING_SOON),
-        Kind::Unsupported => Some(NOT_SUPPORTED),
-        _ if too_new => Some(NOT_SUPPORTED),
+        Kind::Server | Kind::IconTheme => Some(COMING_SOON.to_owned()),
+        Kind::Unsupported => Some(NOT_SUPPORTED.to_owned()),
+        // The version stays in the reason, so the window can say which store the entry needs.
+        _ if too_new => Some(format!("{NEEDS_STORE}{}", wanted.unwrap_or_default())),
         _ => None,
     }
 }
@@ -70,7 +74,7 @@ fn locked_entry(
     c: roxmltree::Node,
     name: PackageName,
     custom: &dyn Fn(&str) -> Option<String>,
-    (kind, kind_text, reason): (Kind, String, &str),
+    (kind, kind_text, reason): (Kind, String, String),
     prefs: &[String],
 ) -> CatalogEntry {
     let version = c
@@ -95,7 +99,7 @@ fn locked_entry(
         title: crate::title::plain_name(c),
         kind,
         kind_text,
-        locked: Some(reason.to_owned()),
+        locked: Some(reason),
         version,
         format: Format::TarGz,
         location: String::new(),

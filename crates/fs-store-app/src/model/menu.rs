@@ -1,5 +1,7 @@
 //! Pattern: Command (the entries of the menu as values; the model says what each one does, the view does it).
 
+use fs_store_sources::Face;
+
 use super::store::StoreModel;
 use super::types::{Problem, View};
 
@@ -18,23 +20,29 @@ pub enum Command {
     About,
     /// Open the help page of the current view in the browser (F1).
     Help,
+    /// Wear this face (View menu); the choice is remembered.
+    Face(Face),
 }
 
 impl Command {
     /// All entries.
-    pub const ALL: [Command; 6] = [
+    pub const ALL: [Command; 8] = [
         Command::Cards,
         Command::Sources,
         Command::Settings,
         Command::Quit,
         Command::About,
         Command::Help,
+        Command::Face(Face::Storefront),
+        Command::Face(Face::Compact),
     ];
 
     /// Stable id of the entry (what the menu hands back).
     #[must_use]
     pub fn id(self) -> &'static str {
         match self {
+            Command::Face(Face::Storefront) => "face-storefront",
+            Command::Face(Face::Compact) => "face-compact",
             Command::Cards => "cards",
             Command::Quit => "quit",
             Command::Help => "help",
@@ -113,6 +121,10 @@ impl StoreModel {
             Command::Settings => Effect::Show(View::Settings),
             Command::About => Effect::Show(View::About),
             Command::Help => Effect::Help,
+            Command::Face(face) => {
+                self.set_face(face);
+                Effect::Nothing
+            }
             Command::Quit => match self.busy_name() {
                 Some(name) => {
                     self.problems = vec![Problem::Busy(name)];

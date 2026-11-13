@@ -33,9 +33,51 @@ pub enum InstallMode {
     Auto,
 }
 
+/// The face of the window: how it shows the packages (View > Face). Written as `face = "storefront"` in `settings.toml`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum Face {
+    /// The Craft storefront: tiles or a table, navigation at the left (default; `--variant b`).
+    #[default]
+    Storefront,
+    /// Compact: a list at the left and the page of the package at the right (`--variant c`).
+    Compact,
+}
+
+impl Face {
+    /// Every face the window has, in the order of the menu.
+    pub const ALL: [Face; 2] = [Face::Storefront, Face::Compact];
+
+    /// The name in `settings.toml`.
+    #[must_use]
+    pub fn id(self) -> &'static str {
+        match self {
+            Face::Storefront => "storefront",
+            Face::Compact => "compact",
+        }
+    }
+
+    /// The face with this name; `None` for anything else.
+    #[must_use]
+    pub fn from_id(id: &str) -> Option<Face> {
+        Self::ALL.into_iter().find(|f| f.id() == id)
+    }
+}
+
+/// A face this version does not know (a file from a newer store) is the default face, not an error: the other settings stay.
+impl<'de> Deserialize<'de> for Face {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let id = String::deserialize(d)?;
+        Ok(Face::from_id(&id).unwrap_or_default())
+    }
+}
+
 /// The settings.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct Settings {
+    /// The face of the window (default: the storefront).
+    #[serde(default)]
+    pub face: Face,
     /// How often to look.
     #[serde(default)]
     pub check: CheckEvery,

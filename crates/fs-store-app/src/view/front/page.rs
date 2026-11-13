@@ -239,7 +239,7 @@ pub(super) fn page(
     if let Some(why) = p.card.open_blocked.filter(|_| p.card.installed.is_some()) {
         title = title.child(text(why).class("craft-sub"));
     }
-    if let Some(why) = p.card.install_blocked {
+    if let Some(why) = &p.card.install_blocked {
         title = title.child(text(why).class("craft-sub"));
     }
     let mut links = div().flex_row().gap(2.0);

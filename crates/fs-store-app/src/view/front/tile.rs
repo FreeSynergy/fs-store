@@ -248,7 +248,7 @@ pub(super) fn tile(
         if let Some(why) = card.open_blocked.filter(|_| card.installed.is_some()) {
             body = body.child(text(why).class("craft-sub"));
         }
-        if let Some(why) = card.install_blocked {
+        if let Some(why) = &card.install_blocked {
             body = body.child(text(why).class("craft-sub"));
         }
     }

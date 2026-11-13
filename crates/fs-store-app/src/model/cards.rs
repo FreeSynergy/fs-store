@@ -111,8 +111,8 @@ pub struct Card {
     /// Why "Open" is locked (no window of its own); `None` when it can be pressed.
     pub open_blocked: Option<&'static str>,
     /// Why "Install" is locked: a kind this store version does not install yet ("Coming soon") or does not know ("not supported by this store
-    /// version"). `None` when it can be installed.
-    pub install_blocked: Option<&'static str>,
+    /// version", or "needs Store 1.2.3" for an entry that wants a newer store). `None` when it can be installed.
+    pub install_blocked: Option<String>,
 }
 
 impl Card {

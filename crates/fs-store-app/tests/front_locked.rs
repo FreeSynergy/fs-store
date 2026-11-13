@@ -59,6 +59,29 @@ fn a_locked_card_has_a_reason_and_the_packages_next_to_it_have_none() {
 }
 
 #[test]
+fn a_program_that_wants_a_newer_store_is_locked_in_the_window_and_says_which_store() {
+    let (_, f) = model_with_locked();
+    f.state.lock().unwrap().offered.push(locked_row(
+        "fs-wants-newer",
+        Kind::Program,
+        "needs store 9.1.0",
+    ));
+    let mut m = common::model(&f);
+    let card = m
+        .cards()
+        .into_iter()
+        .find(|c| c.name == "fs-wants-newer")
+        .unwrap();
+    let why = card.install_blocked.unwrap();
+    assert!(why.contains("Needs Store 9.1.0 or newer"), "{why}");
+    assert!(m.is_locked("fs-wants-newer"));
+    // not installable by a call either
+    m.ask_install("fs-wants-newer");
+    assert!(m.preview().is_none());
+    assert!(m.begin_job("fs-wants-newer").is_none());
+}
+
+#[test]
 fn a_locked_package_is_never_installed_by_a_job_or_a_question() {
     let (mut m, f) = model_with_locked();
     assert!(m.begin_job("fs-srv").is_none());

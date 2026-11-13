@@ -34,6 +34,8 @@ pub struct StoreModel {
     pub(super) new_source: String,
     pub(super) updates: Arc<dyn UpdateService>,
     pub(super) settings: Settings,
+    /// A face asked for on the command line (`--variant`): it wins over the saved one, and is never saved.
+    pub(super) face_override: Option<fs_store_sources::Face>,
     pub(super) findings: Findings,
     pub(super) check: CheckState,
     pub(super) shown: Option<View>,
@@ -65,6 +67,7 @@ impl StoreModel {
                 notify: true,
                 ..Settings::default()
             },
+            face_override: None,
             findings: Findings::default(),
             check: CheckState::Idle,
             shown: None,

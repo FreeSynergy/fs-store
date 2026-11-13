@@ -14,10 +14,10 @@ fs-store-catalog = { path = "../fs-store-catalog" }
 fs-store-engine = { path = "../fs-store-engine" }
 fs-store-pgp = { path = "../fs-store-pgp" }
 fs-store-sources = { path = "../fs-store-sources" }
-fs-components = { git = "https://github.com/FreeSynergy/fs-components", tag = "v0.0.11" }
-fs-components-app = { git = "https://github.com/FreeSynergy/fs-components", tag = "v0.0.11" }
-fs-components-render = { git = "https://github.com/FreeSynergy/fs-components", tag = "v0.0.11" }
-fs-components-styles = { git = "https://github.com/FreeSynergy/fs-components", tag = "v0.0.11" }
-fs-components-widgets = { git = "https://github.com/FreeSynergy/fs-components", tag = "v0.0.11" }
-fs-components-primitives = { git = "https://github.com/FreeSynergy/fs-components", tag = "v0.0.11" }
+fs-components = { git = "https://github.com/FreeSynergy/fs-components", tag = "v0.0.13" }
+fs-components-app = { git = "https://github.com/FreeSynergy/fs-components", tag = "v0.0.13" }
+fs-components-render = { git = "https://github.com/FreeSynergy/fs-components", tag = "v0.0.13" }
+fs-components-styles = { git = "https://github.com/FreeSynergy/fs-components", tag = "v0.0.13" }
+fs-components-widgets = { git = "https://github.com/FreeSynergy/fs-components", tag = "v0.0.13" }
+fs-components-primitives = { git = "https://github.com/FreeSynergy/fs-components", tag = "v0.0.13" }
 fs-interfaces = { git = "https://github.com/FreeSynergy/fs-interfaces", tag = "v0.0.19", features = ["rpc"] }

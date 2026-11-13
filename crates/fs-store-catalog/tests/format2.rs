@@ -102,7 +102,12 @@ fn an_entry_that_wants_a_newer_store_is_locked_and_one_that_wants_an_older_is_no
         )
     };
     let newer = parse_catalog(&catalog(&[with("99.0.0")])).unwrap();
-    assert_eq!(newer.entries[0].locked.as_deref(), Some(NOT_SUPPORTED));
+    // a known kind (program) too: locked, and the reason names the store it needs
+    assert_eq!(
+        newer.entries[0].locked.as_deref(),
+        Some("needs store 99.0.0")
+    );
+    assert!(!newer.entries[0].installable());
     let older = parse_catalog(&catalog(&[with("0.0.1")])).unwrap();
     assert!(older.entries[0].installable());
 }

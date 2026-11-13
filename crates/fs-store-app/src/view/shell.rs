@@ -11,6 +11,7 @@ use fs_components::blinc::layout::prelude::text;
 use fs_components_app::{AppError, AppWidget, Element, Screen, Surface};
 
 use crate::launcher::Launcher;
+use fs_store_sources::Face;
 
 use crate::model::{StoreModel, View, is_help_key, is_quit_key};
 use crate::words;
@@ -45,11 +46,7 @@ const SCREEN: &str = "store";
 ///
 /// # Errors
 /// [`AppError`] if the shell cannot be made.
-pub fn store_app(
-    model: &Shared,
-    launcher: &Arc<dyn Launcher>,
-    variant: Variant,
-) -> Result<AppWidget, AppError> {
+pub fn store_app(model: &Shared, launcher: &Arc<dyn Launcher>) -> Result<AppWidget, AppError> {
     locked(model).defer_refresh();
     let title = locked(model).window_title();
     let screen = Screen::new(
@@ -59,7 +56,6 @@ pub fn store_app(
             model: Arc::clone(model),
             launcher: Arc::clone(launcher),
             search: search_field(model),
-            variant,
         }),
     );
     let app = AppWidget::new(title, vec![screen])?;
@@ -67,23 +63,12 @@ pub fn store_app(
     Ok(app)
 }
 
-/// Which look of the window: B (the storefront with tiles and tables) or C (compact: list at the left, page at the right).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum Variant {
-    /// The storefront (Craft).
-    #[default]
-    Storefront,
-    /// The compact list and page.
-    Compact,
-}
-
-/// One of the views as a surface.
+/// One of the views as a surface. The face (storefront or compact) is read from the model at each draw, so the menu changes it at once.
 struct StoreSurface {
     model: Shared,
     launcher: Arc<dyn Launcher>,
     /// Made once: a redraw keeps what is typed into it.
     search: fs_components_primitives::SearchField,
-    variant: Variant,
 }
 
 impl Surface for StoreSurface {
@@ -91,7 +76,7 @@ impl Surface for StoreSurface {
         let mut model = locked(&self.model);
         let view = model.view();
         model.show(view);
-        if view == View::Cards && self.variant == Variant::Compact {
+        if view == View::Cards && model.face() == Face::Compact {
             let keys = (Arc::clone(&self.model), Arc::clone(&self.launcher));
             return Box::new(
                 super::compact::compact(
@@ -173,7 +158,7 @@ impl Surface for StoreSurface {
         _width: f32,
     ) -> Option<(fs_components::blinc::layout::div::Div, f32)> {
         let model = locked(&self.model);
-        (model.view() == View::Cards && self.variant == Variant::Storefront)
+        (model.view() == View::Cards && model.face() == Face::Storefront)
             .then(|| (top_bar(&model, &self.model, menus), BAR_H))
     }
 

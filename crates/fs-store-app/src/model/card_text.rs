@@ -103,14 +103,20 @@ pub(super) fn open_blocked(kind: Option<fs_store_core::Kind>) -> Option<&'static
 pub(super) fn install_blocked(
     locked: Option<&str>,
     kind: Option<fs_store_core::Kind>,
-) -> Option<&'static str> {
+) -> Option<String> {
     use fs_store_core::Kind;
-    locked?;
+    let reason = locked?;
     let lang = crate::words_front::Lang::current();
-    Some(match kind {
-        Some(Kind::Server | Kind::IconTheme) => crate::words_lang::coming_soon(lang),
-        _ => crate::words_lang::not_supported(lang),
-    })
+    if let Some(wanted) = reason.strip_prefix(fs_store_catalog::NEEDS_STORE) {
+        return Some(crate::words_lang::needs_store(lang).replace("{version}", wanted));
+    }
+    Some(
+        match kind {
+            Some(Kind::Server | Kind::IconTheme) => crate::words_lang::coming_soon(lang),
+            _ => crate::words_lang::not_supported(lang),
+        }
+        .to_owned(),
+    )
 }
 
 /// How many cards of width `item` with `gap` between them fit in a row of `room` pixels (at least one).

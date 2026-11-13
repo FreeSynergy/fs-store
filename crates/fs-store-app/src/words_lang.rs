@@ -64,6 +64,40 @@ pub fn not_supported(lang: Lang) -> &'static str {
     }
 }
 
+/// Title of the menu that holds the faces.
+#[must_use]
+pub fn menu_view(lang: Lang) -> &'static str {
+    match lang {
+        Lang::En => "View",
+        Lang::De => "Ansicht",
+    }
+}
+
+/// The menu line of a face: its name and a short description (`{mark}` is filled by the menu: a dot for the face in use).
+#[must_use]
+pub fn face_line(lang: Lang, face: fs_store_sources::Face) -> &'static str {
+    use fs_store_sources::Face;
+    match (lang, face) {
+        (Lang::En, Face::Storefront) => "{mark} Face: Storefront (tiles or a table, Craft look)",
+        (Lang::En, Face::Compact) => "{mark} Face: Compact (list at the left, page at the right)",
+        (Lang::De, Face::Storefront) => {
+            "{mark} Gesicht: Schaufenster (Kacheln oder Tabelle, Craft-Look)"
+        }
+        (Lang::De, Face::Compact) => "{mark} Gesicht: Kompakt (Liste links, Seite rechts)",
+    }
+}
+
+/// Why "Install" is locked for an entry that wants a newer store. Placeholder: `{version}`.
+#[must_use]
+pub fn needs_store(lang: Lang) -> &'static str {
+    match lang {
+        Lang::En => "Needs Store {version} or newer: update the store to install it.",
+        Lang::De => {
+            "Braucht Store {version} oder neuer: Aktualisiere den Store, um es zu installieren."
+        }
+    }
+}
+
 /// The warning line of the question before an install when a need has no provider. Placeholders: `{need}`, `{title}`.
 #[must_use]
 pub fn missing_need(lang: Lang) -> &'static str {

@@ -11,4 +11,4 @@ pub use file::{FileSources, StoreError};
 pub use manifest::{Basis, FileRecord, Manifest, ManifestStore};
 pub use registry::{Installed, Registry};
 pub use serials::{Serials, Stale, ensure_fresh};
-pub use settings::{CheckEvery, Findings, InstallMode, Novelty, Settings, Update};
+pub use settings::{CheckEvery, Face, Findings, InstallMode, Novelty, Settings, Update};

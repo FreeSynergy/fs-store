@@ -7,6 +7,7 @@ mod admin;
 mod card_text;
 mod cards;
 mod cards_ui;
+mod face;
 mod fetch;
 mod front;
 mod front_extra;
