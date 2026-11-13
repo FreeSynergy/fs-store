@@ -36,8 +36,9 @@ jobs:
           # `--look standard`: the typing test judges glyphs as dark ink on a light ground; the Craft look is light on dark and waits for
           # a polarity check in the shared test (see DESIGN.md). The field is the same widget in both looks.
           app-args: "--demo --look standard --view sources --size 900x640"
-          # The field "Git address of a source" of the sources view: 300,190 from the window's top left corner
-          # (the field is 40 px high at y 145..200 of the 900x640 picture; with or without a title bar the point lies inside).
-          click-in-window: "300,190"
+          # The field "Git address of a source" of the sources view: 300,204 from the window's top left corner (title bar included).
+          # The field is 60 px high at y 154..214 of the 900x640 page (x 42..788); with a title bar of 0 to 40 px the point lies
+          # inside it by 10 px or more. crates/fs-store-app/tests/typing_click.rs checks this line against the real layout.
+          click-in-window: "300,204"
           runs: "3"
           name: fs-store

@@ -9,6 +9,7 @@
 - **Messages at the top fade and can be closed.** A hint goes after 6 s, an error after 20 s; every message has a close button; menu **Store > Messages** shows the history of the session. The clock is handed in, so tests use a fake time.
 - **Start vs. Programs.** Start is an overview (updates, new, not-supported entries) with no number; the per-kind blocks that repeated the lists are gone. Each section lists ALL packages of its kind and its number is exactly what the list shows (the section title names the kind).
 - **Wording:** the layouts are **frontends** (menu View > Frontend), never "face"; tiles, details and list are views.
+- **Typing test (CI):** the click point in the sources field moved to `300,204` (title-bar proof); a test reads it from `typing-test.yml` and checks it against the real layout of the field.
 - **Known limits:** the compact frontend has no reload button yet (it reloads on start and after source commands); a failure with the same text twice before a redraw counts as one message; the internal type and the setting key are still called `face` (renaming would break saved settings); the window drawing is tested to a picture, not by clicking in a real desktop window; the messages of the settings page (the timer note) are not in the strip.
 
 ### Deutsch
@@ -18,6 +19,7 @@
 - **Meldungen oben blenden aus und lassen sich schließen.** Ein Hinweis verschwindet nach 6 s, ein Fehler nach 20 s; jede Meldung hat einen Schließen-Knopf; Menü **Store > Meldungen** zeigt den Verlauf der Sitzung. Die Uhr wird übergeben, Tests nutzen Fake-Zeit.
 - **Start gegen Programme.** Start ist der Überblick (Updates, Neu, nicht unterstützte Einträge) ohne Zahl; die Blöcke je Art, die die Listen wiederholten, entfallen. Jede Rubrik listet ALLE Pakete ihrer Art, ihre Zahl ist genau das, was die Liste zeigt (der Titel nennt die Art).
 - **Wortwahl:** Die Anordnungen heißen **Frontends** (Menü Ansicht > Frontend), nie „Gesicht“; Kacheln, Details und Liste sind Ansichten.
+- **Tipptest (CI):** Der Klickpunkt im Quellen-Feld steht jetzt bei `300,204` (titelleistenfest); ein Test liest ihn aus `typing-test.yml` und prüft ihn gegen die echte Lage des Felds.
 - **Bekannte Grenzen:** Das kompakte Frontend hat noch keinen Neu-laden-Knopf (es lädt beim Start und nach Quellen-Befehlen); dieselbe Fehlermeldung zweimal vor einem Neuzeichnen zählt als eine; der interne Typ und der Einstellungsschlüssel heißen noch `face` (Umbenennen bräche gespeicherte Einstellungen); das Zeichnen des Fensters ist bis zum Bild getestet, nicht durch Klicken in einem echten Desktop-Fenster; die Meldungen der Einstellungsseite (Hinweis des Timers) stehen nicht im Streifen.
 
 ## 0.0.15
