@@ -103,11 +103,14 @@ pub(super) fn preview(model: &StoreModel, shared: &Shared) -> Option<Div> {
                 ),
         );
     }
-    let (label, look) = match p.action {
-        PreviewAction::Install => (w::BUTTON_DO_INSTALL, Look::Fill),
-        PreviewAction::Update => (w::BUTTON_DO_UPDATE, Look::Fill),
-        PreviewAction::Remove => (w::BUTTON_DO_REMOVE, Look::Fill),
-    };
+    let (label, look) = (p.confirm_label(), Look::Fill);
+    let mut extra = div().flex_col().gap(1.0);
+    if !p.facts.is_empty() {
+        extra = extra.child(label_dim(&p.facts));
+    }
+    if let Some(notice) = &p.notice {
+        extra = extra.child(text(notice.clone()).bold());
+    }
     let (yes, no) = (Arc::clone(shared), Arc::clone(shared));
     Some(
         div()
@@ -118,6 +121,7 @@ pub(super) fn preview(model: &StoreModel, shared: &Shared) -> Option<Div> {
             .p(5.0)
             .child(text(p.title.clone()).bold().size(16.0))
             .child(warnings(p))
+            .child(extra)
             .child(steps)
             .child(label_dim(&p.risk_line()))
             .child(

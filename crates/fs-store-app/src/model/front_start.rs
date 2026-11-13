@@ -24,7 +24,8 @@ pub(super) const KINDS: [(Kind, &str); 6] = [
 ];
 
 impl StoreModel {
-    /// The blocks of the start page: updates, new packages, the recommended block (locked) and one block per kind.
+    /// The blocks of the start page, an overview: updates, new packages, and what this store version does not know. The lists of all
+    /// packages of a kind are the sections of the navigation, not blocks here.
     #[must_use]
     pub fn start_blocks(&self) -> Vec<StartBlock> {
         let cards = self.cards();
@@ -47,16 +48,7 @@ impl StoreModel {
         if !fresh.is_empty() {
             out.push(block(w::START_NEW, None, fresh));
         }
-        for (kind, label) in KINDS {
-            let list: Vec<Card> = cards
-                .iter()
-                .filter(|c| c.kind == Some(kind))
-                .cloned()
-                .collect();
-            if !list.is_empty() {
-                out.push(block(label, Some(Section::Kind(kind)), list));
-            }
-        }
+        // Start is the overview (what waits for you); the full lists are the sections of the kinds, one place each.
         // Entries of a kind this store version does not know: listed, locked, never hidden.
         let unknown: Vec<Card> = cards
             .iter()
@@ -67,6 +59,18 @@ impl StoreModel {
             out.push(block(w::START_UNSUPPORTED, None, unknown));
         }
         out
+    }
+
+    /// The title of the list of the section shown: the name of the kind, or the general one.
+    #[must_use]
+    pub fn section_title(&self) -> &'static str {
+        match self.front.section {
+            Section::Start => w::SECTION_ALL,
+            Section::Kind(kind) => KINDS
+                .iter()
+                .find(|(k, _)| *k == kind)
+                .map_or(w::SECTION_ALL, |(_, label)| label),
+        }
     }
 
     /// The footer: which sources the list comes from (they are chosen in the settings).

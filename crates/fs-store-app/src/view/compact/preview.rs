@@ -96,11 +96,14 @@ pub(super) fn preview(model: &StoreModel, shared: &Shared) -> Option<Div> {
                 ),
         );
     }
-    let label = match p.action {
-        PreviewAction::Install => w::BUTTON_DO_INSTALL,
-        PreviewAction::Update => w::BUTTON_DO_UPDATE,
-        PreviewAction::Remove => w::BUTTON_DO_REMOVE,
-    };
+    let label = p.confirm_label();
+    let mut extra = div().flex_col().gap(1.0);
+    if !p.facts.is_empty() {
+        extra = extra.child(text(p.facts.clone()).class("fs-c-sub"));
+    }
+    if let Some(notice) = &p.notice {
+        extra = extra.child(text(notice.clone()).bold());
+    }
     let (yes, no) = (Arc::clone(shared), Arc::clone(shared));
     Some(
         div()
@@ -109,6 +112,7 @@ pub(super) fn preview(model: &StoreModel, shared: &Shared) -> Option<Div> {
             .gap(3.0)
             .child(text(p.title.clone()).bold())
             .child(warnings(p))
+            .child(extra)
             .child(steps)
             .child(text(p.risk_line()).class("fs-c-sub"))
             .child(

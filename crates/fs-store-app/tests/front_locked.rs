@@ -97,7 +97,7 @@ fn a_locked_package_is_never_installed_by_a_job_or_a_question() {
 fn the_navigation_opens_a_section_for_servers_and_the_start_lists_unknown_kinds_apart() {
     let (mut m, _f) = model_with_locked();
     let servers = m.nav().into_iter().find(|n| n.label == "Servers").unwrap();
-    assert_eq!((servers.count, servers.enabled), (1, true));
+    assert_eq!((servers.count, servers.enabled), (Some(1), true));
     assert_eq!(servers.note, Some("Coming soon"));
     m.open_section(Section::Kind(Kind::Server));
     assert_eq!(m.listing().len(), 1);

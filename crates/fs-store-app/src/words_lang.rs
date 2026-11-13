@@ -78,12 +78,16 @@ pub fn menu_view(lang: Lang) -> &'static str {
 pub fn face_line(lang: Lang, face: fs_store_sources::Face) -> &'static str {
     use fs_store_sources::Face;
     match (lang, face) {
-        (Lang::En, Face::Storefront) => "{mark} Face: Storefront (tiles or a table, Craft look)",
-        (Lang::En, Face::Compact) => "{mark} Face: Compact (list at the left, page at the right)",
-        (Lang::De, Face::Storefront) => {
-            "{mark} Gesicht: Schaufenster (Kacheln oder Tabelle, Craft-Look)"
+        (Lang::En, Face::Storefront) => {
+            "{mark} Frontend: Storefront (tiles or a table, Craft look)"
         }
-        (Lang::De, Face::Compact) => "{mark} Gesicht: Kompakt (Liste links, Seite rechts)",
+        (Lang::En, Face::Compact) => {
+            "{mark} Frontend: Compact (list at the left, page at the right)"
+        }
+        (Lang::De, Face::Storefront) => {
+            "{mark} Frontend: Schaufenster (Kacheln oder Tabelle, Craft-Look)"
+        }
+        (Lang::De, Face::Compact) => "{mark} Frontend: Kompakt (Liste links, Seite rechts)",
     }
 }
 

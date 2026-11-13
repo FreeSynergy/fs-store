@@ -29,6 +29,7 @@ pub struct StoreModel {
     pub(super) details: HashMap<String, InstalledDetails>,
     pub(super) jobs: Vec<JobView>,
     pub(super) sync: super::refresh::RefreshState,
+    pub(super) notices: super::notices::NoticeBoard,
     pub(super) stash: HashMap<String, crate::backend::Prepared>,
     pub(super) problems: Vec<Problem>,
     pub(super) new_source: String,
@@ -59,6 +60,7 @@ impl StoreModel {
             details: HashMap::new(),
             jobs: Vec::new(),
             sync: super::refresh::RefreshState::default(),
+            notices: super::notices::NoticeBoard::default(),
             stash: HashMap::new(),
             problems: Vec::new(),
             new_source: String::new(),
@@ -179,8 +181,14 @@ impl StoreModel {
 
     /// Takes what [`fetch`] read: the slow part (catalogs) is done by then, so this only swaps data.
     pub fn apply_fetched(&mut self, fetched: Fetched) {
+        self.notices.release();
         self.problems
             .retain(|p| matches!(p, Problem::JobFailed { .. }));
+        if let Some(text) = fetched.broken {
+            // the old state stays; only the failure is told
+            self.problems.push(Problem::Backend(text));
+            return;
+        }
         self.apply_sources(fetched.sources);
         self.apply_listing(fetched.listing);
         self.apply_installed(fetched.installed);
@@ -214,15 +222,23 @@ impl StoreModel {
 
     /// Takes the offers of the enabled sources; what could not be read or is not offered becomes problems.
     fn apply_listing(&mut self, result: Result<Listing, BackendError>) {
+        // A catalog that cannot be read now keeps what it offered before: a failed reload never empties the window.
         let listing = match result {
             Ok(listing) => listing,
             Err(e) => {
-                self.offers.clear();
                 self.report(&e);
                 return;
             }
         };
-        self.offers = listing.packages;
+        let unreadable: Vec<&str> = listing.unreadable.iter().map(|(s, _)| s.as_str()).collect();
+        let mut offers: Vec<PackageRow> = self
+            .offers
+            .iter()
+            .filter(|p| unreadable.contains(&p.source.as_str()))
+            .cloned()
+            .collect();
+        offers.extend(listing.packages);
+        self.offers = offers;
         for (source, detail) in listing.unreadable {
             self.problems.push(Problem::Unreadable { source, detail });
         }

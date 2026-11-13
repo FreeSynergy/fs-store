@@ -207,7 +207,7 @@ pub const CHECK_FAILED: &str = "Looking for updates did not work: {detail}";
 pub const UPDATE_LINE: &str = "{name}: {from} \u{2192} {to}";
 /// Heading of the update block on the start page.
 pub const UPDATES_HEADING: &str = "Updates";
-pub use crate::words_job::{JOB_NO_ANSWER, REFRESHING, job_problem, job_state};
+pub use crate::words_job::{JOB_NO_ANSWER, READ_BROKEN, REFRESHING, job_problem, job_state};
 /// Heading of the job list.
 pub const JOBS_HEADING: &str = "Jobs";
 /// Clears the finished jobs from the job list.

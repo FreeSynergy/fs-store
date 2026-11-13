@@ -68,8 +68,8 @@ pub struct NavEntry {
     pub section: Option<Section>,
     /// The words.
     pub label: &'static str,
-    /// How many packages are behind it.
-    pub count: usize,
+    /// How many packages the list behind it shows; `None` for the start page (an overview, no list).
+    pub count: Option<usize>,
     /// It can be chosen.
     pub enabled: bool,
     /// It is the one shown.

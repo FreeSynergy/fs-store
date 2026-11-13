@@ -21,17 +21,20 @@ fn titles(m: &StoreModel) -> Vec<String> {
 fn the_navigation_counts_kinds_and_locks_what_has_nothing_or_cannot_be_said_yet() {
     let nav = model().nav();
     let by = |label: &str| nav.iter().find(|n| n.label == label).unwrap().clone();
-    assert_eq!(by("Start").count, 12);
-    assert_eq!((by("Programs").count, by("Programs").enabled), (5, true));
-    assert_eq!(by("Frontends").count, 2);
-    assert_eq!(by("Components").count, 2);
-    assert_eq!(by("Themes").count, 1);
+    assert_eq!(by("Start").count, None);
+    assert_eq!(
+        (by("Programs").count, by("Programs").enabled),
+        (Some(5), true)
+    );
+    assert_eq!(by("Frontends").count, Some(2));
+    assert_eq!(by("Components").count, Some(2));
+    assert_eq!(by("Themes").count, Some(1));
     // Icon sets: the catalog lists none, so the entry is locked; Servers: the demo lists one, so it opens, and both say "Coming soon"
     let icons = by("Icon sets");
     assert!(!icons.enabled && icons.section.is_none());
     assert_eq!(icons.note, Some("Coming soon"));
     let servers = by("Servers");
-    assert_eq!((servers.count, servers.enabled), (1, true));
+    assert_eq!((servers.count, servers.enabled), (Some(1), true));
     assert!(servers.section.is_some());
     assert_eq!(servers.note, Some("Coming soon"));
     assert!(by("Start").current);
@@ -137,15 +140,38 @@ fn needs_are_answered_by_the_resolver_one_choice_or_missing() {
 }
 
 #[test]
-fn the_start_page_has_updates_first_then_a_block_per_kind_with_a_total() {
+fn the_start_page_is_an_overview_and_the_lists_are_the_sections() {
     let m = model();
     let blocks = m.start_blocks();
     assert_eq!(blocks[0].title, "Updates");
     assert_eq!(blocks[0].total, 2);
-    let programs = blocks.iter().find(|b| b.title == "Programs").unwrap();
-    assert_eq!(programs.total, 5);
-    assert!(programs.cards.len() <= 4);
-    assert_eq!(programs.more, Some(Section::Kind(Kind::Program)));
+    // counter-proof: no block repeats a kind list (that is what the sections are for)
+    assert!(blocks.iter().all(|b| b.title != "Programs" && b.more.is_none()));
+}
+
+#[test]
+fn every_section_counts_exactly_what_it_lists_and_the_start_has_no_number() {
+    let mut m = model();
+    let nav = m.nav();
+    assert_eq!(nav[0].count, None);
+    for entry in nav.iter().skip(1).filter(|n| n.enabled) {
+        m.open_section(entry.section.unwrap());
+        assert_eq!(Some(m.listing().len()), entry.count, "{}", entry.label);
+        assert_eq!(m.section_title(), entry.label);
+    }
+    // counter-proof: the sections together hold every card of the catalog, none twice and none left out; the one kind the store does
+    // not know is shown apart on the start page
+    let sum: usize = nav.iter().filter_map(|n| n.count).sum();
+    let unknown = m
+        .cards()
+        .iter()
+        .filter(|c| c.kind == Some(Kind::Unsupported))
+        .count();
+    assert_eq!(unknown, 1);
+    assert_eq!(sum + unknown, m.cards().len());
+    // and a number that is not the list would be caught: the start shows all cards as a list only when a filter asks for it
+    m.open_section(Section::Start);
+    assert_ne!(Some(m.listing().len()), nav[1].count);
 }
 
 #[test]

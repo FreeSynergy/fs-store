@@ -18,6 +18,9 @@ pub fn job_state(state: crate::model::JobState) -> &'static str {
 pub const JOB_NO_ANSWER: &str = "the installer gave no answer for it";
 /// The refresh button while the catalogs are being read.
 pub const REFRESHING: &str = "Reading...";
+/// The read of the catalogs broke on the way; what was shown stays.
+pub const READ_BROKEN: &str =
+    "Reading the catalogs failed unexpectedly. What is shown is the state from before.";
 
 /// Sentence for the reason a job failed. Placeholders: `{name}`, `{detail}`.
 #[must_use]

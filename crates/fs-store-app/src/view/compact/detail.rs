@@ -228,9 +228,7 @@ pub(super) fn pane(
         .w(width)
         .h(height)
         .min_w(0.0);
-    for line in model.problem_lines() {
-        pane = pane.child(div().class("fs-c-card").child(text(line).class("fs-c-bad")));
-    }
+    pane = pane.child(crate::view::notices::strip(model, shared));
     let Some(p) = model.package_page_selected() else {
         return pane.child(text(w::NOTHING_MATCHES).class("fs-c-sub"));
     };

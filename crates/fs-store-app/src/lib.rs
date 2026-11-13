@@ -23,3 +23,4 @@ pub mod words;
 pub mod words_front;
 mod words_job;
 mod words_lang;
+pub mod words_msg;

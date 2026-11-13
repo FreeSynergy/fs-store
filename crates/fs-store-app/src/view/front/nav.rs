@@ -23,6 +23,7 @@ fn item(entry: &NavEntry, i: usize, shared: &Shared) -> Div {
         .gap(0.5)
         .attr("tabindex", "0");
     let mut head = div().flex_row().items_center().gap(2.0);
+    let count = entry.count.map(|c| c.to_string()).unwrap_or_default();
     if entry.current {
         line = line.class("craft-tab-on");
         head = head
@@ -31,11 +32,7 @@ fn item(entry: &NavEntry, i: usize, shared: &Shared) -> Div {
                     .flex_grow()
                     .child(text(caps(entry.label)).class("craft-pill-text").no_wrap()),
             )
-            .child(
-                text(entry.count.to_string())
-                    .class("craft-pill-text")
-                    .no_wrap(),
-            );
+            .child(text(count).class("craft-pill-text").no_wrap());
     } else if entry.enabled {
         head = head
             .child(
@@ -43,11 +40,7 @@ fn item(entry: &NavEntry, i: usize, shared: &Shared) -> Div {
                     .flex_grow()
                     .child(text(caps(entry.label)).class("craft-caps").no_wrap()),
             )
-            .child(
-                text(entry.count.to_string())
-                    .class("craft-caps-dim")
-                    .no_wrap(),
-            );
+            .child(text(count).class("craft-caps-dim").no_wrap());
     } else {
         line = line.class("craft-nav-off");
         head = head.child(div().flex_grow().child(label_dim(entry.label)));

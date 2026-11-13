@@ -13,6 +13,8 @@ pub enum View {
     Sources,
     /// What can be set: the check for updates.
     Settings,
+    /// Every message of this session.
+    Messages,
     /// Name, version, licence and address of the program.
     About,
 }

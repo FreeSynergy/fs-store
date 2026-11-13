@@ -4,7 +4,6 @@
 use std::sync::Arc;
 
 use fs_components::blinc::layout::div::{Div, div};
-use fs_components::blinc::layout::prelude::text;
 use fs_components_primitives::SearchField;
 
 use crate::launcher::Launcher;
@@ -55,9 +54,7 @@ pub(in crate::view) fn storefront(
     if !model.jobs().is_empty() {
         main = main.child(crate::view::job::job_list(model, shared));
     }
-    for line in model.problem_lines() {
-        main = main.child(div().class("fs-store-problem").child(text(line)));
-    }
+    main = main.child(crate::view::notices::strip(model, shared));
     if let Some(p) = preview::preview(model, shared) {
         main = main.child(p);
     }

@@ -90,6 +90,10 @@ pub struct Preview {
     pub steps: Vec<Step>,
     /// What the person must read before saying yes: a need that nobody offers (a warning), a need with a choice of providers.
     pub warnings: Vec<Warning>,
+    /// "Source - Size - Rights" of the (first) package; empty for a removal.
+    pub facts: String,
+    /// Said before the system asks for the password (an install through the package manager of the system).
+    pub notice: Option<String>,
 }
 
 /// A line of the question that is more than a step: it says something may not work, or that the person must choose.
@@ -102,6 +106,17 @@ pub struct Warning {
 }
 
 impl Preview {
+    /// The one button that says yes ("Install now"): the question is the confirmation, nothing asks again after it.
+    #[must_use]
+    pub fn confirm_label(&self) -> &'static str {
+        let lang = crate::words_lang::Lang::current();
+        match self.action {
+            PreviewAction::Install => crate::words_msg::install_now(lang),
+            PreviewAction::Update => crate::words_msg::update_now(lang),
+            PreviewAction::Remove => w::BUTTON_DO_REMOVE,
+        }
+    }
+
     /// The highest risk of all steps.
     #[must_use]
     pub fn risk(&self) -> Risk {

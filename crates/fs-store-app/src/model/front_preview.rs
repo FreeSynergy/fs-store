@@ -16,7 +16,7 @@ fn step(text: String, risk: Risk, actor: Actor) -> Step {
 
 impl StoreModel {
     /// Size in words for a sentence ("13 MiB", or "size unknown").
-    fn size_for_sentence(&self, name: &str) -> String {
+    pub(super) fn size_for_sentence(&self, name: &str) -> String {
         self.available
             .iter()
             .find(|r| r.package.name == name)
@@ -214,6 +214,8 @@ impl StoreModel {
             title: words::fill(heading, &[("title", &self.title(name))]),
             steps,
             warnings: self.need_warnings(name),
+            facts: self.facts_line(name),
+            notice: self.password_notice(&[name.to_owned()]),
         });
     }
 
@@ -240,6 +242,8 @@ impl StoreModel {
             action: PreviewAction::Update,
             title: words::fill(w::PREVIEW_MANY, &[("count", &names.len().to_string())]),
             warnings,
+            facts: self.facts_line(first),
+            notice: self.password_notice(&names),
             names,
             steps,
         });
@@ -256,6 +260,8 @@ impl StoreModel {
             title: words::fill(w::PREVIEW_REMOVE, &[("title", &self.title(name))]),
             steps: self.remove_steps(name),
             warnings: Vec::new(),
+            facts: String::new(),
+            notice: None,
         });
     }
 

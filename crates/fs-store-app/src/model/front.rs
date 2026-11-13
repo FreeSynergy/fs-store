@@ -88,12 +88,12 @@ impl StoreModel {
     /// The navigation: the start page and a kind each (locked while it has no package; servers and icon sets say "Coming soon").
     #[must_use]
     pub fn nav(&self) -> Vec<NavEntry> {
-        let total = self.cards().len();
         let section = self.front.section;
         let mut out = vec![NavEntry {
             section: Some(Section::Start),
             label: w::NAV_START,
-            count: total,
+            // the overview is no list, so it has no number; every other entry counts what its list shows
+            count: None,
             enabled: true,
             current: section == Section::Start,
             note: None,
@@ -109,7 +109,7 @@ impl StoreModel {
             out.push(NavEntry {
                 section: (count > 0).then_some(Section::Kind(kind)),
                 label,
-                count,
+                count: Some(count),
                 enabled: count > 0,
                 current: section == Section::Kind(kind),
                 note,

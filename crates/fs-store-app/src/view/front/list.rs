@@ -73,7 +73,7 @@ pub(super) fn listing(
         Layout::Grid => div()
             .flex_col()
             .gap(3.5)
-            .child(section_title(1, w::SECTION_ALL, cards.len(), None, shared))
+            .child(section_title(1, model.section_title(), cards.len(), None, shared))
             .child(grid(&cards, 1, model, shared, launcher, room)),
         Layout::Table => super::table::table(model, shared, launcher),
     }
@@ -137,7 +137,7 @@ pub(super) fn start(
 ) -> Div {
     let mut page = div().flex_col().gap(7.0);
     let blocks = model.start_blocks();
-    if blocks.is_empty() {
+    if model.cards().is_empty() {
         return page.child(
             div()
                 .class("fs-store-empty")
@@ -153,6 +153,15 @@ pub(super) fn start(
             .child(text(caps(w::START_RECOMMENDED)).class("craft-caps"))
             .child(text(w::START_RECOMMENDED_WHY).class("craft-sub")),
     );
+    if blocks.is_empty() {
+        page = page.child(
+            div()
+                .class("fs-store-empty")
+                .child(text(crate::words_msg::start_quiet(
+                    crate::words_lang::Lang::current(),
+                ))),
+        );
+    }
     for (i, b) in blocks.iter().enumerate() {
         page = page.child(block(i + 1, b, model, shared, launcher, room));
     }

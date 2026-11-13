@@ -41,6 +41,7 @@ fn label(command: Command) -> &'static str {
         Command::Sources => words::MENU_SOURCES,
         Command::Settings => words::MENU_SETTINGS,
         Command::About => words::MENU_ABOUT,
+        Command::Messages => crate::words_msg::history_menu(Lang::current()),
         Command::Help => words::MENU_HELP_PAGE,
         // the line of a face is made in `menus`
         Command::Face(_) => "",
@@ -71,6 +72,7 @@ pub fn menus(face: Face, lang: Lang) -> Vec<Menu> {
                 entry(Command::Cards),
                 entry(Command::Sources),
                 entry(Command::Settings),
+                entry(Command::Messages),
                 entry(Command::Quit),
             ],
         ),

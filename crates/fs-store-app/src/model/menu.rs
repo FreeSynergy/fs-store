@@ -16,6 +16,8 @@ pub enum Command {
     Sources,
     /// Show the settings page.
     Settings,
+    /// Show the history of the messages.
+    Messages,
     /// Show the About page.
     About,
     /// Open the help page of the current view in the browser (F1).
@@ -26,10 +28,11 @@ pub enum Command {
 
 impl Command {
     /// All entries.
-    pub const ALL: [Command; 8] = [
+    pub const ALL: [Command; 9] = [
         Command::Cards,
         Command::Sources,
         Command::Settings,
+        Command::Messages,
         Command::Quit,
         Command::About,
         Command::Help,
@@ -49,6 +52,7 @@ impl Command {
             Command::Sources => "sources",
             Command::Settings => "settings",
             Command::About => "about",
+            Command::Messages => "messages",
         }
     }
 
@@ -89,7 +93,7 @@ pub fn help_url(view: View, lang: &str) -> String {
         View::Cards => "programs",
         View::Sources => "sources",
         View::Settings => "settings",
-        View::About => "about",
+        View::About | View::Messages => "about",
     };
     let german = lang.to_ascii_lowercase().starts_with("de");
     format!(
@@ -120,6 +124,7 @@ impl StoreModel {
             Command::Sources => Effect::Show(View::Sources),
             Command::Settings => Effect::Show(View::Settings),
             Command::About => Effect::Show(View::About),
+            Command::Messages => Effect::Show(View::Messages),
             Command::Help => Effect::Help,
             Command::Face(face) => {
                 self.set_face(face);

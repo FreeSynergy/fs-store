@@ -7,7 +7,6 @@ use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use fs_components::blinc::cn::components::button::{ButtonBuilder, ButtonVariant};
 use fs_components::blinc::core::BlincContextState;
 use fs_components::blinc::layout::div::div;
-use fs_components::blinc::layout::prelude::text;
 use fs_components_app::{AppError, AppWidget, Element, Screen, Surface};
 
 use crate::launcher::Launcher;
@@ -76,6 +75,7 @@ impl Surface for StoreSurface {
         let mut model = locked(&self.model);
         let view = model.view();
         model.show(view);
+        model.sync_notices(super::notices::now());
         if view == View::Cards && model.face() == Face::Compact {
             let keys = (Arc::clone(&self.model), Arc::clone(&self.launcher));
             return Box::new(
@@ -142,11 +142,10 @@ impl Surface for StoreSurface {
                 rebuild();
             }),
         ));
-        for line in model.problem_lines() {
-            page = page.child(div().class("fs-store-problem").child(text(line)));
-        }
+        page = page.child(super::notices::strip(&model, &self.model));
         let body = match view {
             View::Sources | View::Settings => admin(&model, &self.model, view == View::Sources),
+            View::Messages => super::notices::history(&model),
             _ => about(),
         };
         Box::new(page.child(body))
@@ -184,6 +183,7 @@ const STYLES: &str = r"
 .fs-store-phase { color: var(--text-secondary); font-size: var(--text-sm); }
 .fs-store-phase-now { color: var(--text-primary); font-weight: 600; }
 .fs-store-problem { padding: var(--space-2); background: var(--error-bg); color: var(--text-primary); }
+.fs-store-hint { padding: var(--space-2); background: var(--surface); border-width: 1px; border-color: var(--border); color: var(--text-primary); }
 .fs-store-row { display: flex; flex-direction: row; align-items: center; gap: var(--space-3); padding: var(--space-2); border-bottom-width: 1px; border-bottom-color: var(--border); }
 .fs-store-cell { flex-grow: 1; min-width: 0; }
 .fs-store-sub { color: var(--text-secondary); font-size: var(--text-sm); }

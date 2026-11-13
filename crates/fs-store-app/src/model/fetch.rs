@@ -15,17 +15,26 @@ pub struct Fetched {
     pub(super) sources: Result<Vec<SourceRow>, BackendError>,
     pub(super) listing: Result<Listing, BackendError>,
     pub(super) installed: Installed,
+    /// The read itself broke (a panic in the backend): nothing is taken over, the old state stays, this is told.
+    pub(super) broken: Option<String>,
 }
 
 /// Reads sources, offers and what is installed (slow: it fetches the catalogs). Hand the result to
-/// [`StoreModel::apply_fetched`].
+/// [`StoreModel::apply_fetched`]. A panic in the backend does not escape: it comes back as a broken read.
 #[must_use]
 pub fn fetch(backend: &dyn StoreBackend) -> Fetched {
-    Fetched {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| Fetched {
         sources: backend.sources(),
         listing: backend.available(),
         installed: fetch_installed(backend),
-    }
+        broken: None,
+    }))
+    .unwrap_or_else(|_| Fetched {
+        sources: Ok(Vec::new()),
+        listing: Ok(Listing::default()),
+        installed: Ok((Vec::new(), HashMap::new())),
+        broken: Some(crate::words::READ_BROKEN.to_owned()),
+    })
 }
 
 pub(super) fn fetch_installed(backend: &dyn StoreBackend) -> Installed {

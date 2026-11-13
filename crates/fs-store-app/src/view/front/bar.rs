@@ -115,9 +115,9 @@ pub(in crate::view) fn top_bar(model: &StoreModel, shared: &Shared, menus: Optio
                 "refresh",
                 Glyph::Reload,
                 if model.is_refreshing() {
-                    words::REFRESHING
+                    crate::words_msg::reload_busy(crate::words_lang::Lang::current())
                 } else {
-                    words::BUTTON_REFRESH
+                    crate::words_msg::reload_tip(crate::words_lang::Lang::current())
                 },
                 !busy,
                 Arc::new(move || start_refresh(&refresh)),

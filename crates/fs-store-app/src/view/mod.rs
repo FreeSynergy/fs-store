@@ -12,6 +12,7 @@ mod front;
 mod job;
 mod menu;
 mod more;
+mod notices;
 mod pages;
 mod settings;
 mod shell;
