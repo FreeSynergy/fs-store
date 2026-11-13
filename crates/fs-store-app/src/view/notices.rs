@@ -78,11 +78,11 @@ pub(super) fn strip(model: &StoreModel, shared: &Shared) -> Div {
 
 /// The page of the history: every message of the session, newest first.
 pub(super) fn history(model: &StoreModel) -> Div {
-    let mut page = div().flex_col().gap(2.0).class("fs-store-empty").child(
-        text(m::history_menu(Lang::current()))
-            .bold()
-            .size(16.0),
-    );
+    let mut page = div()
+        .flex_col()
+        .gap(2.0)
+        .class("fs-store-empty")
+        .child(text(m::history_menu(Lang::current())).bold().size(16.0));
     let all = model.notice_history();
     if all.is_empty() {
         return page.child(text(m::history_empty(Lang::current())));

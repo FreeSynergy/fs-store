@@ -27,7 +27,8 @@ impl Launcher for NoLauncher {
 fn draw(m: fs_store_app::model::StoreModel, name: &str) {
     let launcher: Arc<dyn Launcher> = Arc::new(NoLauncher);
     let app = store_app(&Arc::new(Mutex::new(m)), &launcher).unwrap();
-    let path = std::env::temp_dir().join(format!("fs-store-0016-{}-{name}.png", std::process::id()));
+    let path =
+        std::env::temp_dir().join(format!("fs-store-0016-{}-{name}.png", std::process::id()));
     app.picture(900, 640, &path).unwrap();
     let size = std::fs::metadata(&path).unwrap().len();
     let _ = std::fs::remove_file(&path);

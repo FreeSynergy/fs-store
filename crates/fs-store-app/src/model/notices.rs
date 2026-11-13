@@ -68,11 +68,7 @@ impl NoticeBoard {
             entry.live = current.iter().any(|(t, _)| *t == entry.notice.text) && entry.live;
         }
         for (text, severity) in current {
-            if self
-                .entries
-                .iter()
-                .any(|e| e.live && e.notice.text == text)
-            {
+            if self.entries.iter().any(|e| e.live && e.notice.text == text) {
                 continue;
             }
             self.next += 1;

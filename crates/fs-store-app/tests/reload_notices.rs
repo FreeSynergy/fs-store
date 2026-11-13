@@ -238,7 +238,10 @@ fn the_question_is_the_one_confirmation_and_says_where_how_big_and_which_rights(
     let p = model.preview().expect("the question");
     assert!(p.facts.contains("https://example.org/s"), "{}", p.facts);
     assert!(p.facts.contains(m::rights_own(lang)));
-    assert!(p.notice.is_none(), "no password for an install in the own folder");
+    assert!(
+        p.notice.is_none(),
+        "no password for an install in the own folder"
+    );
     assert_eq!(p.confirm_label(), m::install_now(lang));
     // one "yes" starts the job at once: no second question, no card waiting for an answer
     let _ = model.take_preview();

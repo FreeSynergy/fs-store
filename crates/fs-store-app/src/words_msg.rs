@@ -109,7 +109,9 @@ pub fn rights_system(lang: Lang) -> &'static str {
 #[must_use]
 pub fn start_quiet(lang: Lang) -> &'static str {
     match lang {
-        Lang::En => "Everything is up to date, and nothing is new. All programs are under Programs.",
+        Lang::En => {
+            "Everything is up to date, and nothing is new. All programs are under Programs."
+        }
         Lang::De => "Alles ist aktuell, nichts ist neu. Alle Programme stehen unter Programme.",
     }
 }

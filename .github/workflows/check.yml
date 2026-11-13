@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   check:
-    uses: FreeSynergy/fs-release/.github/workflows/check.yml@main
-    # with:
-    #   working-directory: "."
-    #   apt-packages: "libssl-dev"
+    uses: FreeSynergy/fs-release/.github/workflows/check.yml@v0.0.4
+    with:
+      # Software Vulkan (lavapipe): tests/window_draws.rs draws the shell into a picture; a runner has no GPU
+      software-gpu: true

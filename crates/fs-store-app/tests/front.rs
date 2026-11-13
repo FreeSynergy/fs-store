@@ -146,7 +146,11 @@ fn the_start_page_is_an_overview_and_the_lists_are_the_sections() {
     assert_eq!(blocks[0].title, "Updates");
     assert_eq!(blocks[0].total, 2);
     // counter-proof: no block repeats a kind list (that is what the sections are for)
-    assert!(blocks.iter().all(|b| b.title != "Programs" && b.more.is_none()));
+    assert!(
+        blocks
+            .iter()
+            .all(|b| b.title != "Programs" && b.more.is_none())
+    );
 }
 
 #[test]
