@@ -55,7 +55,10 @@ fn verify_is_red_for_a_command_that_starts_the_old_version_and_green_after_relin
     fs::write(sys.join("fsprog-app"), "x").unwrap();
     run(&["relink", "fsprog"]).unwrap();
     assert!(!root.join("packages/fsprog").exists());
-    assert_eq!(fs::read_link(bin.join("fsprog")).unwrap(), sys.join("fsprog-app"));
+    assert_eq!(
+        fs::read_link(bin.join("fsprog")).unwrap(),
+        sys.join("fsprog-app")
+    );
     run(&["verify"]).unwrap();
     run(&["verify", "fsprog"]).unwrap();
     assert!(run(&["relink", "nothing"]).is_err());

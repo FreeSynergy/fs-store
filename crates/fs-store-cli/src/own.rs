@@ -60,7 +60,11 @@ pub(crate) fn verify(root: &Path, only: Option<&str>) -> Result<(), String> {
     let in_register = |n: &str| registry.as_ref().is_some_and(|r| r.get(n).is_some());
     let reports = match fs_store_engine::verify(root, only, &source_of(root)) {
         // an rpm has no list of files here, but its commands are still checked below; any other error stays an error
-        Err(e) if only.is_some_and(|n| in_register(n) && e == format!("{n} is not installed by this store")) => {
+        Err(e)
+            if only.is_some_and(|n| {
+                in_register(n) && e == format!("{n} is not installed by this store")
+            }) =>
+        {
             Vec::new()
         }
         other => other?,

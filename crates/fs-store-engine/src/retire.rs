@@ -16,9 +16,7 @@ use crate::own_judge::stray;
 pub(crate) fn retire_unpacked(root: &Path, name: &str, bin_dir: &Path) -> Vec<String> {
     // the name comes from `installed.toml`, which can be edited by hand: never let it leave `packages/`
     if name.is_empty() || name == "." || name == ".." || name.contains(['/', '\\', '\0']) {
-        return vec![format!(
-            "{name:?}: not a package name, nothing was removed"
-        )];
+        return vec![format!("{name:?}: not a package name, nothing was removed")];
     }
     let mut problems = Vec::new();
     let mut say = |what: &str, e: &dyn std::fmt::Display| {
