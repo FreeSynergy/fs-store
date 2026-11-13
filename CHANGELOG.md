@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.0.16
+
+### English
+- **Reload is reliable.** A catalog that cannot be read (source down, no route) no longer empties the window: the old offers of that source stay, a message says what failed. A read that breaks on the worker thread (a panic in the backend) no longer leaves the button dead: it ends, tells it, and the old state stays. Tests run the real flow (ticket, read, finish) with a changing catalog, an unreachable source, a failing catalog read and a panic, each with a counter-proof.
+- **Reload button:** icon only (`view-refresh`, the same size and contrast as the other buttons), tooltip "Reload catalog" (German: "Katalog neu laden").
+- **One confirmation to install.** "Install" opens the question; its button is now **Install now** ("Jetzt installieren"), so it is no longer a second "Install". The question names the source, the size and the rights, and for a system install (rpm/deb) it says that the system asks for your password next. Nothing asks after "Install now".
+- **Messages at the top fade and can be closed.** A hint goes after 6 s, an error after 20 s; every message has a close button; menu **Store > Messages** shows the history of the session. The clock is handed in, so tests use a fake time.
+- **Start vs. Programs.** Start is an overview (updates, new, not-supported entries) with no number; the per-kind blocks that repeated the lists are gone. Each section lists ALL packages of its kind and its number is exactly what the list shows (the section title names the kind).
+- **Wording:** the layouts are **frontends** (menu View > Frontend), never "face"; tiles, details and list are views.
+- **Known limits:** the compact frontend has no reload button yet (it reloads on start and after source commands); a failure with the same text twice before a redraw counts as one message; the internal type and the setting key are still called `face` (renaming would break saved settings); the window drawing is tested to a picture, not by clicking in a real desktop window; the messages of the settings page (the timer note) are not in the strip.
+
+### Deutsch
+- **Neu laden ist verlässlich.** Ein Katalog, der nicht gelesen werden kann (Quelle aus, keine Route), leert das Fenster nicht mehr: Die alten Angebote dieser Quelle bleiben, eine Meldung sagt, was fehlschlug. Ein Lesevorgang, der im Arbeits-Thread abbricht (Panic im Backend), lässt den Knopf nicht mehr tot zurück: Er endet, meldet es, der alte Stand bleibt. Die Tests fahren den echten Ablauf (Ticket, Lesen, Abschluss) mit sich änderndem Katalog, unerreichbarer Quelle, fehlschlagendem Katalog und Panic, je mit Gegenprobe.
+- **Neu-laden-Knopf:** nur Symbol (`view-refresh`, gleiche Größe und gleicher Kontrast wie die anderen Knöpfe), Tooltip „Katalog neu laden“ (en: „Reload catalog“).
+- **Eine Bestätigung zum Installieren.** „Installieren“ öffnet die Vorschau; ihr Knopf heißt jetzt **Jetzt installieren**, ist also keine zweite „Installieren“-Frage mehr. Die Vorschau nennt Quelle, Größe und Rechte und sagt bei einer Systeminstallation (rpm/deb): „Für die Systeminstallation fragt das System gleich nach Ihrem Passwort.“ Nach „Jetzt installieren“ fragt nichts mehr.
+- **Meldungen oben blenden aus und lassen sich schließen.** Ein Hinweis verschwindet nach 6 s, ein Fehler nach 20 s; jede Meldung hat einen Schließen-Knopf; Menü **Store > Meldungen** zeigt den Verlauf der Sitzung. Die Uhr wird übergeben, Tests nutzen Fake-Zeit.
+- **Start gegen Programme.** Start ist der Überblick (Updates, Neu, nicht unterstützte Einträge) ohne Zahl; die Blöcke je Art, die die Listen wiederholten, entfallen. Jede Rubrik listet ALLE Pakete ihrer Art, ihre Zahl ist genau das, was die Liste zeigt (der Titel nennt die Art).
+- **Wortwahl:** Die Anordnungen heißen **Frontends** (Menü Ansicht > Frontend), nie „Gesicht“; Kacheln, Details und Liste sind Ansichten.
+- **Bekannte Grenzen:** Das kompakte Frontend hat noch keinen Neu-laden-Knopf (es lädt beim Start und nach Quellen-Befehlen); dieselbe Fehlermeldung zweimal vor einem Neuzeichnen zählt als eine; der interne Typ und der Einstellungsschlüssel heißen noch `face` (Umbenennen bräche gespeicherte Einstellungen); das Zeichnen des Fensters ist bis zum Bild getestet, nicht durch Klicken in einem echten Desktop-Fenster; die Meldungen der Einstellungsseite (Hinweis des Timers) stehen nicht im Streifen.
+
 ## 0.0.15
 
 ### English

@@ -161,7 +161,7 @@ fn an_unreachable_source_tells_it_and_keeps_the_old_state() {
     *s.mode.lock().unwrap() = Mode::Fine;
     s.offers.lock().unwrap().push(pkg("fs-c", 0, Vec::new()));
     reload(&mut model);
-    assert!(model.problem_lines().is_empty());
+    assert_eq!(model.problem_lines().len(), 0);
     assert_eq!(names(&model).len(), 3);
 }
 
@@ -177,7 +177,7 @@ fn a_broken_read_does_not_leave_the_reload_dead() {
     // counter-proof: the next reload works
     *s.mode.lock().unwrap() = Mode::Fine;
     reload(&mut model);
-    assert!(model.problem_lines().is_empty());
+    assert_eq!(model.problem_lines().len(), 0);
 }
 
 #[test]
@@ -193,7 +193,7 @@ fn messages_fade_by_the_clock_can_be_closed_and_stay_in_the_history() {
     assert_eq!(shown[0].severity, Severity::Error);
     // an error stays longer than a hint, and goes by itself
     assert_eq!(model.visible_notices(1000 + 19).len(), 1);
-    assert!(model.visible_notices(1000 + 20).is_empty());
+    assert_eq!(model.visible_notices(1000 + 20).len(), 0);
     assert_eq!(model.notice_history().len(), 1);
     // a hint goes after a few seconds
     model.ask_uninstall("nothing-here");
@@ -244,7 +244,7 @@ fn the_question_is_the_one_confirmation_and_says_where_how_big_and_which_rights(
     let _ = model.take_preview();
     assert!(model.begin_job("fs-a").is_some());
     assert!(model.preview().is_none());
-    assert!(model.problem_lines().is_empty());
+    assert_eq!(model.problem_lines().len(), 0);
     assert!(model.cards().iter().all(|c| !c.is_confirming()));
 }
 
